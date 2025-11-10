@@ -1,0 +1,75 @@
+# ============================================================
+# CRM Python 微服务 Ingress 配置
+# 使用 www.bantu.sbs 作为访问域名
+# ============================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: crm-python-ingress
+  labels:
+    app: crm-python-ingress
+  annotations:
+    # 重写路径配置（如果需要）
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    # SSL 重定向（强制 HTTPS）
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # 代理缓冲区配置
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # CORS 配置（如果需要，也可以在 Gateway 层配置）
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: www.bantu.sbs
+      http:
+        paths:
+          # 所有请求路由到 Gateway Service
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-gateway-service
+                port:
+                  number: 8080
+          # 也可以直接访问各个服务（可选，通常不推荐，应该通过 Gateway）
+          # - path: /api/foundation
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: crm-foundation-service
+          #       port:
+          #         number: 8081
+          # - path: /api/business
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: crm-business-service
+          #       port:
+          #         number: 8082
+          # - path: /api/workflow
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: crm-workflow-service
+          #       port:
+          #         number: 8083
+          # - path: /api/finance
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: crm-finance-service
+          #       port:
+          #         number: 8084
+  # TLS 配置（HTTPS）
+  tls:
+    - hosts:
+        - www.bantu.sbs
+      secretName: bantu-sbs-tls
+
