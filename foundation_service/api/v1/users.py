@@ -16,6 +16,7 @@ from foundation_service.dependencies import get_db
 router = APIRouter()
 
 
+
 @router.post("", response_model=Result[UserResponse])
 async def create_user(
     request: UserCreateRequest,

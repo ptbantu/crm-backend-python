@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.response import Result
 from foundation_service.schemas.organization import (
-    OrganizationResponse, OrganizationCreateRequest, OrganizationUpdateRequest
+    OrganizationResponse, OrganizationCreateRequest, OrganizationUpdateRequest,
+    OrganizationListResponse
 )
 from foundation_service.services.organization_service import OrganizationService
 from foundation_service.dependencies import get_db
@@ -47,6 +48,31 @@ async def update_organization(
     service = OrganizationService(db)
     organization = await service.update_organization(organization_id, request)
     return Result.success(data=organization, message="组织更新成功")
+
+
+@router.get("", response_model=Result[OrganizationListResponse])
+async def get_organization_list(
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    name: Optional[str] = None,
+    code: Optional[str] = None,
+    organization_type: Optional[str] = None,
+    parent_id: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """分页查询组织列表"""
+    service = OrganizationService(db)
+    result = await service.get_organization_list(
+        page=page,
+        size=size,
+        name=name,
+        code=code,
+        organization_type=organization_type,
+        parent_id=parent_id,
+        is_active=is_active
+    )
+    return Result.success(data=result)
 
 
 @router.delete("/{organization_id}", response_model=Result[None])

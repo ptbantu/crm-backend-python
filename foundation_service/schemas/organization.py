@@ -97,3 +97,12 @@ class OrganizationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
+class OrganizationListResponse(BaseModel):
+    """组织列表响应"""
+    records: List[OrganizationResponse]
+    total: int
+    size: int
+    current: int
+    pages: int
+

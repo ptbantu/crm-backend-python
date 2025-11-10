@@ -1,6 +1,7 @@
 """
 组织服务
 """
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from foundation_service.schemas.organization import (
     OrganizationCreateRequest, OrganizationUpdateRequest, OrganizationResponse
@@ -118,6 +119,40 @@ class OrganizationService:
         organization.is_locked = True
         organization.is_active = False
         await self.org_repo.update(organization)
+    
+    async def get_organization_list(
+        self,
+        page: int = 1,
+        size: int = 10,
+        name: Optional[str] = None,
+        code: Optional[str] = None,
+        organization_type: Optional[str] = None,
+        parent_id: Optional[str] = None,
+        is_active: Optional[bool] = None
+    ) -> dict:
+        """分页查询组织列表"""
+        organizations, total = await self.org_repo.get_list(
+            page=page,
+            size=size,
+            name=name,
+            code=code,
+            organization_type=organization_type,
+            parent_id=parent_id,
+            is_active=is_active
+        )
+        
+        # 转换为响应对象
+        records = []
+        for org in organizations:
+            records.append(await self._to_response(org))
+        
+        return {
+            "records": records,
+            "total": total,
+            "size": size,
+            "current": page,
+            "pages": (total + size - 1) // size if total > 0 else 0
+        }
     
     async def _to_response(self, organization: Organization) -> OrganizationResponse:
         """转换为响应对象"""

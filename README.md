@@ -49,11 +49,21 @@ uvicorn main:app --host 0.0.0.0 --port 8080
 docker-compose up -d
 ```
 
-## API 文档
+## 📚 API 文档
 
-启动服务后访问：
-- Swagger UI: http://localhost:8080/docs
-- ReDoc: http://localhost:8080/redoc
+**完整 API 文档**:
+- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - 详细的 API 接口文档，包含所有端点和示例
+- **[API_QUICK_REFERENCE.md](./API_QUICK_REFERENCE.md)** - API 端点快速查询表
+
+**访问地址**:
+- **开发环境**: `http://www.bantu.sbs:8080`
+- **生产环境**: `https://www.bantu.sbs`
+
+**交互式文档**:
+- Swagger UI: http://localhost:8080/docs (或 http://www.bantu.sbs:8080/docs)
+- ReDoc: http://localhost:8080/redoc (或 http://www.bantu.sbs:8080/redoc)
+
+**注意**: 开发环境需要配置 `/etc/hosts` 将 `www.bantu.sbs` 指向 `127.0.0.1`
 
 ## 开发规范
 
