@@ -27,10 +27,11 @@ app = FastAPI(
 )
 
 # CORS 配置
+# 临时允许所有域名访问（开发环境）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],  # 临时允许所有域名
+    allow_credentials=False,  # 使用 "*" 时不能使用 credentials
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -78,7 +79,12 @@ async def gateway_middleware(request: Request, call_next):
         if not auth_header or not auth_header.startswith("Bearer "):
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"detail": "未提供认证令牌"}
+                content={"detail": "未提供认证令牌"},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
             )
         
         token = auth_header.replace("Bearer ", "")
@@ -86,7 +92,12 @@ async def gateway_middleware(request: Request, call_next):
         if not payload:
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"detail": "无效的认证令牌"}
+                content={"detail": "无效的认证令牌"},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
             )
         
         # 将用户信息添加到请求头
@@ -102,7 +113,12 @@ async def gateway_middleware(request: Request, call_next):
     # 未匹配的路由
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
-        content={"detail": "路由未找到"}
+        content={"detail": "路由未找到"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
     )
 
 
@@ -128,15 +144,34 @@ async def forward_request(request: Request, service_url: str) -> JSONResponse:
                 timeout=30.0
             )
             
+            # 构建响应头
+            # 移除微服务可能返回的 CORS 头，手动添加 CORS 头（因为直接返回 JSONResponse 可能绕过中间件）
+            response_headers = {}
+            for key, value in response.headers.items():
+                # 跳过所有 CORS 相关的头，手动添加
+                if key.lower().startswith("access-control-"):
+                    continue
+                response_headers[key] = value
+            
+            # 手动添加 CORS 头（临时允许所有域名）
+            response_headers["Access-Control-Allow-Origin"] = "*"
+            response_headers["Access-Control-Allow-Methods"] = "*"
+            response_headers["Access-Control-Allow-Headers"] = "*"
+            
             return JSONResponse(
                 content=response.json() if response.headers.get("content-type", "").startswith("application/json") else response.text,
                 status_code=response.status_code,
-                headers=dict(response.headers)
+                headers=response_headers
             )
         except httpx.RequestError as e:
             return JSONResponse(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                content={"detail": f"服务不可用: {str(e)}"}
+                content={"detail": f"服务不可用: {str(e)}"},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
             )
 
 

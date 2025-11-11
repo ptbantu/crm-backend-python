@@ -39,24 +39,19 @@ class Settings(BaseSettings):
         cors_env = os.getenv("CORS_ALLOWED_ORIGINS")
         if cors_env:
             try:
-                return json.loads(cors_env)
+                parsed = json.loads(cors_env)
+                # 如果环境变量设置为 ["*"]，允许所有域名
+                if parsed == ["*"] or parsed == "*":
+                    return ["*"]
+                return parsed
             except json.JSONDecodeError:
                 # 如果不是 JSON，尝试按逗号分割
-                return [origin.strip() for origin in cors_env.split(",")]
-        # 默认值
-        return [
-            "https://crmbantu.space",
-            "http://crmbantu.space",
-            "https://www.crmbantu.space",
-            "http://www.crmbantu.space",
-            "https://www.bantu.sbs",
-            "http://www.bantu.sbs",
-            "https://168.231.118.179",
-            "http://168.231.118.179",
-            "http://localhost:3000",
-            "http://localhost:5173",
-            "http://localhost:8080",
-        ]
+                origins = [origin.strip() for origin in cors_env.split(",")]
+                if "*" in origins:
+                    return ["*"]
+                return origins
+        # 临时允许所有域名访问（开发环境）
+        return ["*"]
     
     class Config:
         env_file = ".env"

@@ -32,10 +32,11 @@ app = FastAPI(
 )
 
 # CORS 配置
+# 临时允许所有域名访问（开发环境）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],  # 临时允许所有域名
+    allow_credentials=False,  # 使用 "*" 时不能使用 credentials
     allow_methods=["*"],
     allow_headers=["*"],
 )
