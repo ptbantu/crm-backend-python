@@ -32,12 +32,17 @@ class Settings(BaseSettings):
                 return [origin.strip() for origin in cors_env.split(",")]
         # 默认值
         return [
+            "https://crmbantu.space",
+            "http://crmbantu.space",
             "https://www.crmbantu.space",
             "http://www.crmbantu.space",
             "https://www.bantu.sbs",
             "http://www.bantu.sbs",
             "https://168.231.118.179",
             "http://168.231.118.179",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:8080",
         ]
     
     # 微服务地址

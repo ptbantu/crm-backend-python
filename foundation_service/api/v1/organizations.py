@@ -57,7 +57,6 @@ async def get_organization_list(
     name: Optional[str] = None,
     code: Optional[str] = None,
     organization_type: Optional[str] = None,
-    parent_id: Optional[str] = None,
     is_active: Optional[bool] = None,
     db: AsyncSession = Depends(get_db)
 ):
@@ -69,7 +68,6 @@ async def get_organization_list(
         name=name,
         code=code,
         organization_type=organization_type,
-        parent_id=parent_id,
         is_active=is_active
     )
     return Result.success(data=result)

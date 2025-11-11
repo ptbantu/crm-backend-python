@@ -14,7 +14,10 @@ from foundation_service.models.user import User
 from foundation_service.models.organization_employee import OrganizationEmployee
 from foundation_service.models.user_role import UserRole
 from foundation_service.utils.password import hash_password
-from common.exceptions import UserNotFoundError, OrganizationNotFoundError, BusinessException
+from common.exceptions import (
+    UserNotFoundError, OrganizationNotFoundError, OrganizationInactiveError, 
+    BusinessException
+)
 
 
 class UserService:
@@ -32,6 +35,10 @@ class UserService:
         organization = await self.org_repo.get_by_id(request.organization_id)
         if not organization:
             raise OrganizationNotFoundError()
+        
+        # 检查组织是否激活
+        if not organization.is_active:
+            raise OrganizationInactiveError()
         
         # 检查邮箱是否已存在
         if request.email:

@@ -41,14 +41,6 @@ class OrganizationRepository:
         await self.db.refresh(organization)
         return organization
     
-    async def get_children_count(self, organization_id: str) -> int:
-        """获取子组织数量"""
-        result = await self.db.execute(
-            select(func.count(Organization.id))
-            .where(Organization.parent_id == organization_id)
-        )
-        return result.scalar() or 0
-    
     async def get_employees_count(self, organization_id: str) -> int:
         """获取员工数量"""
         result = await self.db.execute(
@@ -67,7 +59,6 @@ class OrganizationRepository:
         name: Optional[str] = None,
         code: Optional[str] = None,
         organization_type: Optional[str] = None,
-        parent_id: Optional[str] = None,
         is_active: Optional[bool] = None
     ) -> tuple[List[Organization], int]:
         """分页查询组织列表"""
@@ -79,8 +70,6 @@ class OrganizationRepository:
             query = query.where(Organization.code == code)
         if organization_type:
             query = query.where(Organization.organization_type == organization_type)
-        if parent_id:
-            query = query.where(Organization.parent_id == parent_id)
         if is_active is not None:
             query = query.where(Organization.is_active == is_active)
         

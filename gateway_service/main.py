@@ -59,9 +59,14 @@ PUBLIC_PATHS = [
 async def gateway_middleware(request: Request, call_next):
     """网关中间件：路由转发和 JWT 验证"""
     path = request.url.path
+    method = request.method
     
     # Gateway 自身的健康检查和文档路径直接通过
     if path == "/health" or path.startswith("/docs") or path.startswith("/openapi") or path == "/":
+        return await call_next(request)
+    
+    # OPTIONS 预检请求直接通过（CORS 预检）
+    if method == "OPTIONS":
         return await call_next(request)
     
     # 检查是否为公开路径（不需要认证）

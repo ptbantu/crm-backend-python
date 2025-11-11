@@ -12,7 +12,6 @@ class OrganizationCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, description="组织名称")
     code: Optional[str] = Field(None, description="组织编码（唯一）")
     organization_type: str = Field(..., pattern="^(internal|vendor|agent)$", description="组织类型")
-    parent_id: Optional[str] = Field(None, description="父组织ID")
     
     # 基本信息
     email: Optional[EmailStr] = None
@@ -65,7 +64,6 @@ class OrganizationUpdateRequest(BaseModel):
     """更新组织请求"""
     name: Optional[str] = None
     code: Optional[str] = None
-    parent_id: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     website: Optional[str] = None
@@ -82,8 +80,6 @@ class OrganizationResponse(BaseModel):
     name: str
     code: Optional[str]
     organization_type: str
-    parent_id: Optional[str]
-    parent_name: Optional[str]
     email: Optional[str]
     phone: Optional[str]
     website: Optional[str]
@@ -92,7 +88,6 @@ class OrganizationResponse(BaseModel):
     is_active: bool
     is_locked: bool
     is_verified: bool
-    children_count: int = 0
     employees_count: int = 0
     created_at: datetime
     updated_at: datetime

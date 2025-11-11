@@ -26,17 +26,11 @@ class OrganizationService:
             if existing:
                 raise BusinessException(detail=f"组织编码 {request.code} 已存在")
         
-        # 验证父组织
-        if request.parent_id:
-            parent = await self.org_repo.get_by_id(request.parent_id)
-            if not parent:
-                raise OrganizationNotFoundError()
-        
         organization = Organization(
             name=request.name,
             code=request.code,
             organization_type=request.organization_type,
-            parent_id=request.parent_id,
+            parent_id=None,  # 不再支持父组织
             email=request.email,
             phone=request.phone,
             website=request.website,
@@ -127,7 +121,6 @@ class OrganizationService:
         name: Optional[str] = None,
         code: Optional[str] = None,
         organization_type: Optional[str] = None,
-        parent_id: Optional[str] = None,
         is_active: Optional[bool] = None
     ) -> dict:
         """分页查询组织列表"""
@@ -137,7 +130,6 @@ class OrganizationService:
             name=name,
             code=code,
             organization_type=organization_type,
-            parent_id=parent_id,
             is_active=is_active
         )
         
@@ -156,14 +148,7 @@ class OrganizationService:
     
     async def _to_response(self, organization: Organization) -> OrganizationResponse:
         """转换为响应对象"""
-        # 获取父组织名称
-        parent_name = None
-        if organization.parent_id:
-            parent = await self.org_repo.get_by_id(organization.parent_id)
-            parent_name = parent.name if parent else None
-        
         # 获取统计信息
-        children_count = await self.org_repo.get_children_count(organization.id)
         employees_count = await self.org_repo.get_employees_count(organization.id)
         
         return OrganizationResponse(
@@ -171,8 +156,6 @@ class OrganizationService:
             name=organization.name,
             code=organization.code,
             organization_type=organization.organization_type,
-            parent_id=organization.parent_id,
-            parent_name=parent_name,
             email=organization.email,
             phone=organization.phone,
             website=organization.website,
@@ -181,7 +164,6 @@ class OrganizationService:
             is_active=organization.is_active,
             is_locked=organization.is_locked or False,
             is_verified=organization.is_verified or False,
-            children_count=children_count,
             employees_count=employees_count,
             created_at=organization.created_at,
             updated_at=organization.updated_at
