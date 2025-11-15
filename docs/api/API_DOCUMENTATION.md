@@ -5,13 +5,16 @@
 本文档包含 BANTU CRM 系统的所有 API 接口，供前端开发使用。
 
 **访问地址**：
-- **开发环境**: `http://www.bantu.sbs:8080` (通过 Docker Compose)
-- **生产环境**: `https://www.bantu.sbs` (通过 Kubernetes Ingress)
+- **生产环境 (HTTPS)**: `https://www.bantu.sbs` (通过 Kubernetes Ingress)
+- **生产环境 (HTTP)**: `http://www.bantu.sbs` (自动重定向到 HTTPS)
+- **直接 IP 访问**: `http://168.231.118.179` (需要设置 Host 头: `Host: www.bantu.sbs`)
+- **本地开发 (端口转发)**: `http://localhost:8080` (需要运行 `kubectl port-forward`)
 
 **注意**：
-- 所有 API 请求通过 Gateway Service 路由
-- 开发环境使用 HTTP，生产环境使用 HTTPS
+- 所有 API 请求通过 Gateway Service 路由（或直接访问 Foundation Service）
+- 生产环境使用 HTTPS，HTTP 会自动重定向到 HTTPS
 - 需要认证的接口需要在 Header 中携带 JWT Token: `Authorization: Bearer <token>`
+- 可以通过 Ingress 直接访问 Foundation Service: `https://www.bantu.sbs/api/foundation/*`
 
 ---
 
@@ -33,7 +36,6 @@
 **接口地址**: `POST /api/foundation/auth/login`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/auth/login`
 - 生产环境: `https://www.bantu.sbs/api/foundation/auth/login`
 
 **请求头**:
@@ -75,13 +77,13 @@ Content-Type: application/json
 
 **cURL 示例**:
 ```bash
-# 开发环境
-curl -X POST http://www.bantu.sbs:8080/api/foundation/auth/login \
+# 生产环境
+curl -k -X POST https://www.bantu.sbs/api/foundation/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@bantu.sbs","password":"password123"}'
 
-# 生产环境
-curl -k -X POST https://www.bantu.sbs/api/foundation/auth/login \
+# 本地开发 (需要端口转发)
+curl -X POST http://localhost:8080/api/foundation/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@bantu.sbs","password":"password123"}'
 ```
@@ -105,7 +107,6 @@ curl -k -X POST https://www.bantu.sbs/api/foundation/auth/login \
 **接口地址**: `POST /api/foundation/users`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users`
 
 **请求头**:
@@ -149,7 +150,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/users/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}`
 
 **请求头**:
@@ -191,7 +191,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/users`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users`
 
 **请求头**:
@@ -236,7 +235,6 @@ Authorization: Bearer <token>
 **接口地址**: `PUT /api/foundation/users/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}`
 
 **请求头**:
@@ -263,7 +261,6 @@ Authorization: Bearer <token>
 **接口地址**: `DELETE /api/foundation/users/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}`
 
 **请求头**:
@@ -281,7 +278,6 @@ Authorization: Bearer <token>
 **接口地址**: `PUT /api/foundation/users/{id}/restore`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{id}/restore`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}/restore`
 
 **请求头**:
@@ -294,7 +290,6 @@ Authorization: Bearer <token>
 **接口地址**: `PUT /api/foundation/users/{id}/password`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{id}/password`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}/password`
 
 **请求头**:
@@ -316,7 +311,6 @@ Authorization: Bearer <token>
 **接口地址**: `POST /api/foundation/users/{id}/reset-password`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{id}/reset-password`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}/reset-password`
 
 **请求头**:
@@ -331,7 +325,6 @@ Authorization: Bearer <token>
 **接口地址**: `POST /api/foundation/users/{userId}/roles/{roleId}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{userId}/roles/{roleId}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{userId}/roles/{roleId}`
 
 **请求头**:
@@ -348,7 +341,6 @@ Authorization: Bearer <token>
 **接口地址**: `DELETE /api/foundation/users/{userId}/roles/{roleId}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{userId}/roles/{roleId}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{userId}/roles/{roleId}`
 
 **请求头**:
@@ -361,7 +353,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/users/{userId}/roles`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/users/{userId}/roles`
 - 生产环境: `https://www.bantu.sbs/api/foundation/users/{userId}/roles`
 
 **请求头**:
@@ -394,7 +385,6 @@ Authorization: Bearer <token>
 **接口地址**: `POST /api/foundation/organizations`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/organizations`
 - 生产环境: `https://www.bantu.sbs/api/foundation/organizations`
 
 **请求头**:
@@ -420,7 +410,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/organizations/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/organizations/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/organizations/{id}`
 
 **请求头**:
@@ -433,7 +422,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/organizations`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/organizations`
 - 生产环境: `https://www.bantu.sbs/api/foundation/organizations`
 
 **请求头**:
@@ -447,7 +435,6 @@ Authorization: Bearer <token>
 - `name`: 组织名称（模糊查询）
 - `code`: 组织编码（精确查询）
 - `organization_type`: 组织类型（internal/vendor/agent）
-- `parent_id`: 父组织ID
 - `is_active`: 是否激活
 
 ### 3.4 更新组织
@@ -455,7 +442,6 @@ Authorization: Bearer <token>
 **接口地址**: `PUT /api/foundation/organizations/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/organizations/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/organizations/{id}`
 
 **请求头**:
@@ -469,7 +455,6 @@ Authorization: Bearer <token>
 **接口地址**: `DELETE /api/foundation/organizations/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/organizations/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/organizations/{id}`
 
 **请求头**:
@@ -482,7 +467,6 @@ Authorization: Bearer <token>
 **接口地址**: `PUT /api/foundation/organizations/{id}/restore`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/organizations/{id}/restore`
 - 生产环境: `https://www.bantu.sbs/api/foundation/organizations/{id}/restore`
 
 **请求头**:
@@ -499,7 +483,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/roles`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/roles`
 - 生产环境: `https://www.bantu.sbs/api/foundation/roles`
 
 **请求头**:
@@ -534,7 +517,6 @@ Authorization: Bearer <token>
 **接口地址**: `POST /api/foundation/roles`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/roles`
 - 生产环境: `https://www.bantu.sbs/api/foundation/roles`
 
 **请求头**:
@@ -557,7 +539,6 @@ Authorization: Bearer <token>
 **接口地址**: `GET /api/foundation/roles/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/roles/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/roles/{id}`
 
 **请求头**:
@@ -570,7 +551,6 @@ Authorization: Bearer <token>
 **接口地址**: `PUT /api/foundation/roles/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/roles/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/roles/{id}`
 
 **请求头**:
@@ -594,7 +574,6 @@ Authorization: Bearer <token>
 **接口地址**: `DELETE /api/foundation/roles/{id}`
 
 **完整地址**:
-- 开发环境: `http://www.bantu.sbs:8080/api/foundation/roles/{id}`
 - 生产环境: `https://www.bantu.sbs/api/foundation/roles/{id}`
 
 **请求头**:
@@ -672,24 +651,7 @@ Authorization: Bearer <token>
 
 ## 8. 快速开始
 
-### 8.1 开发环境测试
-
-```bash
-# 1. 启动服务
-cd /home/bantu/crm-backend-python
-docker compose -f docker-compose.dev.yml up -d
-
-# 2. 测试登录
-curl -X POST http://www.bantu.sbs:8080/api/foundation/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@bantu.sbs","password":"password123"}'
-
-# 3. 使用 Token 访问其他接口
-curl http://www.bantu.sbs:8080/api/foundation/roles \
-  -H "Authorization: Bearer <token>"
-```
-
-### 8.2 生产环境测试
+### 8.1 生产环境测试
 
 ```bash
 # 1. 测试登录
@@ -699,6 +661,26 @@ curl -k -X POST https://www.bantu.sbs/api/foundation/auth/login \
 
 # 2. 使用 Token 访问其他接口
 curl -k https://www.bantu.sbs/api/foundation/roles \
+  -H "Authorization: Bearer <token>"
+
+# 3. 直接访问 Foundation Service (无需 Gateway 认证)
+curl -k https://www.bantu.sbs/api/foundation/organizations \
+  -H "Host: www.bantu.sbs"
+```
+
+### 8.2 本地开发测试 (端口转发)
+
+```bash
+# 1. 启动端口转发
+kubectl port-forward svc/crm-gateway-service 8080:8080
+
+# 2. 测试登录
+curl -X POST http://localhost:8080/api/foundation/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@bantu.sbs","password":"password123"}'
+
+# 3. 使用 Token 访问其他接口
+curl http://localhost:8080/api/foundation/roles \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -736,11 +718,13 @@ curl -k https://www.bantu.sbs/api/foundation/roles \
 
 ## 10. 注意事项
 
-1. **开发环境**: 使用 `http://www.bantu.sbs:8080`
-2. **生产环境**: 使用 `https://www.bantu.sbs`
-3. **认证**: 除登录接口外，其他接口都需要在 Header 中携带 JWT Token
-4. **CORS**: 已配置跨域支持，前端可以直接调用
-5. **错误处理**: 所有错误都返回统一的响应格式，前端可以根据 `code` 字段判断错误类型
+1. **生产环境**: 使用 `https://www.bantu.sbs` (推荐)
+2. **直接访问 Foundation**: 可以通过 `https://www.bantu.sbs/api/foundation/*` 直接访问 Foundation Service，无需 Gateway 认证
+3. **通过 Gateway 访问**: 使用 `https://www.bantu.sbs/*` 访问，需要 JWT 认证
+4. **认证**: 除登录接口外，通过 Gateway 访问的接口都需要在 Header 中携带 JWT Token
+5. **CORS**: 已配置跨域支持，前端可以直接调用
+6. **错误处理**: 所有错误都返回统一的响应格式，前端可以根据 `code` 字段判断错误类型
+7. **本地开发**: 使用 `kubectl port-forward` 进行本地测试
 
 ---
 

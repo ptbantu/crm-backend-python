@@ -8,20 +8,24 @@
 
 ## 文件说明
 
-### 配置文件
+### Kubernetes 配置文件
 
-- **foundation-deployment.yaml** - Foundation Service 生产环境部署配置
-- **gateway-deployment.yaml** - Gateway Service 生产环境部署配置
+- **foundation-deployment.yaml** - Foundation Service 部署配置（支持开发模式热重载）
+- **gateway-deployment.yaml** - Gateway Service 部署配置
 - **services.yaml** - Kubernetes Services 配置
 - **configmap.yaml** - 应用配置（环境变量、服务 URL 等）
 - **secret.yaml** - 敏感信息（数据库密码、JWT 密钥等）
-- **crm-ingress.yaml** - Ingress 配置（外部访问）
+- **crm-ingress.yaml** - Ingress 配置（外部访问，使用 traefik）
 - **bantu-sbs-tls-secret.yaml** - TLS 证书 Secret
 
 ### 部署脚本
 
 - **deploy.sh** - 一键部署所有 Kubernetes 资源
 - **build-and-push.sh** - 构建 Docker 镜像并推送到镜像仓库
+
+### 文档
+
+- **README.md** - 本文件，部署和使用说明
 
 ## 快速开始
 
@@ -62,8 +66,12 @@ kubectl get ingress
 ### Ingress 配置
 
 - **域名**: `www.bantu.sbs`
-- **协议**: HTTPS
+- **协议**: HTTPS（HTTP 自动重定向到 HTTPS）
 - **TLS**: 使用 `bantu-sbs-tls` Secret
+- **Ingress Controller**: traefik
+- **路由规则**:
+  - `/api/foundation/*` → Foundation Service (直接访问，无需 Gateway 认证)
+  - `/*` → Gateway Service (需要 JWT 认证)
 
 ### 服务端口
 
@@ -92,9 +100,9 @@ kubectl port-forward svc/crm-gateway-service 8080:8080
 kubectl port-forward svc/crm-foundation-service 8081:8081
 ```
 
-## 开发环境
+## 开发模式
 
-开发环境请使用 Docker Compose：
+### 方式一：Docker Compose（推荐用于本地开发）
 
 ```bash
 cd /home/bantu/crm-backend-python
@@ -106,6 +114,27 @@ Docker Compose 提供：
 - ✅ 源代码挂载
 - ✅ 更简单的配置
 - ✅ 更快的启动速度
+
+### 方式二：Kubernetes 开发模式
+
+Foundation Service 已配置为开发模式，支持热重载：
+
+**特性**：
+- ✅ 代码挂载：本地代码目录挂载到容器
+- ✅ 热重载：使用 `uvicorn --reload` 自动检测代码变更
+- ✅ 实时日志：`PYTHONUNBUFFERED=1` 实时输出日志
+- ✅ 调试模式：`DEBUG=true` 启用详细日志
+
+**挂载的目录**：
+- `/home/bantu/crm-backend-python/common` → `/app/common`
+- `/home/bantu/crm-backend-python/foundation_service` → `/app/foundation_service`
+
+**使用方法**：
+1. 修改本地代码文件
+2. 保存后，服务会自动检测并重新加载
+3. 查看日志：`kubectl logs -f deployment/crm-foundation-service`
+
+**注意**：Gateway Service 暂不支持开发模式，建议使用 Docker Compose 进行 Gateway 开发。
 
 ## 故障排查
 

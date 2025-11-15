@@ -10,8 +10,8 @@ metadata:
   labels:
     app: crm-python-ingress
   annotations:
-    # 重写路径配置（如果需要）
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    # 重写路径配置
+    # 注意: rewrite-target 会影响所有路径，对于 Foundation 直接访问，路径会保持原样
     # SSL 重定向（强制 HTTPS）
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     # 代理缓冲区配置
@@ -25,12 +25,21 @@ metadata:
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
     nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
     - host: www.bantu.sbs
       http:
         paths:
-          # 所有请求路由到 Gateway Service
+          # 直接访问 Foundation Service (用于测试，生产环境建议通过 Gateway)
+          # 注意: 更具体的路径必须放在通用路径之前
+          - path: /api/foundation
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-foundation-service
+                port:
+                  number: 8081
+          # 所有其他请求路由到 Gateway Service
           - path: /
             pathType: Prefix
             backend:
@@ -38,14 +47,6 @@ spec:
                 name: crm-gateway-service
                 port:
                   number: 8080
-          # 也可以直接访问各个服务（可选，通常不推荐，应该通过 Gateway）
-          # - path: /api/foundation
-          #   pathType: Prefix
-          #   backend:
-          #     service:
-          #       name: crm-foundation-service
-          #       port:
-          #         number: 8081
           # - path: /api/business
           #   pathType: Prefix
           #   backend:
