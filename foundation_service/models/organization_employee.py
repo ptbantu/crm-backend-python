@@ -1,7 +1,7 @@
 """
 组织员工模型
 """
-from sqlalchemy import Column, String, Boolean, DateTime, Date, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Date, ForeignKey, Computed
 from sqlalchemy.sql import func
 from foundation_service.database import Base
 import uuid
@@ -17,7 +17,10 @@ class OrganizationEmployee(Base):
     
     first_name = Column(String(255), nullable=True)
     last_name = Column(String(255), nullable=True)
-    full_name = Column(String(255), nullable=True)  # 生成列
+    # full_name 是生成列，不能直接插入，SQLAlchemy 会自动处理
+    # 注意：如果使用 Computed，需要确保数据库列定义匹配
+    # 这里不定义 full_name，让 SQLAlchemy 忽略它，或者使用 Computed
+    # full_name = Column(String(510), Computed("CONCAT(IFNULL(first_name, ''), ' ', IFNULL(last_name, ''))"), nullable=True)
     email = Column(String(255), nullable=True)  # 工作邮箱
     phone = Column(String(50), nullable=True)  # 工作电话
     position = Column(String(255), nullable=True)  # 职位
