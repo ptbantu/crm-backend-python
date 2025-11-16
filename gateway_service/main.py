@@ -27,10 +27,12 @@ app = FastAPI(
 )
 
 # CORS 配置
-# 临时允许所有域名访问（开发环境）
+# 使用配置中的允许来源列表，如果没有配置则允许所有域名
+cors_origins = settings.CORS_ALLOWED_ORIGINS
+print(f"🌐 CORS 允许的来源: {cors_origins}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 临时允许所有域名
+    allow_origins=cors_origins,  # 从配置读取
     allow_credentials=False,  # 使用 "*" 时不能使用 credentials
     allow_methods=["*"],
     allow_headers=["*"],

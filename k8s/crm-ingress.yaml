@@ -10,20 +10,19 @@ metadata:
   labels:
     app: crm-python-ingress
   annotations:
-    # 重写路径配置
-    # 注意: rewrite-target 会影响所有路径，对于 Foundation 直接访问，路径会保持原样
-    # SSL 重定向（强制 HTTPS）
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # 代理缓冲区配置
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
-    # CORS 配置（如果需要，也可以在 Gateway 层配置）
-    nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
-    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    # cert-manager 自动管理证书
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Traefik 配置（当前使用 traefik Ingress Controller）
+    # Traefik 在配置了 TLS 时会自动将 HTTP 重定向到 HTTPS
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    # 注意: nginx 注解对 traefik 无效，但保留用于文档说明
+    # SSL 重定向（traefik 会自动处理，如果配置了 TLS）
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"  # nginx 注解，对 traefik 无效
+    # 代理缓冲区配置（traefik 有自己的配置方式）
+    # nginx.ingress.kubernetes.io/proxy-body-size: "10m"  # nginx 注解
+    # CORS 配置（在 Gateway 和 Foundation Service 层已配置）
+    # nginx.ingress.kubernetes.io/enable-cors: "true"  # nginx 注解
 spec:
   ingressClassName: traefik
   rules:
@@ -69,8 +68,9 @@ spec:
           #       port:
           #         number: 8084
   # TLS 配置（HTTPS）
+  # cert-manager 会自动创建和管理证书
   tls:
     - hosts:
         - www.bantu.sbs
-      secretName: bantu-sbs-tls
+      secretName: bantu-sbs-tls-cert  # cert-manager 会自动创建此 Secret
 
