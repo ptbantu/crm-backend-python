@@ -1,0 +1,134 @@
+# Foundation Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-foundation-service
+  namespace: default
+  labels:
+    app: crm-foundation-service
+    service: foundation
+    version: python
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-foundation-service
+  template:
+    metadata:
+      labels:
+        app: crm-foundation-service
+        service: foundation
+        version: python
+    spec:
+      containers:
+      - name: foundation
+        image: bantu-crm-foundation-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8081
+          protocol: TCP
+        # 开发模式：使用热重载启动命令
+        command: ["uvicorn", "foundation_service.main:app", "--host", "0.0.0.0", "--port", "8081", "--reload", "--reload-dir", "/app", "--reload-include", "*.py", "--log-level", "debug"]
+        env:
+        # 从 MySQL ConfigMap 读取数据库配置（优先使用 mysql-config）
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        # 从 MySQL Secret 读取敏感配置（优先使用 mysql-secret）
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
+        - name: JWT_EXPIRATION
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_EXPIRATION
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        # 开发模式环境变量
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        # 开发模式：覆盖 DEBUG 为 true（如果 ConfigMap 中为 false）
+        - name: DEBUG
+          value: "true"
+        volumeMounts:
+        # 挂载本地代码目录，实现热重载
+        - name: common-code
+          mountPath: /app/common
+        - name: foundation-code
+          mountPath: /app/foundation_service
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      volumes:
+      # 开发模式：挂载本地代码目录
+      - name: common-code
+        hostPath:
+          path: /home/bantu/crm-backend-python/common
+          type: Directory
+      - name: foundation-code
+        hostPath:
+          path: /home/bantu/crm-backend-python/foundation_service
+          type: Directory
+
