@@ -1,0 +1,486 @@
+erDiagram
+
+    agent_extensions {
+        organization_id string PK
+        organization_id string FK
+        account_group string
+        category_name string
+        created_at string
+        updated_at string
+    }
+
+    contacts {
+        id string PK
+        customer_id string FK
+        created_by string FK
+        updated_by string FK
+        first_name string
+        last_name string
+        full_name string
+        email string
+        phone string
+        mobile string
+        position string
+        department string
+        is_primary string
+        is_decision_maker string
+        ...
+    }
+
+    customer_channels {
+        id string PK
+        code string
+        name string
+        created_at string
+        updated_at string
+    }
+
+    customer_sources {
+        id string PK
+        code string
+        name string
+        created_at string
+        updated_at string
+    }
+
+    customers {
+        id string PK
+        parent_customer_id string FK
+        source_id string FK
+        channel_id string FK
+        owner_user_id string FK
+        agent_user_id string FK
+        agent_id string FK
+        id_external string
+        owner_id_external string
+        owner_name string
+        created_by_external string
+        created_by_name string
+        updated_by_external string
+        updated_by_name string
+        created_at_src string
+        updated_at_src string
+        last_action_at_src string
+        ...
+    }
+
+    deliverables {
+        id string PK
+        order_id string FK
+        order_stage_id string FK
+        verified_by string FK
+        uploaded_by string FK
+        deliverable_type string
+        name string
+        description string
+        file_path string
+        file_url string
+        file_size string
+        mime_type string
+        is_verified string
+        verified_at string
+        created_at string
+        ...
+    }
+
+    order_assignments {
+        id string PK
+        order_id string FK
+        assigned_to_user_id string FK
+        assigned_by_user_id string FK
+        vendor_id string FK
+        organization_employee_id string FK
+        vendor_employee_id string FK
+        assignment_type string
+        is_primary string
+        assigned_at string
+        unassigned_at string
+        notes string
+        created_at string
+    }
+
+    order_stages {
+        id string PK
+        order_id string FK
+        assigned_to_user_id string FK
+        created_by string FK
+        updated_by string FK
+        stage_name string
+        stage_code string
+        stage_order string
+        status string
+        started_at string
+        completed_at string
+        progress_percent string
+        notes string
+        created_at string
+        updated_at string
+    }
+
+    order_statuses {
+        id string PK
+        code string
+        name string
+        description string
+        display_order string
+        is_active string
+        created_at string
+        updated_at string
+    }
+
+    orders {
+        id string PK
+        customer_id string FK
+        product_id string FK
+        sales_user_id string FK
+        status_id string FK
+        created_by string FK
+        updated_by string FK
+        order_number string
+        title string
+        product_name string
+        sales_username string
+        quantity string
+        unit_price string
+        total_amount string
+        currency_code string
+        discount_amount string
+        final_amount string
+        ...
+    }
+
+    organization_employees {
+        id string PK
+        user_id string FK
+        organization_id string FK
+        created_by string FK
+        updated_by string FK
+        first_name string
+        last_name string
+        full_name string
+        email string
+        phone string
+        position string
+        department string
+        employee_number string
+        is_primary string
+        is_manager string
+        ...
+    }
+
+    organizations {
+        id string PK
+        parent_id string FK
+        verified_by string FK
+        name string
+        code string
+        external_id string
+        organization_type string
+        email string
+        phone string
+        website string
+        logo_url string
+        description string
+        street string
+        ...
+    }
+
+    payments {
+        id string PK
+        order_id string FK
+        confirmed_by string FK
+        created_by string FK
+        payment_type string
+        amount string
+        currency_code string
+        payment_method string
+        payment_date string
+        received_at string
+        transaction_id string
+        bank_account string
+        payer_name string
+        payer_account string
+        ...
+    }
+
+    product_categories {
+        id string PK
+        code string
+        name string
+        created_at string
+        updated_at string
+        parent_id string
+    }
+
+    product_price_history {
+        id string PK
+        product_id string FK
+        organization_id string FK
+        changed_by string FK
+        price_type string
+        currency string
+        old_price string
+        new_price string
+        change_reason string
+        effective_from string
+        effective_to string
+        created_at string
+    }
+
+    product_prices {
+        id string PK
+        product_id string FK
+        organization_id string FK
+        approved_by string FK
+        changed_by string FK
+        price_type string
+        currency string
+        amount string
+        exchange_rate string
+        effective_from string
+        effective_to string
+        source string
+        is_approved string
+        approved_at string
+        change_reason string
+        ...
+    }
+
+    products {
+        id string PK
+        vendor_id string FK
+        category_id string FK
+        id_external string
+        owner_id_external string
+        owner_name string
+        created_by_external string
+        created_by_name string
+        updated_by_external string
+        updated_by_name string
+        created_at_src string
+        updated_at_src string
+        last_action_at_src string
+        ...
+    }
+
+    roles {
+        id string PK
+        parent_id string FK
+        verified_by string FK
+        organization_id string FK
+        user_id string FK
+        role_id string FK
+        created_by string FK
+        updated_by string FK
+        vendor_id string FK
+        category_id string FK
+        parent_customer_id string FK
+        source_id string FK
+        channel_id string FK
+        owner_user_id string FK
+        agent_user_id string FK
+        agent_id string FK
+        customer_id string FK
+        product_id string FK
+        sales_user_id string FK
+        status_id string FK
+        order_id string FK
+        assigned_to_user_id string FK
+        assigned_by_user_id string FK
+        organization_employee_id string FK
+        vendor_employee_id string FK
+        order_stage_id string FK
+        uploaded_by string FK
+        confirmed_by string FK
+        code string
+        name string
+        description string
+        created_at string
+        updated_at string
+    }
+
+    user_roles {
+        user_id string FK
+        role_id string FK
+    }
+
+    users {
+        id string PK
+        username string
+        email string
+        phone string
+        display_name string
+        password_hash string
+        avatar_url string
+        bio string
+        gender string
+        address string
+        contact_phone string
+        ...
+    }
+
+    vendor_extensions {
+        organization_id string PK
+        organization_id string FK
+        account_group string
+        category_name string
+        created_at string
+        updated_at string
+    }
+
+    vendor_product_financials {
+        id string PK
+        vendor_product_id string FK
+        order_id string FK
+        payment_id string FK
+        approved_by string FK
+        created_by string FK
+        updated_by string FK
+        cost_amount_idr string
+        cost_amount_cny string
+        exchange_rate string
+        account_code string
+        cost_center string
+        expense_category string
+        department string
+        invoice_number string
+        invoice_date string
+        payment_status string
+        ...
+    }
+
+    vendor_products {
+        id string PK
+        organization_id string FK
+        product_id string FK
+        created_by string FK
+        updated_by string FK
+        approved_by string FK
+        changed_by string FK
+        vendor_product_id string FK
+        order_id string FK
+        payment_id string FK
+        is_primary string
+        priority string
+        cost_price_idr string
+        cost_price_cny string
+        exchange_rate string
+        min_quantity string
+        max_quantity string
+        lead_time_days string
+        processing_days string
+        is_available string
+        ...
+    }
+
+    visa_records {
+        id string PK
+        customer_id string FK
+        id_external string
+        owner_id_external string
+        owner_name string
+        created_by_external string
+        created_by_name string
+        updated_by_external string
+        updated_by_name string
+        created_at_src string
+        updated_at_src string
+        last_action_at_src string
+        ...
+    }
+
+    %% Relationships
+    organizations ||--o{ organizations : "parent_id"
+    organizations ||--o{ users : "verified_by"
+    vendor_extensions ||--o{ organizations : "organization_id"
+    agent_extensions ||--o{ organizations : "organization_id"
+    user_roles ||--o{ users : "user_id"
+    user_roles ||--o{ roles : "role_id"
+    organization_employees ||--o{ users : "user_id"
+    organization_employees ||--o{ organizations : "organization_id"
+    organization_employees ||--o{ users : "created_by"
+    organization_employees ||--o{ users : "updated_by"
+    products ||--o{ organizations : "vendor_id"
+    products ||--o{ product_categories : "category_id"
+    customers ||--o{ customers : "parent_customer_id"
+    customers ||--o{ customer_sources : "source_id"
+    customers ||--o{ customer_channels : "channel_id"
+    customers ||--o{ users : "owner_user_id"
+    customers ||--o{ users : "agent_user_id"
+    customers ||--o{ organizations : "agent_id"
+    contacts ||--o{ customers : "customer_id"
+    contacts ||--o{ users : "created_by"
+    contacts ||--o{ users : "updated_by"
+    visa_records ||--o{ customers : "customer_id"
+    orders ||--o{ customers : "customer_id"
+    orders ||--o{ products : "product_id"
+    orders ||--o{ users : "sales_user_id"
+    orders ||--o{ order_statuses : "status_id"
+    orders ||--o{ users : "created_by"
+    orders ||--o{ users : "updated_by"
+    order_assignments ||--o{ orders : "order_id"
+    order_assignments ||--o{ users : "assigned_to_user_id"
+    order_assignments ||--o{ users : "assigned_by_user_id"
+    order_assignments ||--o{ organizations : "vendor_id"
+    order_assignments ||--o{ organization_employees : "organization_employee_id"
+    order_assignments ||--o{ organization_employees : "vendor_employee_id"
+    order_stages ||--o{ orders : "order_id"
+    order_stages ||--o{ users : "assigned_to_user_id"
+    order_stages ||--o{ users : "created_by"
+    order_stages ||--o{ users : "updated_by"
+    deliverables ||--o{ orders : "order_id"
+    deliverables ||--o{ order_stages : "order_stage_id"
+    deliverables ||--o{ users : "verified_by"
+    deliverables ||--o{ users : "uploaded_by"
+    payments ||--o{ orders : "order_id"
+    payments ||--o{ users : "confirmed_by"
+    payments ||--o{ users : "created_by"
+    roles ||--o{ organizations : "parent_id"
+    roles ||--o{ users : "verified_by"
+    roles ||--o{ organizations : "organization_id"
+    roles ||--o{ users : "user_id"
+    roles ||--o{ roles : "role_id"
+    roles ||--o{ users : "created_by"
+    roles ||--o{ users : "updated_by"
+    roles ||--o{ organizations : "vendor_id"
+    roles ||--o{ product_categories : "category_id"
+    roles ||--o{ customers : "parent_customer_id"
+    roles ||--o{ customer_sources : "source_id"
+    roles ||--o{ customer_channels : "channel_id"
+    roles ||--o{ users : "owner_user_id"
+    roles ||--o{ users : "agent_user_id"
+    roles ||--o{ organizations : "agent_id"
+    roles ||--o{ customers : "customer_id"
+    roles ||--o{ products : "product_id"
+    roles ||--o{ users : "sales_user_id"
+    roles ||--o{ order_statuses : "status_id"
+    roles ||--o{ orders : "order_id"
+    roles ||--o{ users : "assigned_to_user_id"
+    roles ||--o{ users : "assigned_by_user_id"
+    roles ||--o{ organization_employees : "organization_employee_id"
+    roles ||--o{ organization_employees : "vendor_employee_id"
+    roles ||--o{ order_stages : "order_stage_id"
+    roles ||--o{ users : "uploaded_by"
+    roles ||--o{ users : "confirmed_by"
+    vendor_products ||--o{ organizations : "organization_id"
+    vendor_products ||--o{ products : "product_id"
+    vendor_products ||--o{ users : "created_by"
+    vendor_products ||--o{ users : "updated_by"
+    product_prices ||--o{ products : "product_id"
+    product_prices ||--o{ organizations : "organization_id"
+    product_prices ||--o{ users : "approved_by"
+    product_prices ||--o{ users : "changed_by"
+    product_price_history ||--o{ products : "product_id"
+    product_price_history ||--o{ organizations : "organization_id"
+    product_price_history ||--o{ users : "changed_by"
+    vendor_product_financials ||--o{ vendor_products : "vendor_product_id"
+    vendor_product_financials ||--o{ orders : "order_id"
+    vendor_product_financials ||--o{ payments : "payment_id"
+    vendor_product_financials ||--o{ users : "approved_by"
+    vendor_product_financials ||--o{ users : "created_by"
+    vendor_product_financials ||--o{ users : "updated_by"
+    vendor_products ||--o{ users : "approved_by"
+    vendor_products ||--o{ users : "changed_by"
+    vendor_products ||--o{ vendor_products : "vendor_product_id"
+    vendor_products ||--o{ orders : "order_id"
+    vendor_products ||--o{ payments : "payment_id"

@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     @property
     def DATABASE_URL(self) -> str:
         """数据库连接 URL"""
-        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
+        # 确保包含完整的字符集参数
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4&use_unicode=true"
     
     # JWT 配置
     JWT_SECRET: str = "your-secret-key-change-in-production"

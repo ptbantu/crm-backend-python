@@ -21,6 +21,9 @@
 -- 注意：如果 schema_unified.sql 已创建角色（使用随机 UUID），这里会更新名称和描述
 -- 但 ID 会保持为 schema_unified.sql 创建的 UUID（避免影响外键关系）
 
+-- 确保使用 UTF-8 字符集
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO roles (id, code, name, description, created_at, updated_at)
 VALUES 
     -- 管理员角色

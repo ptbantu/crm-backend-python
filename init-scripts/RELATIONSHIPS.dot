@@ -1,0 +1,134 @@
+digraph BANTU_CRM {
+  rankdir=LR;
+  node [shape=record, style=filled, fillcolor=lightblue];
+  
+  // Core Domain
+  users [label="users|id (PK)\lusername\lemail\lphone\ldisplay_name\lpassword_hash\lavatar_url\lbio\lgender\laddress\lcontact_phone\lwhatsapp\lwechat\lis_active\llast_login_at\l..."];
+  roles [label="roles|id (PK)\lparent_id (FK)\lverified_by (FK)\lorganization_id (FK)\luser_id (FK)\lrole_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lvendor_id (FK)\lcategory_id (FK)\lparent_customer_id (FK)\lsource_id (FK)\lchannel_id (FK)\lowner_user_id (FK)\lagent_user_id (FK)\lagent_id (FK)\lcustomer_id (FK)\lproduct_id (FK)\lsales_user_id (FK)\lstatus_id (FK)\lorder_id (FK)\lassigned_to_user_id (FK)\lassigned_by_user_id (FK)\lorganization_employee_id (FK)\lvendor_employee_id (FK)\lorder_stage_id (FK)\luploaded_by (FK)\lconfirmed_by (FK)\lcode\lname\ldescription\lcreated_at\lupdated_at"];
+  user_roles [label="user_roles|user_id (FK)\lrole_id (FK)"];
+  organizations [label="organizations|id (PK)\lparent_id (FK)\lverified_by (FK)\lname\lcode\lexternal_id\lorganization_type\lemail\lphone\lwebsite\llogo_url\ldescription\lstreet\lcity\lstate_province\lpostal_code\l..."];
+  organization_employees [label="organization_employees|id (PK)\luser_id (FK)\lorganization_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lfirst_name\llast_name\lfull_name\lemail\lphone\lposition\ldepartment\lemployee_number\lis_primary\lis_manager\lis_decision_maker\lis_active\l..."];
+
+  // Product Domain
+  product_categories [label="product_categories|id (PK)\lcode\lname\lcreated_at\lupdated_at\lparent_id"];
+  products [label="products|id (PK)\lvendor_id (FK)\lcategory_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lname\lcode\l..."];
+  vendor_products [label="vendor_products|id (PK)\lorganization_id (FK)\lproduct_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lapproved_by (FK)\lchanged_by (FK)\lvendor_product_id (FK)\lorder_id (FK)\lpayment_id (FK)\lis_primary\lpriority\lcost_price_idr\lcost_price_cny\lexchange_rate\lmin_quantity\lmax_quantity\llead_time_days\lprocessing_days\lis_available\lavailability_notes\lavailable_from\l..."];
+  product_prices [label="product_prices|id (PK)\lproduct_id (FK)\lorganization_id (FK)\lapproved_by (FK)\lchanged_by (FK)\lprice_type\lcurrency\lamount\lexchange_rate\leffective_from\leffective_to\lsource\lis_approved\lapproved_at\lchange_reason\l..."];
+  product_price_history [label="product_price_history|id (PK)\lproduct_id (FK)\lorganization_id (FK)\lchanged_by (FK)\lprice_type\lcurrency\lold_price\lnew_price\lchange_reason\leffective_from\leffective_to\lcreated_at"];
+  vendor_product_financials [label="vendor_product_financials|id (PK)\lvendor_product_id (FK)\lorder_id (FK)\lpayment_id (FK)\lapproved_by (FK)\lcreated_by (FK)\lupdated_by (FK)\lcost_amount_idr\lcost_amount_cny\lexchange_rate\laccount_code\lcost_center\lexpense_category\ldepartment\linvoice_number\linvoice_date\lpayment_status\lis_approved\l..."];
+
+  // Customer Domain
+  customers [label="customers|id (PK)\lparent_customer_id (FK)\lsource_id (FK)\lchannel_id (FK)\lowner_user_id (FK)\lagent_user_id (FK)\lagent_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\lchange_log_at_src\llinked_module\llinked_id_external\lname\l..."];
+  contacts [label="contacts|id (PK)\lcustomer_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lfirst_name\llast_name\lfull_name\lemail\lphone\lmobile\lposition\ldepartment\lis_primary\lis_decision_maker\lcontact_role\laddress\lcity\l..."];
+  customer_sources [label="customer_sources|id (PK)\lcode\lname\lcreated_at\lupdated_at"];
+  customer_channels [label="customer_channels|id (PK)\lcode\lname\lcreated_at\lupdated_at"];
+  visa_records [label="visa_records|id (PK)\lcustomer_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lcustomer_name\l..."];
+
+  // Order Domain
+  orders [label="orders|id (PK)\lcustomer_id (FK)\lproduct_id (FK)\lsales_user_id (FK)\lstatus_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lorder_number\ltitle\lproduct_name\lsales_username\lquantity\lunit_price\ltotal_amount\lcurrency_code\ldiscount_amount\lfinal_amount\l..."];
+  order_statuses [label="order_statuses|id (PK)\lcode\lname\ldescription\ldisplay_order\lis_active\lcreated_at\lupdated_at"];
+  order_assignments [label="order_assignments|id (PK)\lorder_id (FK)\lassigned_to_user_id (FK)\lassigned_by_user_id (FK)\lvendor_id (FK)\lorganization_employee_id (FK)\lvendor_employee_id (FK)\lassignment_type\lis_primary\lassigned_at\lunassigned_at\lnotes\lcreated_at"];
+  order_stages [label="order_stages|id (PK)\lorder_id (FK)\lassigned_to_user_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lstage_name\lstage_code\lstage_order\lstatus\lstarted_at\lcompleted_at\lprogress_percent\lnotes\lcreated_at\lupdated_at"];
+  deliverables [label="deliverables|id (PK)\lorder_id (FK)\lorder_stage_id (FK)\lverified_by (FK)\luploaded_by (FK)\ldeliverable_type\lname\ldescription\lfile_path\lfile_url\lfile_size\lmime_type\lis_verified\lverified_at\lcreated_at\l..."];
+  payments [label="payments|id (PK)\lorder_id (FK)\lconfirmed_by (FK)\lcreated_by (FK)\lpayment_type\lamount\lcurrency_code\lpayment_method\lpayment_date\lreceived_at\ltransaction_id\lbank_account\lpayer_name\lpayer_account\lstatus\lconfirmed_at\l..."];
+
+  // Extension Domain
+  vendor_extensions [label="vendor_extensions|organization_id (PK)\lorganization_id (FK)\laccount_group\lcategory_name\lcreated_at\lupdated_at"];
+  agent_extensions [label="agent_extensions|organization_id (PK)\lorganization_id (FK)\laccount_group\lcategory_name\lcreated_at\lupdated_at"];
+
+  // Relationships
+  organizations -> organizations [label="parent_id"];
+  organizations -> users [label="verified_by"];
+  vendor_extensions -> organizations [label="organization_id"];
+  agent_extensions -> organizations [label="organization_id"];
+  user_roles -> users [label="user_id"];
+  user_roles -> roles [label="role_id"];
+  organization_employees -> users [label="user_id"];
+  organization_employees -> organizations [label="organization_id"];
+  organization_employees -> users [label="created_by"];
+  organization_employees -> users [label="updated_by"];
+  products -> organizations [label="vendor_id"];
+  products -> product_categories [label="category_id"];
+  customers -> customers [label="parent_customer_id"];
+  customers -> customer_sources [label="source_id"];
+  customers -> customer_channels [label="channel_id"];
+  customers -> users [label="owner_user_id"];
+  customers -> users [label="agent_user_id"];
+  customers -> organizations [label="agent_id"];
+  contacts -> customers [label="customer_id"];
+  contacts -> users [label="created_by"];
+  contacts -> users [label="updated_by"];
+  visa_records -> customers [label="customer_id"];
+  orders -> customers [label="customer_id"];
+  orders -> products [label="product_id"];
+  orders -> users [label="sales_user_id"];
+  orders -> order_statuses [label="status_id"];
+  orders -> users [label="created_by"];
+  orders -> users [label="updated_by"];
+  order_assignments -> orders [label="order_id"];
+  order_assignments -> users [label="assigned_to_user_id"];
+  order_assignments -> users [label="assigned_by_user_id"];
+  order_assignments -> organizations [label="vendor_id"];
+  order_assignments -> organization_employees [label="organization_employee_id"];
+  order_assignments -> organization_employees [label="vendor_employee_id"];
+  order_stages -> orders [label="order_id"];
+  order_stages -> users [label="assigned_to_user_id"];
+  order_stages -> users [label="created_by"];
+  order_stages -> users [label="updated_by"];
+  deliverables -> orders [label="order_id"];
+  deliverables -> order_stages [label="order_stage_id"];
+  deliverables -> users [label="verified_by"];
+  deliverables -> users [label="uploaded_by"];
+  payments -> orders [label="order_id"];
+  payments -> users [label="confirmed_by"];
+  payments -> users [label="created_by"];
+  roles -> organizations [label="parent_id"];
+  roles -> users [label="verified_by"];
+  roles -> organizations [label="organization_id"];
+  roles -> users [label="user_id"];
+  roles -> roles [label="role_id"];
+  roles -> users [label="created_by"];
+  roles -> users [label="updated_by"];
+  roles -> organizations [label="vendor_id"];
+  roles -> product_categories [label="category_id"];
+  roles -> customers [label="parent_customer_id"];
+  roles -> customer_sources [label="source_id"];
+  roles -> customer_channels [label="channel_id"];
+  roles -> users [label="owner_user_id"];
+  roles -> users [label="agent_user_id"];
+  roles -> organizations [label="agent_id"];
+  roles -> customers [label="customer_id"];
+  roles -> products [label="product_id"];
+  roles -> users [label="sales_user_id"];
+  roles -> order_statuses [label="status_id"];
+  roles -> orders [label="order_id"];
+  roles -> users [label="assigned_to_user_id"];
+  roles -> users [label="assigned_by_user_id"];
+  roles -> organization_employees [label="organization_employee_id"];
+  roles -> organization_employees [label="vendor_employee_id"];
+  roles -> order_stages [label="order_stage_id"];
+  roles -> users [label="uploaded_by"];
+  roles -> users [label="confirmed_by"];
+  vendor_products -> organizations [label="organization_id"];
+  vendor_products -> products [label="product_id"];
+  vendor_products -> users [label="created_by"];
+  vendor_products -> users [label="updated_by"];
+  product_prices -> products [label="product_id"];
+  product_prices -> organizations [label="organization_id"];
+  product_prices -> users [label="approved_by"];
+  product_prices -> users [label="changed_by"];
+  product_price_history -> products [label="product_id"];
+  product_price_history -> organizations [label="organization_id"];
+  product_price_history -> users [label="changed_by"];
+  vendor_product_financials -> vendor_products [label="vendor_product_id"];
+  vendor_product_financials -> orders [label="order_id"];
+  vendor_product_financials -> payments [label="payment_id"];
+  vendor_product_financials -> users [label="approved_by"];
+  vendor_product_financials -> users [label="created_by"];
+  vendor_product_financials -> users [label="updated_by"];
+  vendor_products -> users [label="approved_by"];
+  vendor_products -> users [label="changed_by"];
+  vendor_products -> vendor_products [label="vendor_product_id"];
+  vendor_products -> orders [label="order_id"];
+  vendor_products -> payments [label="payment_id"];
+}

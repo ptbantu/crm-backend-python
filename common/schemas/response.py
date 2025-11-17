@@ -2,13 +2,26 @@
 统一响应格式
 """
 from typing import Generic, TypeVar, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 T = TypeVar('T')
 
 
 class Result(BaseModel, Generic[T]):
     """统一响应结果"""
+    model_config = ConfigDict(
+        # 确保 JSON 序列化时不转义非 ASCII 字符（如中文）
+        json_encoders={},
+        json_schema_extra={
+            "example": {
+                "code": 200,
+                "message": "操作成功",
+                "data": None,
+                "timestamp": "2025-01-01T00:00:00"
+            }
+        }
+    )
+    
     code: int = 200
     message: str = "操作成功"
     data: Optional[T] = None
