@@ -6,9 +6,27 @@
 
 **注意**：开发环境请使用 Docker Compose，参考项目根目录的 `docker-compose.dev.yml`。
 
+## 📁 目录结构
+
+```
+k8s/
+├── deployments/          # Kubernetes 部署配置文件
+│   ├── foundation-deployment.yaml
+│   ├── gateway-deployment.yaml
+│   ├── crm-ingress.yaml
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   ├── services.yaml
+│   ├── letsencrypt-issuer.yaml
+│   ├── bantu-sbs-tls-secret.yaml
+│   └── README-LETSENCRYPT.md
+│
+└── create_and_test_admin.py  # 创建管理员用户脚本
+```
+
 ## 文件说明
 
-### Kubernetes 配置文件
+### Kubernetes 配置文件（位于 deployments/ 目录）
 
 - **foundation-deployment.yaml** - Foundation Service 部署配置（支持开发模式热重载）
 - **gateway-deployment.yaml** - Gateway Service 部署配置
@@ -16,16 +34,13 @@
 - **configmap.yaml** - 应用配置（环境变量、服务 URL 等）
 - **secret.yaml** - 敏感信息（数据库密码、JWT 密钥等）
 - **crm-ingress.yaml** - Ingress 配置（外部访问，使用 traefik）
-- **bantu-sbs-tls-secret.yaml** - TLS 证书 Secret
+- **letsencrypt-issuer.yaml** - Let's Encrypt 证书配置
+- **bantu-sbs-tls-secret.yaml** - TLS 证书 Secret（备用）
+- **README-LETSENCRYPT.md** - Let's Encrypt 证书配置文档
 
-### 部署脚本
+### 工具脚本
 
-- **deploy.sh** - 一键部署所有 Kubernetes 资源
-- **build-and-push.sh** - 构建 Docker 镜像并推送到镜像仓库
-
-### 文档
-
-- **README.md** - 本文件，部署和使用说明
+- **create_and_test_admin.py** - 创建管理员用户并测试登录
 
 ## 快速开始
 

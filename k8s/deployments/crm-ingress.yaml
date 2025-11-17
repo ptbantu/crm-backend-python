@@ -74,3 +74,4 @@ spec:
         - www.bantu.sbs
       secretName: bantu-sbs-tls-cert  # cert-manager 会自动创建此 Secret
 
+
