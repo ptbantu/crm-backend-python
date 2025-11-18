@@ -7,6 +7,9 @@ from foundation_service.schemas.role import RoleCreateRequest, RoleUpdateRequest
 from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.models.role import Role
 from common.exceptions import RoleNotFoundError, BusinessException
+from common.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class RoleService:
@@ -18,7 +21,9 @@ class RoleService:
     
     async def get_role_list(self) -> List[RoleResponse]:
         """查询角色列表"""
+        logger.debug("查询角色列表")
         roles = await self.role_repo.get_all()
+        logger.debug(f"角色列表查询成功: total={len(roles)}")
         return [RoleResponse(
             id=role.id,
             code=role.code,

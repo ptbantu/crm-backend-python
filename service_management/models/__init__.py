@@ -7,6 +7,9 @@ from .vendor_product import VendorProduct
 from .product_price import ProductPrice
 from .product_price_history import ProductPriceHistory
 from .vendor_product_financial import VendorProductFinancial
+from .customer import Customer, CustomerSource, CustomerChannel
+from .contact import Contact
+from .service_record import ServiceRecord
 
 __all__ = [
     "ProductCategory",
@@ -15,5 +18,10 @@ __all__ = [
     "ProductPrice",
     "ProductPriceHistory",
     "VendorProductFinancial",
+    "Customer",
+    "CustomerSource",
+    "CustomerChannel",
+    "Contact",
+    "ServiceRecord",
 ]
 

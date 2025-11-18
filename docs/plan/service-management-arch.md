@@ -2,7 +2,7 @@
 
 ## 一、概述
 
-服务管理模块负责管理由供应商提供的各种服务（如签证服务、公司注册服务等），包括服务分类、服务信息、定价体系、供应商关联等功能。
+服务管理模块负责管理由供应商提供的各种服务（如签证服务、公司注册服务等），包括服务分类、服务信息、定价体系、供应商关联等功能。同时，服务管理模块还包含客户管理功能，包括客户信息管理、联系人管理、服务记录管理等。
 
 ## 二、业务需求分析
 
@@ -293,10 +293,35 @@ CREATE INDEX ix_price_history_effective ON product_price_history(effective_from,
    - 管理供应商服务可用性
    - 供应商服务库存/容量管理
 
+#### 4.1.4 Customer Service（客户管理服务）
+**职责：**
+- 客户信息管理
+- 联系人管理
+- 服务记录管理
+
+**主要功能模块：**
+1. **Customer Management（客户管理）**
+   - 客户创建、更新、删除、查询
+   - 支持个人客户和组织客户
+   - 支持内部客户和渠道客户
+   - 支持客户层级关系（组织下挂个人）
+
+2. **Contact Management（联系人管理）**
+   - 联系人创建、更新、删除、查询
+   - 主要联系人自动管理
+   - 联系人作为接单人员（sales）
+
+3. **Service Record Management（服务记录管理）**
+   - 服务记录创建、更新、删除、查询
+   - 服务记录状态流转
+   - 优先级管理
+   - 接单人员关联
+
 ### 4.2 推荐架构方案
 
 **方案一：单一服务（推荐初期使用）**
-- 将所有功能整合到 **Product Service** 中
+- 将所有功能整合到 **Service Management Service** 中
+- 包括：产品管理、客户管理、联系人管理、服务记录管理
 - 优点：开发简单，部署方便，减少服务间通信
 - 缺点：服务职责较多，后续拆分成本高
 
@@ -304,6 +329,7 @@ CREATE INDEX ix_price_history_effective ON product_price_history(effective_from,
 - Product Service：产品管理
 - Pricing Service：定价管理
 - Vendor Service：供应商管理
+- Customer Service：客户管理
 - 优点：职责清晰，易于扩展和维护
 - 缺点：服务间通信复杂，部署成本高
 
@@ -346,6 +372,32 @@ DELETE /api/products/{id}/vendors/{vendor_id} # 取消供应商关联
 ```
 POST   /api/products/calculate-price         # 计算价格（根据客户类型、数量等）
 GET    /api/products/{id}/price-history     # 获取价格历史
+```
+
+#### 5.1.4 客户管理 API
+
+```
+# 客户管理
+POST   /api/service-management/customers              # 创建客户
+GET    /api/service-management/customers               # 获取客户列表
+GET    /api/service-management/customers/{id}         # 获取客户详情
+PUT    /api/service-management/customers/{id}         # 更新客户
+DELETE /api/service-management/customers/{id}         # 删除客户
+
+# 联系人管理
+POST   /api/service-management/contacts                # 创建联系人
+GET    /api/service-management/contacts/{id}          # 获取联系人详情
+GET    /api/service-management/contacts/customers/{customer_id}/contacts  # 获取客户的联系人列表
+PUT    /api/service-management/contacts/{id}          # 更新联系人
+DELETE /api/service-management/contacts/{id}         # 删除联系人
+
+# 服务记录管理
+POST   /api/service-management/service-records         # 创建服务记录
+GET    /api/service-management/service-records         # 获取服务记录列表
+GET    /api/service-management/service-records/{id}    # 获取服务记录详情
+GET    /api/service-management/service-records/customers/{customer_id}/service-records  # 获取客户的服务记录列表
+PUT    /api/service-management/service-records/{id}     # 更新服务记录
+DELETE /api/service-management/service-records/{id}   # 删除服务记录
 ```
 
 ### 5.2 数据模型（Pydantic Schemas）
@@ -397,4 +449,101 @@ class ProductCreateRequest(BaseModel):
     exchange_rate: Optional[Decimal] = None
     
     # 服务属性
+```
+
+#### 5.2.3 Customer（客户）
+
+```python
+class CustomerCreateRequest(BaseModel):
+    name: str
+    code: Optional[str] = None
+    customer_type: str = "individual"  # individual/organization
+    customer_source_type: str = "own"  # own/agent
+    parent_customer_id: Optional[str] = None
+    owner_user_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    source_id: Optional[str] = None
+    channel_id: Optional[str] = None
+    level: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+class CustomerResponse(BaseModel):
+    id: str
+    name: str
+    code: Optional[str]
+    customer_type: str
+    customer_source_type: str
+    parent_customer_id: Optional[str]
+    owner_user_id: Optional[str]
+    level: Optional[str]
+    industry: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+```
+
+#### 5.2.4 Contact（联系人）
+
+```python
+class ContactCreateRequest(BaseModel):
+    customer_id: str
+    first_name: str
+    last_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    mobile: Optional[str] = None
+    position: Optional[str] = None
+    is_primary: bool = False
+    is_decision_maker: bool = False
+
+class ContactResponse(BaseModel):
+    id: str
+    customer_id: str
+    customer_name: Optional[str]
+    first_name: str
+    last_name: str
+    full_name: Optional[str]
+    email: Optional[str]
+    mobile: Optional[str]
+    position: Optional[str]
+    is_primary: bool
+    is_decision_maker: bool
+    created_at: datetime
+    updated_at: datetime
+```
+
+#### 5.2.5 ServiceRecord（服务记录）
+
+```python
+class ServiceRecordCreateRequest(BaseModel):
+    customer_id: str
+    service_type_id: Optional[str] = None
+    product_id: Optional[str] = None
+    service_name: Optional[str] = None
+    contact_id: Optional[str] = None  # 接单人员
+    sales_user_id: Optional[str] = None
+    status: str = "pending"
+    priority: str = "normal"
+    expected_start_date: Optional[date] = None
+    expected_completion_date: Optional[date] = None
+    estimated_price: Optional[Decimal] = None
+    currency_code: str = "CNY"
+
+class ServiceRecordResponse(BaseModel):
+    id: str
+    customer_id: str
+    customer_name: Optional[str]
+    service_name: Optional[str]
+    service_type_id: Optional[str]
+    product_id: Optional[str]
+    contact_id: Optional[str]
+    contact_name: Optional[str]
+    status: str
+    priority: str
+    estimated_price: Optional[Decimal]
+    final_price: Optional[Decimal]
+    created_at: datetime
+    updated_at: datetime
+```
     required_documents: Opti

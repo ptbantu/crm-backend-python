@@ -9,6 +9,9 @@ from foundation_service.schemas.organization import (
 from foundation_service.repositories.organization_repository import OrganizationRepository
 from foundation_service.models.organization import Organization
 from common.exceptions import OrganizationNotFoundError, BusinessException
+from common.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class OrganizationService:
@@ -20,10 +23,13 @@ class OrganizationService:
     
     async def create_organization(self, request: OrganizationCreateRequest) -> OrganizationResponse:
         """创建组织"""
+        logger.info(f"开始创建组织: name={request.name}, code={request.code}, type={request.organization_type}")
+        
         # 检查编码是否已存在
         if request.code:
             existing = await self.org_repo.get_by_code(request.code)
             if existing:
+                logger.warning(f"组织编码已存在: code={request.code}")
                 raise BusinessException(detail=f"组织编码 {request.code} 已存在")
         
         organization = Organization(
@@ -67,14 +73,18 @@ class OrganizationService:
         )
         
         organization = await self.org_repo.create(organization)
+        logger.info(f"组织创建成功: id={organization.id}, name={organization.name}, code={organization.code}")
         return await self._to_response(organization)
     
     async def get_organization_by_id(self, organization_id: str) -> OrganizationResponse:
         """查询组织详情"""
+        logger.debug(f"查询组织详情: organization_id={organization_id}")
         organization = await self.org_repo.get_by_id(organization_id)
         if not organization:
+            logger.warning(f"组织不存在: organization_id={organization_id}")
             raise OrganizationNotFoundError()
         
+        logger.debug(f"组织查询成功: id={organization.id}, name={organization.name}")
         return await self._to_response(organization)
     
     async def update_organization(
@@ -83,8 +93,10 @@ class OrganizationService:
         request: OrganizationUpdateRequest
     ) -> OrganizationResponse:
         """更新组织信息"""
+        logger.info(f"开始更新组织: organization_id={organization_id}")
         organization = await self.org_repo.get_by_id(organization_id)
         if not organization:
+            logger.warning(f"组织不存在: organization_id={organization_id}")
             raise OrganizationNotFoundError()
         
         # 更新字段（简化处理，实际应该逐个字段判断）
@@ -94,7 +106,9 @@ class OrganizationService:
             if request.code != organization.code:
                 existing = await self.org_repo.get_by_code(request.code)
                 if existing:
+                    logger.warning(f"组织编码已存在: code={request.code}, organization_id={organization_id}")
                     raise BusinessException(detail=f"组织编码 {request.code} 已存在")
+                logger.debug(f"更新组织编码: organization_id={organization_id}, old_code={organization.code}, new_code={request.code}")
             organization.code = request.code
         if request.is_active is not None:
             organization.is_active = request.is_active
@@ -102,17 +116,21 @@ class OrganizationService:
             organization.is_locked = request.is_locked
         
         organization = await self.org_repo.update(organization)
+        logger.info(f"组织更新成功: id={organization.id}, name={organization.name}")
         return await self._to_response(organization)
     
     async def delete_organization(self, organization_id: str) -> None:
         """Block 组织（逻辑删除）"""
+        logger.info(f"开始删除组织: organization_id={organization_id}")
         organization = await self.org_repo.get_by_id(organization_id)
         if not organization:
+            logger.warning(f"组织不存在: organization_id={organization_id}")
             raise OrganizationNotFoundError()
         
         organization.is_locked = True
         organization.is_active = False
         await self.org_repo.update(organization)
+        logger.info(f"组织删除成功: id={organization.id}, name={organization.name}")
     
     async def get_organization_list(
         self,
@@ -124,6 +142,7 @@ class OrganizationService:
         is_active: Optional[bool] = None
     ) -> dict:
         """分页查询组织列表"""
+        logger.debug(f"查询组织列表: page={page}, size={size}, name={name}, code={code}, type={organization_type}")
         organizations, total = await self.org_repo.get_list(
             page=page,
             size=size,
@@ -138,6 +157,7 @@ class OrganizationService:
         for org in organizations:
             records.append(await self._to_response(org))
         
+        logger.debug(f"组织列表查询成功: total={total}, returned={len(records)}")
         return {
             "records": records,
             "total": total,

@@ -29,8 +29,12 @@
    - [5.1 服务分类管理](#51-服务分类管理)
    - [5.2 服务类型管理](#52-服务类型管理)
    - [5.3 服务管理](#53-服务管理)
-6. [统一响应格式](#6-统一响应格式)
-7. [错误码说明](#7-错误码说明)
+6. [客户管理](#6-客户管理)
+   - [6.1 客户管理接口](#61-客户管理接口)
+   - [6.2 联系人管理接口](#62-联系人管理接口)
+   - [6.3 服务记录管理接口](#63-服务记录管理接口)
+7. [统一响应格式](#7-统一响应格式)
+8. [错误码说明](#8-错误码说明)
 
 ---
 
@@ -1326,7 +1330,602 @@ Authorization: Bearer <token>
 
 ---
 
-## 6. 统一响应格式
+## 6. 客户管理
+
+客户管理模块包含客户管理、联系人管理和服务记录管理三个子模块。
+
+---
+
+### 6.1 客户管理接口
+
+客户管理用于管理客户信息，支持个人客户和组织客户，以及内部客户和渠道客户的管理。
+
+#### 6.1.1 创建客户
+
+**接口地址**: `POST /api/service-management/customers`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "name": "测试客户",
+  "code": "CUSTOMER_001",
+  "customer_type": "individual",
+  "customer_source_type": "own",
+  "parent_customer_id": null,
+  "owner_user_id": "uuid",
+  "source_id": "uuid",
+  "channel_id": "uuid",
+  "level": "A 重点客户",
+  "industry": "IT",
+  "description": "客户描述",
+  "tags": ["VIP", "重要"],
+  "is_locked": false
+}
+```
+
+**字段说明**:
+- `customer_type`: 客户类型，`individual`（个人客户）或 `organization`（组织客户）
+- `customer_source_type`: 客户来源类型，`own`（内部客户）或 `agent`（渠道客户）
+- `parent_customer_id`: 父客户ID（用于组织下挂个人客户）
+- `owner_user_id`: 内部客户所有者ID（SALES角色用户）
+- `agent_id`: 渠道客户组织ID
+- `source_id`: 客户来源ID
+- `channel_id`: 客户渠道ID
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "客户创建成功",
+  "data": {
+    "id": "uuid",
+    "name": "测试客户",
+    "code": "CUSTOMER_001",
+    "customer_type": "individual",
+    "customer_source_type": "own",
+    "parent_customer_id": null,
+    "owner_user_id": "uuid",
+    "source_id": "uuid",
+    "channel_id": "uuid",
+    "level": "A 重点客户",
+    "industry": "IT",
+    "description": "客户描述",
+    "tags": ["VIP", "重要"],
+    "is_locked": false,
+    "created_at": "2024-11-10T05:00:00",
+    "updated_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+#### 6.1.2 获取客户详情
+
+**接口地址**: `GET /api/service-management/customers/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 客户 ID (UUID)
+
+#### 6.1.3 获取客户列表
+
+**接口地址**: `GET /api/service-management/customers`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10，最大: 100）
+- `name`: 客户名称（模糊查询）
+- `code`: 客户编码（模糊查询）
+- `customer_type`: 客户类型（individual/organization）
+- `customer_source_type`: 客户来源类型（own/agent）
+- `parent_customer_id`: 父客户ID
+- `owner_user_id`: 所有者用户ID
+- `agent_id`: 渠道组织ID
+- `source_id`: 客户来源ID
+- `channel_id`: 客户渠道ID
+- `is_locked`: 是否锁定（true/false）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "name": "测试客户",
+        "code": "CUSTOMER_001",
+        "customer_type": "individual",
+        "customer_source_type": "own",
+        "level": "A 重点客户",
+        "industry": "IT",
+        "is_locked": false,
+        "created_at": "2024-11-10T05:00:00",
+        "updated_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+#### 6.1.4 更新客户
+
+**接口地址**: `PUT /api/service-management/customers/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 客户 ID (UUID)
+
+**请求体**:
+```json
+{
+  "name": "新客户名称",
+  "level": "B 普通客户",
+  "description": "更新后的描述",
+  "tags": ["VIP", "重要", "新标签"]
+}
+```
+
+**注意**: 所有字段都是可选的，只更新提供的字段
+
+#### 6.1.5 删除客户
+
+**接口地址**: `DELETE /api/service-management/customers/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 客户 ID (UUID)
+
+**注意**: 删除客户前，系统会检查是否有服务记录或订单关联。如果有关联数据，建议先处理关联数据。
+
+---
+
+### 6.2 联系人管理接口
+
+联系人管理用于管理客户的联系人信息，联系人同时可以作为服务记录的接单人员（sales）。
+
+#### 6.2.1 创建联系人
+
+**接口地址**: `POST /api/service-management/contacts`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/contacts`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "customer_id": "uuid",
+  "first_name": "张",
+  "last_name": "三",
+  "email": "zhangsan@example.com",
+  "phone": "+86-400-000-0000",
+  "mobile": "+86-138-0000-0000",
+  "wechat_id": "zhangsan_wechat",
+  "position": "总经理",
+  "department": "销售部",
+  "contact_role": "决策人",
+  "is_primary": true,
+  "is_decision_maker": true,
+  "address": "北京市朝阳区",
+  "city": "北京",
+  "province": "北京",
+  "country": "中国",
+  "postal_code": "100000",
+  "preferred_contact_method": "mobile",
+  "is_active": true,
+  "notes": "重要联系人"
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "联系人创建成功",
+  "data": {
+    "id": "uuid",
+    "customer_id": "uuid",
+    "customer_name": "测试客户",
+    "first_name": "张",
+    "last_name": "三",
+    "full_name": "张 三",
+    "email": "zhangsan@example.com",
+    "phone": "+86-400-000-0000",
+    "mobile": "+86-138-0000-0000",
+    "position": "总经理",
+    "department": "销售部",
+    "is_primary": true,
+    "is_decision_maker": true,
+    "is_active": true,
+    "created_at": "2024-11-10T05:00:00",
+    "updated_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+**注意**: 
+- 如果设置 `is_primary = true`，系统会自动取消该客户的其他主要联系人
+- 每个客户只能有一个主要联系人
+
+#### 6.2.2 获取联系人详情
+
+**接口地址**: `GET /api/service-management/contacts/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/contacts/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 联系人 ID (UUID)
+
+#### 6.2.3 获取客户的联系人列表
+
+**接口地址**: `GET /api/service-management/contacts/customers/{customer_id}/contacts`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/contacts/customers/{customer_id}/contacts`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户 ID (UUID)
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10，最大: 100）
+- `is_primary`: 是否主要联系人（true/false）
+- `is_active`: 是否激活（true/false）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "customer_id": "uuid",
+        "customer_name": "测试客户",
+        "first_name": "张",
+        "last_name": "三",
+        "full_name": "张 三",
+        "email": "zhangsan@example.com",
+        "mobile": "+86-138-0000-0000",
+        "position": "总经理",
+        "is_primary": true,
+        "is_decision_maker": true,
+        "is_active": true,
+        "created_at": "2024-11-10T05:00:00",
+        "updated_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 5,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+#### 6.2.4 更新联系人
+
+**接口地址**: `PUT /api/service-management/contacts/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/contacts/{id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 联系人 ID (UUID)
+
+**请求体**:
+```json
+{
+  "email": "newemail@example.com",
+  "mobile": "+86-139-0000-0000",
+  "position": "副总经理",
+  "is_primary": false
+}
+```
+
+#### 6.2.5 删除联系人
+
+**接口地址**: `DELETE /api/service-management/contacts/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/contacts/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 联系人 ID (UUID)
+
+---
+
+### 6.3 服务记录管理接口
+
+服务记录用于记录客户的服务需求/意向，可以关联到具体的服务类型和产品，并指定接单人员。
+
+#### 6.3.1 创建服务记录
+
+**接口地址**: `POST /api/service-management/service-records`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-records`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "customer_id": "uuid",
+  "service_type_id": "uuid",
+  "product_id": "uuid",
+  "service_name": "印尼工作签证 B211",
+  "service_description": "客户需要办理印尼工作签证",
+  "contact_id": "uuid",
+  "sales_user_id": "uuid",
+  "referral_customer_id": "uuid",
+  "status": "pending",
+  "priority": "high",
+  "expected_start_date": "2024-12-01",
+  "expected_completion_date": "2024-12-10",
+  "deadline": "2024-12-15",
+  "estimated_price": 3000000,
+  "final_price": null,
+  "currency_code": "IDR",
+  "quantity": 1,
+  "unit": "次",
+  "requirements": "需要护照、照片、申请表",
+  "customer_requirements": "客户希望加急处理",
+  "internal_notes": "内部备注信息",
+  "customer_notes": "客户备注信息",
+  "required_documents": "护照、照片、申请表",
+  "attachments": ["file1.pdf", "file2.jpg"],
+  "next_follow_up_at": "2024-11-15T10:00:00",
+  "follow_up_notes": "需要跟进客户确认材料",
+  "tags": ["urgent", "vip"]
+}
+```
+
+**字段说明**:
+- `status`: 状态，`pending`（待处理）、`in_progress`（进行中）、`completed`（已完成）、`cancelled`（已取消）、`on_hold`（暂停）
+- `priority`: 优先级，`low`（低）、`normal`（普通）、`high`（高）、`urgent`（紧急）
+- `contact_id`: 接单人员ID（关联联系人表）
+- `referral_customer_id`: 推荐客户ID（转介绍）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "服务记录创建成功",
+  "data": {
+    "id": "uuid",
+    "customer_id": "uuid",
+    "customer_name": "测试客户",
+    "service_type_id": "uuid",
+    "service_type_name": "落地签",
+    "product_id": "uuid",
+    "product_name": "印尼工作签证 B211",
+    "service_name": "印尼工作签证 B211",
+    "contact_id": "uuid",
+    "contact_name": "张 三",
+    "status": "pending",
+    "priority": "high",
+    "estimated_price": 3000000,
+    "currency_code": "IDR",
+    "quantity": 1,
+    "created_at": "2024-11-10T05:00:00",
+    "updated_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+#### 6.3.2 获取服务记录详情
+
+**接口地址**: `GET /api/service-management/service-records/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-records/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 服务记录 ID (UUID)
+
+#### 6.3.3 获取服务记录列表
+
+**接口地址**: `GET /api/service-management/service-records`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-records`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10，最大: 100）
+- `customer_id`: 客户ID
+- `service_type_id`: 服务类型ID
+- `product_id`: 产品ID
+- `contact_id`: 接单人员ID
+- `sales_user_id`: 销售用户ID
+- `status`: 状态（pending/in_progress/completed/cancelled/on_hold）
+- `priority`: 优先级（low/normal/high/urgent）
+- `referral_customer_id`: 推荐客户ID
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "customer_id": "uuid",
+        "customer_name": "测试客户",
+        "service_name": "印尼工作签证 B211",
+        "status": "pending",
+        "priority": "high",
+        "contact_name": "张 三",
+        "estimated_price": 3000000,
+        "currency_code": "IDR",
+        "expected_completion_date": "2024-12-10",
+        "created_at": "2024-11-10T05:00:00",
+        "updated_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 50,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+**注意**: 查询结果按优先级排序（urgent > high > normal > low），然后按创建时间倒序
+
+#### 6.3.4 获取客户的服务记录列表
+
+**接口地址**: `GET /api/service-management/service-records/customers/{customer_id}/service-records`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-records/customers/{customer_id}/service-records`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户 ID (UUID)
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10，最大: 100）
+- `status`: 状态
+- `priority`: 优先级
+
+#### 6.3.5 更新服务记录
+
+**接口地址**: `PUT /api/service-management/service-records/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-records/{id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 服务记录 ID (UUID)
+
+**请求体**:
+```json
+{
+  "status": "in_progress",
+  "actual_start_date": "2024-12-01",
+  "final_price": 3000000,
+  "internal_notes": "已开始处理",
+  "last_follow_up_at": "2024-11-15T10:00:00"
+}
+```
+
+#### 6.3.6 删除服务记录
+
+**接口地址**: `DELETE /api/service-management/service-records/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-records/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 服务记录 ID (UUID)
+
+**注意**: 删除服务记录前，系统会检查是否有订单关联。如果有订单关联，建议先处理订单。
+
+---
+
+## 7. 统一响应格式
 
 所有 API 响应都遵循以下格式：
 
@@ -1347,7 +1946,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 7. 错误码说明
+## 8. 错误码说明
 
 | 错误码 | 说明 |
 |--------|------|
@@ -1365,7 +1964,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 8. 认证说明
+## 9. 认证说明
 
 ### 8.1 获取 Token
 
@@ -1390,7 +1989,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 9. 快速开始
+## 10. 快速开始
 
 ### 9.1 生产环境测试
 
@@ -1427,7 +2026,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 10. API 端点汇总表
+## 11. API 端点汇总表
 
 | 方法 | 路径 | 说明 | 需要认证 |
 |------|------|------|----------|
@@ -1474,7 +2073,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 11. 注意事项
+## 12. 注意事项
 
 1. **生产环境**: 使用 `https://www.bantu.sbs` (推荐)
 2. **直接访问 Foundation**: 可以通过 `https://www.bantu.sbs/api/foundation/*` 直接访问 Foundation Service，无需 Gateway 认证
@@ -1486,7 +2085,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 12. 联系与支持
+## 13. 联系与支持
 
 如有问题，请联系开发团队。
 

@@ -23,6 +23,16 @@ passlib[bcrypt]==1.7.4
 # HTTP 客户端（服务间调用）
 httpx==0.25.1
 
+# Redis 客户端（异步支持）
+redis[hiredis]==5.0.1
+
+# MongoDB 客户端（异步驱动）
+motor==3.3.2
+pymongo==4.6.1  # motor 3.3.2 兼容的 pymongo 版本
+
+# MinIO 对象存储客户端（S3 兼容）
+minio==7.2.0
+
 # 环境变量
 python-dotenv==1.0.0
 
@@ -31,6 +41,18 @@ loguru==0.7.2
 
 # 工具
 python-multipart==0.0.6  # 文件上传支持
+
+# 邮件发送
+aiosmtplib==3.0.1  # 异步 SMTP 客户端
+
+# WeChaty 微信机器人（暂时注释，等需要时再启用）
+# wechaty==0.10.7  # 微信机器人框架
+# pyee==11.1.0  # wechaty 0.10.7 兼容的 pyee 版本（AsyncIOEventEmitter 支持）
+# urllib3==1.26.18  # wechaty 0.10.7 兼容的 urllib3 版本（get_host 支持）
+# 注意：wechaty 存在版本兼容性问题，需要时再调整
+
+# WhatsApp（使用 httpx，已包含）
+# WhatsApp Business API 通过 httpx 调用
 
 # 开发工具
 pytest==7.4.3

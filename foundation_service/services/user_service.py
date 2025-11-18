@@ -18,6 +18,9 @@ from common.exceptions import (
     UserNotFoundError, OrganizationNotFoundError, OrganizationInactiveError, 
     BusinessException
 )
+from common.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class UserService:
@@ -31,19 +34,24 @@ class UserService:
     
     async def create_user(self, request: UserCreateRequest) -> UserResponse:
         """创建用户"""
+        logger.info(f"开始创建用户: username={request.username}, email={request.email}, organization_id={request.organization_id}")
+        
         # 验证组织是否存在
         organization = await self.org_repo.get_by_id(request.organization_id)
         if not organization:
+            logger.warning(f"组织不存在: organization_id={request.organization_id}")
             raise OrganizationNotFoundError()
         
         # 检查组织是否激活
         if not organization.is_active:
+            logger.warning(f"组织未激活: organization_id={request.organization_id}, name={organization.name}")
             raise OrganizationInactiveError()
         
         # 检查邮箱是否已存在
         if request.email:
             existing = await self.user_repo.get_by_email(request.email)
             if existing:
+                logger.warning(f"邮箱已存在: email={request.email}")
                 raise BusinessException(detail="邮箱已存在")
         
         # 创建用户
@@ -67,6 +75,7 @@ class UserService:
         
         # 自动创建组织员工记录
         if request.auto_create_employee:
+            logger.debug(f"自动创建组织员工记录: user_id={user.id}, organization_id={request.organization_id}")
             employee = OrganizationEmployee(
                 user_id=user.id,
                 organization_id=request.organization_id,
@@ -77,19 +86,24 @@ class UserService:
         
         # 分配角色
         if request.role_ids:
+            logger.debug(f"分配角色: user_id={user.id}, role_ids={request.role_ids}")
             for role_id in request.role_ids:
                 user_role = UserRole(user_id=user.id, role_id=role_id)
                 self.db.add(user_role)
             await self.db.flush()
         
+        logger.info(f"用户创建成功: id={user.id}, username={user.username}, email={user.email}")
         return await self._to_response(user)
     
     async def get_user_by_id(self, user_id: str) -> UserResponse:
         """查询用户详情"""
+        logger.debug(f"查询用户详情: user_id={user_id}")
         user = await self.user_repo.get_by_id(user_id)
         if not user:
+            logger.warning(f"用户不存在: user_id={user_id}")
             raise UserNotFoundError()
         
+        logger.debug(f"用户查询成功: id={user.id}, username={user.username}")
         return await self._to_response(user)
     
     async def get_user_list(
@@ -100,6 +114,7 @@ class UserService:
         organization_id: Optional[str] = None
     ) -> UserListResponse:
         """分页查询用户列表"""
+        logger.debug(f"查询用户列表: page={page}, size={size}, email={email}, organization_id={organization_id}")
         users, total = await self.user_repo.get_list(
             page=page,
             size=size,
@@ -109,6 +124,7 @@ class UserService:
         
         records = [await self._to_response(user) for user in users]
         
+        logger.debug(f"用户列表查询成功: total={total}, returned={len(records)}")
         return UserListResponse(
             records=records,
             total=total,
@@ -119,8 +135,10 @@ class UserService:
     
     async def update_user(self, user_id: str, request: UserUpdateRequest) -> UserResponse:
         """更新用户信息"""
+        logger.info(f"开始更新用户: user_id={user_id}")
         user = await self.user_repo.get_by_id(user_id)
         if not user:
+            logger.warning(f"用户不存在: user_id={user_id}")
             raise UserNotFoundError()
         
         # 更新字段
@@ -128,7 +146,9 @@ class UserService:
             if request.email != user.email:
                 existing = await self.user_repo.get_by_email(request.email)
                 if existing:
+                    logger.warning(f"邮箱已存在: email={request.email}, user_id={user_id}")
                     raise BusinessException(detail="邮箱已存在")
+                logger.debug(f"更新邮箱: user_id={user_id}, old_email={user.email}, new_email={request.email}")
             user.email = request.email
         
         if request.phone is not None:
@@ -154,6 +174,7 @@ class UserService:
         
         # 更新角色
         if request.role_ids is not None:
+            logger.debug(f"更新用户角色: user_id={user_id}, role_ids={request.role_ids}")
             # 删除旧角色
             await self.db.execute(
                 delete(UserRole).where(UserRole.user_id == user_id)
@@ -164,16 +185,20 @@ class UserService:
                 self.db.add(user_role)
         
         user = await self.user_repo.update(user)
+        logger.info(f"用户更新成功: id={user.id}, username={user.username}")
         return await self._to_response(user)
     
     async def delete_user(self, user_id: str) -> None:
         """Block 用户（逻辑删除）"""
+        logger.info(f"开始删除用户: user_id={user_id}")
         user = await self.user_repo.get_by_id(user_id)
         if not user:
+            logger.warning(f"用户不存在: user_id={user_id}")
             raise UserNotFoundError()
         
         user.is_active = False
         await self.user_repo.update(user)
+        logger.info(f"用户删除成功: id={user.id}, username={user.username}")
     
     async def _to_response(self, user: User) -> UserResponse:
         """转换为响应对象"""

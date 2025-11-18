@@ -13,6 +13,26 @@ from .product import (
     ProductResponse,
     ProductListResponse,
 )
+from .customer import (
+    CustomerCreateRequest,
+    CustomerUpdateRequest,
+    CustomerResponse,
+    CustomerListResponse,
+    CustomerSourceResponse,
+    CustomerChannelResponse,
+)
+from .contact import (
+    ContactCreateRequest,
+    ContactUpdateRequest,
+    ContactResponse,
+    ContactListResponse,
+)
+from .service_record import (
+    ServiceRecordCreateRequest,
+    ServiceRecordUpdateRequest,
+    ServiceRecordResponse,
+    ServiceRecordListResponse,
+)
 
 __all__ = [
     "ProductCategoryCreateRequest",
@@ -23,5 +43,19 @@ __all__ = [
     "ProductUpdateRequest",
     "ProductResponse",
     "ProductListResponse",
+    "CustomerCreateRequest",
+    "CustomerUpdateRequest",
+    "CustomerResponse",
+    "CustomerListResponse",
+    "CustomerSourceResponse",
+    "CustomerChannelResponse",
+    "ContactCreateRequest",
+    "ContactUpdateRequest",
+    "ContactResponse",
+    "ContactListResponse",
+    "ServiceRecordCreateRequest",
+    "ServiceRecordUpdateRequest",
+    "ServiceRecordResponse",
+    "ServiceRecordListResponse",
 ]
 
