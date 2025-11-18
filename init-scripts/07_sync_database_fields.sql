@@ -1,15 +1,15 @@
 -- ============================================================
 -- 同步数据库字段脚本
 -- ============================================================
--- 确保 products 表包含所有新增字段
+-- 确保所有表包含所有新增字段和表结构
 -- 
 -- 执行顺序：
 -- 1. 先执行 01_schema_unified.sql 创建基础表
--- 2. 执行本文件同步所有字段
--- 3. 执行 06_products_seed_data.sql 导入数据
+-- 2. 执行本文件同步所有字段和创建扩展表
+-- 3. 执行 02_all_seed_data.sql 导入种子数据
 -- ============================================================
 
-SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
 -- ============================================================
 -- 1. 扩展产品分类表 (product_categories)
@@ -122,7 +122,78 @@ SET price_list_cny = price_list_idr / exchange_rate
 WHERE price_list_idr IS NOT NULL AND price_list_cny IS NULL AND exchange_rate > 0;
 
 -- ============================================================
--- 3. 验证字段同步
+-- 3. 创建服务类型表 (service_types)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS service_types (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    code VARCHAR(50) NOT NULL UNIQUE COMMENT '类型代码',
+    name VARCHAR(255) NOT NULL COMMENT '类型名称（中文）',
+    name_en VARCHAR(255) COMMENT '类型名称（英文）',
+    description TEXT COMMENT '类型描述',
+    display_order INT DEFAULT 0 COMMENT '显示顺序',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否激活',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_service_types_code (code),
+    INDEX idx_service_types_active (is_active),
+    INDEX idx_service_types_display_order (display_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+COMMENT='服务类型表';
+
+-- 在 products 表中添加 service_type_id 字段
+ALTER TABLE products
+ADD COLUMN IF NOT EXISTS service_type_id CHAR(36) COMMENT '服务类型ID';
+
+-- 添加索引
+CREATE INDEX IF NOT EXISTS idx_products_service_type_id ON products(service_type_id);
+
+-- 添加外键约束（如果不存在）
+-- 注意：使用存储过程处理可能已存在的约束
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS add_products_service_type_fk$$
+CREATE PROCEDURE add_products_service_type_fk()
+BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    -- 如果约束不存在，忽略错误
+  END;
+  
+  -- 尝试删除已存在的约束
+  ALTER TABLE products 
+  DROP FOREIGN KEY fk_products_service_type;
+END$$
+
+CALL add_products_service_type_fk()$$
+DROP PROCEDURE IF EXISTS add_products_service_type_fk$$
+
+DELIMITER ;
+
+-- 添加外键约束（使用存储过程处理可能已存在的约束）
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS add_fk_products_service_type$$
+CREATE PROCEDURE add_fk_products_service_type()
+BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    -- 如果约束已存在，忽略错误
+  END;
+  
+  ALTER TABLE products
+  ADD CONSTRAINT fk_products_service_type
+      FOREIGN KEY (service_type_id) REFERENCES service_types(id)
+      ON DELETE SET NULL;
+END$$
+
+CALL add_fk_products_service_type()$$
+DROP PROCEDURE IF EXISTS add_fk_products_service_type$$
+
+DELIMITER ;
+
+-- ============================================================
+-- 4. 验证字段同步
 -- ============================================================
 
 -- 检查字段是否存在

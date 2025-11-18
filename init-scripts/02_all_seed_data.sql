@@ -1,16 +1,406 @@
 -- ============================================================
--- 产品/服务种子数据 (Products Seed Data)
+-- BANTU CRM 完整种子数据 (All Seed Data)
 -- ============================================================
--- 从 Products.xlsx 导入的产品数据
+-- 用于初始化系统的所有基础数据
 -- 
 -- 执行顺序：
--- 1. 先执行 01_schema_unified.sql 创建表结构
--- 2. 执行 05_product_service_enhancement.sql 添加扩展字段（或使用 07_sync_database_fields.sql）
--- 3. 执行 06_product_categories_seed_data.sql 创建产品分类
--- 4. 再执行本文件导入产品数据
+-- 1. 先执行 01_schema_unified.sql 创建基础表结构
+-- 2. 执行 07_sync_database_fields.sql 同步所有字段和创建扩展表
+-- 3. 执行本文件导入所有种子数据
+-- 
+-- 本文件包含：
+-- 1. 预设角色（ADMIN, SALES, FINANCE, OPERATION, AGENT）
+-- 2. BANTU 根组织
+-- 3. 管理员用户（admin@bantu.sbs）
+-- 4. 产品分类数据（5个分类）
+-- 5. 服务类型数据（10个类型）
+-- 6. 产品/服务数据（51个产品）
+-- 
+-- Usage: mysql -u user -p database < 02_all_seed_data.sql
 -- ============================================================
 
+-- ============================================================
+-- 1. 创建预设角色
+-- ============================================================
+-- 预设系统角色，使用固定 UUID 确保可重复执行
+-- 注意：如果角色已存在，会更新名称和描述为中文版本
+
+-- 使用 INSERT ... ON DUPLICATE KEY UPDATE 确保角色存在且使用中文名称
+-- 注意：如果 schema_unified.sql 已创建角色（使用随机 UUID），这里会更新名称和描述
+-- 但 ID 会保持为 schema_unified.sql 创建的 UUID（避免影响外键关系）
+
+-- 确保使用 UTF-8 字符集
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+INSERT INTO roles (id, code, name, description, created_at, updated_at)
+VALUES 
+    -- 管理员角色
+    ('00000000-0000-0000-0000-000000000101', 'ADMIN', '管理员', '系统管理员，拥有所有权限', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    -- 销售角色
+    ('00000000-0000-0000-0000-000000000102', 'SALES', '销售', '内部销售代表，负责客户开发和订单管理', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    -- 财务角色
+    ('00000000-0000-0000-0000-000000000103', 'FINANCE', '财务', '财务人员，负责应收应付和财务报表', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    -- 做单人员角色（订单处理人员）
+    ('00000000-0000-0000-0000-000000000104', 'OPERATION', '做单人员', '订单处理人员，负责订单处理和跟进', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    -- 渠道代理角色（可选）
+    ('00000000-0000-0000-0000-000000000105', 'AGENT', '渠道代理', '外部渠道代理销售', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+    -- 基于 code 的唯一约束，如果角色已存在，更新名称和描述为中文版本
+    -- 注意：ID 不会更新（保持 schema_unified.sql 创建的 UUID，避免影响外键关系）
+    name = VALUES(name),
+    description = VALUES(description),
+    updated_at = CURRENT_TIMESTAMP;
+
+-- ============================================================
+-- 2. 创建 BANTU 根组织
+-- ============================================================
+-- 这是系统的根组织，所有用户创建都需要依赖此组织
+-- 注意：使用 INSERT IGNORE 避免重复插入
+
+INSERT IGNORE INTO organizations (
+    id,
+    name,
+    code,
+    organization_type,
+    parent_id,
+    
+    -- 基本信息
+    email,
+    phone,
+    website,
+    logo_url,
+    description,
+    
+    -- 地址信息
+    street,
+    city,
+    state_province,
+    postal_code,
+    country_region,
+    country,
+    country_code,
+    
+    -- 公司属性
+    company_size,
+    company_nature,
+    company_type,
+    industry,
+    industry_code,
+    sub_industry,
+    business_scope,
+    
+    -- 工商信息
+    registration_number,
+    tax_id,
+    legal_representative,
+    established_date,
+    registered_capital,
+    registered_capital_currency,
+    company_status,
+    
+    -- 财务信息
+    annual_revenue,
+    annual_revenue_currency,
+    employee_count,
+    revenue_year,
+    
+    -- 认证信息
+    certifications,
+    business_license_url,
+    tax_certificate_url,
+    is_verified,
+    verified_at,
+    verified_by,
+    
+    -- 状态字段
+    is_active,
+    is_locked,
+    
+    -- 时间字段（使用默认值）
+    created_at,
+    updated_at
+) VALUES (
+    -- 使用固定 UUID，确保可重复执行
+    '00000000-0000-0000-0000-000000000001',
+    
+    -- 基本信息
+    'BANTU Enterprise Services',
+    'BANTU',
+    'internal',  -- 内部组织
+    NULL,        -- 根组织，无父组织
+    
+    -- 联系方式
+    'info@bantu.sbs',
+    '+86-400-000-0000',
+    'https://www.bantu.sbs',
+    'https://www.bantu.sbs/logo.png',
+    'BANTU Enterprise Services - 企业级 CRM 系统提供商',
+    
+    -- 地址信息（示例）
+    '示例街道地址',
+    '北京',
+    '北京市',
+    '100000',
+    '中国',
+    '中国',
+    'CN',
+    
+    -- 公司属性
+    'medium',           -- 公司规模：medium
+    'private',          -- 公司性质：private（私营）
+    'limited',          -- 公司类型：limited（有限责任公司）
+    '信息技术',         -- 行业领域
+    'I65',              -- 行业代码（GB/T 4754-2017: 软件和信息技术服务业）
+    '软件开发',         -- 细分行业
+    '企业级 CRM 系统开发、销售和服务',
+    
+    -- 工商信息（示例，实际使用时需要替换为真实信息）
+    '91110000MA00000001',  -- 统一社会信用代码（示例）
+    '91110000MA00000001',  -- 税号（示例）
+    '法定代表人',          -- 法定代表人（示例）
+    '2020-01-01',          -- 成立日期（示例）
+    1000000.00,            -- 注册资本：100万元
+    'CNY',                 -- 注册资本币种
+    'normal',              -- 公司状态：正常
+    
+    -- 财务信息（示例）
+    5000000.00,            -- 年营业额：500万元
+    'CNY',                 -- 营业额币种
+    50,                    -- 员工数量
+    2024,                  -- 营业额年份
+    
+    -- 认证信息
+    CAST('["ISO9001"]' AS JSON), -- 认证信息（示例，JSON 数组格式）
+    NULL,                  -- 营业执照URL（待上传）
+    NULL,                  -- 税务登记证URL（待上传）
+    FALSE,                 -- 是否已认证（待认证）
+    NULL,                  -- 认证时间
+    NULL,                  -- 认证人
+    
+    -- 状态字段
+    TRUE,                  -- 激活状态
+    FALSE,                 -- 锁定状态
+    
+    -- 时间字段（使用当前时间）
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 3. 验证数据插入
+-- ============================================================
+
+-- 检查角色是否创建成功
+SELECT 
+    id,
+    code,
+    name,
+    description,
+    created_at
+FROM roles 
+WHERE code IN ('ADMIN', 'SALES', 'FINANCE', 'OPERATION', 'AGENT')
+ORDER BY code;
+
+-- 检查组织是否创建成功
+SELECT 
+    id,
+    name,
+    code,
+    organization_type,
+    is_active,
+    is_locked,
+    created_at
+FROM organizations 
+WHERE code = 'BANTU';
+
+-- ============================================================
+-- 说明
+-- ============================================================
+-- 1. 预设角色：
+--    - ADMIN: 管理员（系统管理员，拥有所有权限）
+--    - SALES: 销售（内部销售代表）
+--    - FINANCE: 财务（财务人员，负责应收应付和财务报表）
+--    - OPERATION: 做单人员（订单处理人员，负责订单处理和跟进）
+--    - AGENT: 渠道代理（外部渠道代理销售）
+-- 
+-- 2. BANTU 组织：
+--    - 此组织作为系统的根组织，所有用户创建时都需要指定此组织
+--    - 组织 ID 使用固定 UUID，确保可重复执行而不会创建重复数据
+--    - 部分字段（如工商信息、财务信息）为示例数据，实际使用时需要替换为真实数据
+--    - 认证信息（is_verified）默认为 FALSE，需要管理员手动认证
+--    - 如需修改组织信息，请使用 UPDATE 语句，不要删除此记录
+-- 
+-- 3. 角色和组织的 ID 都使用固定 UUID，确保可重复执行而不会创建重复数据
+-- 4. 如果角色已存在（通过 code 唯一约束），会更新名称和描述为中文版本
+
+
+-- ============================================================
+-- 4. 创建管理员用户
+-- ============================================================
+SET @bantu_org_id = (SELECT id FROM organizations WHERE code = 'BANTU' LIMIT 1);
+
+-- 获取 ADMIN 角色 ID
+SET @admin_role_id = (SELECT id FROM roles WHERE code = 'ADMIN' LIMIT 1);
+
+-- 检查是否已存在管理员用户
+SET @admin_user_exists = (SELECT COUNT(*) FROM users WHERE email = 'admin@bantu.sbs');
+
+-- 如果 BANTU 组织或 ADMIN 角色不存在，输出错误信息
+SELECT 
+    CASE 
+        WHEN @bantu_org_id IS NULL THEN '错误: BANTU 组织不存在，请先执行 02_seed_data.sql'
+        WHEN @admin_role_id IS NULL THEN '错误: ADMIN 角色不存在，请先执行 02_seed_data.sql'
+        ELSE '准备创建管理员用户...'
+    END AS status;
+
+-- 创建管理员用户
+-- 密码: Admin@123456
+-- bcrypt 哈希值: $2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyY5GyY5GyY5G
+-- 注意: 这是示例哈希值，实际使用时需要使用 Python 生成正确的 bcrypt 哈希
+INSERT IGNORE INTO users (
+    id,
+    username,
+    email,
+    password_hash,
+    full_name,
+    phone,
+    is_active,
+    created_at,
+    updated_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000100',  -- 固定 UUID
+    'admin',
+    'admin@bantu.sbs',
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyY5GyY5GyY5G',  -- 临时哈希，需要替换
+    '系统管理员',
+    NULL,
+    TRUE,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+
+-- 创建组织员工记录（关联到 BANTU 组织）
+INSERT IGNORE INTO organization_employees (
+    id,
+    user_id,
+    organization_id,
+    is_primary,
+    is_active,
+    created_at,
+    updated_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000200',  -- 固定 UUID
+    '00000000-0000-0000-0000-000000000100',  -- admin 用户 ID
+    @bantu_org_id,
+    TRUE,  -- 主要组织
+    TRUE,  -- 激活状态
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+
+-- 分配 ADMIN 角色
+INSERT IGNORE INTO user_roles (
+    id,
+    user_id,
+    role_id,
+    created_at,
+    updated_at
+) VALUES (
+    '00000000-0000-0000-0000-000000000300',  -- 固定 UUID
+    '00000000-0000-0000-0000-000000000100',  -- admin 用户 ID
+    @admin_role_id,  -- ADMIN 角色 ID
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+);
+
+-- 验证数据
+SELECT 
+    u.id,
+    u.username,
+    u.email,
+    u.full_name,
+    u.is_active,
+    o.name AS organization_name,
+    r.code AS role_code,
+    r.name AS role_name
+FROM users u
+LEFT JOIN organization_employees oe ON u.id = oe.user_id AND oe.is_primary = TRUE
+LEFT JOIN organizations o ON oe.organization_id = o.id
+LEFT JOIN user_roles ur ON u.id = ur.user_id
+LEFT JOIN roles r ON ur.role_id = r.id
+WHERE u.email = 'admin@bantu.sbs';
+
+-- ============================================================
+-- 说明
+-- ============================================================
+-- 1. 默认管理员账号:
+--    - 邮箱: admin@bantu.sbs
+--    - 用户名: admin
+--    - 密码: Admin@123456 (需要替换为正确的 bcrypt 哈希)
+-- 
+-- 2. 重要提示:
+--    - 此脚本中的密码哈希是示例值，实际使用时需要使用 Python 生成正确的 bcrypt 哈希
+--    - 生成密码哈希的方法:
+--      ```python
+--      from foundation_service.utils.password import hash_password
+--      print(hash_password("Admin@123456"))
+--      ```
+--    - 或者使用 Python 脚本生成:
+--      ```python
+--      import bcrypt
+--      password = "Admin@123456"
+--      salt = bcrypt.gensalt()
+--      hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+--      print(hashed.decode('utf-8'))
+--      ```
+-- 
+-- 3. 执行顺序:
+--    - 必须先执行 01_schema_unified.sql
+--    - 然后执行 02_seed_data.sql (创建 BANTU 组织和 ADMIN 角色)
+--    - 最后执行本脚本 (创建管理员用户)
+-- 
+-- 4. 如果用户已存在，使用 INSERT IGNORE 不会重复插入
+
+
+-- ============================================================
+-- 5. 产品分类种子数据
+-- ============================================================
+INSERT INTO product_categories (id, code, name, created_at, updated_at)
+VALUES
+    ('93c369b2-9487-4213-9cdc-63770b020912', 'VisaService', '签证服务', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('55869370-2806-4756-8c58-d27a10b75359', 'CompanyService', '公司开办服务', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('177a4cd6-7084-49e2-91aa-ca7a979e7ec8', 'LicenseService', '资质注册服务', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('6c0cf973-9af3-4b7c-a25d-02c0f0dc9b8e', 'TaxService', '税务服务', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('6b1b89d4-b3bb-4544-be5c-417d25e04184', 'Jemput&AntarService', '接送关服务', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    updated_at = CURRENT_TIMESTAMP;
+
+-- ============================================================
+-- 6. 服务类型种子数据
+-- ============================================================
+INSERT INTO service_types (id, code, name, name_en, description, display_order, is_active)
+VALUES
+    ('ead5858b-2352-41fa-8560-cc9e36cf7e24', 'LANDING_VISA', '落地签', 'Landing Visa', '落地签证服务，包括B1签证及其续签服务', 1, TRUE),
+    ('c17e105b-b754-4f65-a640-146c6b04d34e', 'BUSINESS_VISA', '商务签', 'Business Visa', '商务签证服务，包括C211、C212等商务签证', 2, TRUE),
+    ('d7647049-5c43-488e-b695-da58367d6b62', 'WORK_VISA', '工作签', 'Work Visa', '工作签证服务，包括C312工作签证', 3, TRUE),
+    ('87135a85-effa-436d-8855-84acfb6d6366', 'FAMILY_VISA', '家属签', 'Family Visa', '家属陪同签证服务，包括C317家属签证', 4, TRUE),
+    ('a626d72e-5512-45a4-914c-337598961fc3', 'COMPANY_REGISTRATION', '公司注册', 'Company Registration', '公司注册服务，包括PMA、PMDN等公司注册', 5, TRUE),
+    ('de0c9cfe-91ac-4dfb-8f6f-752b8ae64cd8', 'LICENSE', '许可证', 'License', '各类许可证服务，包括PSE、API等许可证', 6, TRUE),
+    ('9484e999-1cfc-44a1-a524-65f29baef5ca', 'TAX_SERVICE', '税务服务', 'Tax Service', '税务相关服务，包括报税、税务申报等', 7, TRUE),
+    ('4d4701fd-8a2b-47e3-99dd-4a6658dddfcc', 'DRIVING_LICENSE', '驾照', 'Driving License', '驾照办理服务', 8, TRUE),
+    ('7318d96a-e18b-421f-9669-98cceb821e52', 'PICKUP_SERVICE', '接送服务', 'Pickup Service', '机场接送关服务', 9, TRUE),
+    ('f337fa92-1858-4c8f-8027-89ffd16dc02e', 'OTHER', '其他', 'Other', '其他类型服务', 10, TRUE)
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name),
+    name_en = VALUES(name_en),
+    description = VALUES(description),
+    display_order = VALUES(display_order),
+    updated_at = CURRENT_TIMESTAMP;
+
+-- ============================================================
+-- 7. 产品/服务种子数据
+-- ============================================================
 
 -- ============================================================
 -- 插入产品数据

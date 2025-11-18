@@ -66,7 +66,7 @@ async def delete_category(
 @router.get("", response_model=Result[ProductCategoryListResponse])
 async def get_category_list(
     page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
+    size: int = Query(10, ge=1, le=1000),
     code: Optional[str] = None,
     name: Optional[str] = None,
     parent_id: Optional[str] = None,

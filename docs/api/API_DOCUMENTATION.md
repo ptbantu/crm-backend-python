@@ -25,10 +25,12 @@
 2. [用户管理接口](#2-用户管理接口)
 3. [组织管理接口](#3-组织管理接口)
 4. [角色管理接口](#4-角色管理接口)
-5. [产品分类管理接口](#5-产品分类管理接口)
-6. [产品/服务管理接口](#6-产品服务管理接口)
-7. [统一响应格式](#7-统一响应格式)
-8. [错误码说明](#8-错误码说明)
+5. [服务列表](#5-服务列表)
+   - [5.1 服务分类管理](#51-服务分类管理)
+   - [5.2 服务类型管理](#52-服务类型管理)
+   - [5.3 服务管理](#53-服务管理)
+6. [统一响应格式](#6-统一响应格式)
+7. [错误码说明](#7-错误码说明)
 
 ---
 
@@ -588,9 +590,17 @@ Authorization: Bearer <token>
 
 ---
 
-## 5. 产品分类管理接口
+## 5. 服务列表
 
-### 5.1 创建产品分类
+服务列表模块包含服务分类管理、服务类型管理和服务管理三个子模块。
+
+---
+
+### 5.1 服务分类管理
+
+服务分类用于对服务进行层级分类管理，支持多级分类结构。
+
+#### 5.1.1 创建服务分类
 
 **接口地址**: `POST /api/service-management/categories`
 
@@ -619,7 +629,7 @@ Authorization: Bearer <token>
 ```json
 {
   "code": 200,
-  "message": "产品分类创建成功",
+  "message": "服务分类创建成功",
   "data": {
     "id": "uuid",
     "code": "VISA_SERVICE",
@@ -635,7 +645,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 5.2 获取产品分类详情
+#### 5.1.2 获取服务分类详情
 
 **接口地址**: `GET /api/service-management/categories/{id}`
 
@@ -650,7 +660,27 @@ Authorization: Bearer <token>
 **路径参数**:
 - `id`: 分类 ID (UUID)
 
-### 5.3 获取产品分类列表
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": "uuid",
+    "code": "VISA_SERVICE",
+    "name": "签证服务",
+    "description": "各类签证办理服务",
+    "parent_id": null,
+    "parent_name": null,
+    "display_order": 1,
+    "is_active": true,
+    "created_at": "2024-11-10T05:00:00",
+    "updated_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+#### 5.1.3 获取服务分类列表
 
 **接口地址**: `GET /api/service-management/categories`
 
@@ -664,7 +694,7 @@ Authorization: Bearer <token>
 
 **查询参数**:
 - `page`: 页码（默认: 1）
-- `size`: 每页大小（默认: 10）
+- `size`: 每页大小（默认: 10，最大: 1000）
 - `code`: 分类编码（模糊查询）
 - `name`: 分类名称（模糊查询）
 - `parent_id`: 父分类ID（精确查询，空字符串表示查询顶级分类）
@@ -697,7 +727,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 5.4 更新产品分类
+#### 5.1.4 更新服务分类
 
 **接口地址**: `PUT /api/service-management/categories/{id}`
 
@@ -723,7 +753,24 @@ Authorization: Bearer <token>
 }
 ```
 
-### 5.5 删除产品分类
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "服务分类更新成功",
+  "data": {
+    "id": "uuid",
+    "code": "VISA_SERVICE",
+    "name": "新分类名称",
+    "description": "新描述",
+    "display_order": 2,
+    "is_active": true,
+    "updated_at": "2024-11-10T06:00:00"
+  }
+}
+```
+
+#### 5.1.5 删除服务分类
 
 **接口地址**: `DELETE /api/service-management/categories/{id}`
 
@@ -738,11 +785,270 @@ Authorization: Bearer <token>
 **路径参数**:
 - `id`: 分类 ID (UUID)
 
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "服务分类删除成功",
+  "data": null
+}
+```
+
+**注意**: 删除服务分类前，系统会检查是否有服务使用此分类。如果有服务关联，建议先更新服务或设置为非激活状态。
+
 ---
 
-## 6. 产品/服务管理接口
+### 5.2 服务类型管理
 
-### 6.1 创建产品/服务
+服务类型用于定义服务的具体类型，如落地签、商务签等。
+
+#### 5.2.1 创建服务类型
+
+**接口地址**: `POST /api/service-management/service-types`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-types`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "code": "LANDING_VISA",
+  "name": "落地签",
+  "name_en": "Landing Visa",
+  "description": "落地签证服务，包括B1签证及其续签服务",
+  "display_order": 1,
+  "is_active": true
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "服务类型创建成功",
+  "data": {
+    "id": "ead5858b-2352-41fa-8560-cc9e36cf7e24",
+    "code": "LANDING_VISA",
+    "name": "落地签",
+    "name_en": "Landing Visa",
+    "description": "落地签证服务，包括B1签证及其续签服务",
+    "display_order": 1,
+    "is_active": true,
+    "created_at": "2024-11-18T06:00:00",
+    "updated_at": "2024-11-18T06:00:00"
+  }
+}
+```
+
+#### 5.2.2 获取服务类型详情
+
+**接口地址**: `GET /api/service-management/service-types/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-types/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 服务类型 ID (UUID)
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": "ead5858b-2352-41fa-8560-cc9e36cf7e24",
+    "code": "LANDING_VISA",
+    "name": "落地签",
+    "name_en": "Landing Visa",
+    "description": "落地签证服务，包括B1签证及其续签服务",
+    "display_order": 1,
+    "is_active": true,
+    "created_at": "2024-11-18T06:00:00",
+    "updated_at": "2024-11-18T06:00:00"
+  }
+}
+```
+
+#### 5.2.3 根据代码查询服务类型
+
+**接口地址**: `GET /api/service-management/service-types/code/{code}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-types/code/{code}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `code`: 服务类型代码（如：LANDING_VISA）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": "ead5858b-2352-41fa-8560-cc9e36cf7e24",
+    "code": "LANDING_VISA",
+    "name": "落地签",
+    "name_en": "Landing Visa",
+    "description": "落地签证服务，包括B1签证及其续签服务",
+    "display_order": 1,
+    "is_active": true,
+    "created_at": "2024-11-18T06:00:00",
+    "updated_at": "2024-11-18T06:00:00"
+  }
+}
+```
+
+#### 5.2.4 获取服务类型列表
+
+**接口地址**: `GET /api/service-management/service-types`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-types`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10，最大: 1000）
+- `code`: 类型代码（模糊查询）
+- `name`: 类型名称（模糊查询，支持中文和英文）
+- `is_active`: 是否激活（true/false）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "ead5858b-2352-41fa-8560-cc9e36cf7e24",
+        "code": "LANDING_VISA",
+        "name": "落地签",
+        "name_en": "Landing Visa",
+        "description": "落地签证服务，包括B1签证及其续签服务",
+        "display_order": 1,
+        "is_active": true,
+        "created_at": "2024-11-18T06:00:00",
+        "updated_at": "2024-11-18T06:00:00"
+      },
+      {
+        "id": "c17e105b-b754-4f65-a640-146c6b04d34e",
+        "code": "BUSINESS_VISA",
+        "name": "商务签",
+        "name_en": "Business Visa",
+        "description": "商务签证服务，包括C211、C212等商务签证",
+        "display_order": 2,
+        "is_active": true,
+        "created_at": "2024-11-18T06:00:00",
+        "updated_at": "2024-11-18T06:00:00"
+      }
+    ],
+    "total": 10,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+#### 5.2.5 更新服务类型
+
+**接口地址**: `PUT /api/service-management/service-types/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-types/{id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 服务类型 ID (UUID)
+
+**请求体**:
+```json
+{
+  "name": "新服务类型名称",
+  "name_en": "New Service Type Name",
+  "description": "新描述",
+  "display_order": 2,
+  "is_active": true
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "服务类型更新成功",
+  "data": {
+    "id": "ead5858b-2352-41fa-8560-cc9e36cf7e24",
+    "code": "LANDING_VISA",
+    "name": "新服务类型名称",
+    "name_en": "New Service Type Name",
+    "description": "新描述",
+    "display_order": 2,
+    "is_active": true,
+    "created_at": "2024-11-18T06:00:00",
+    "updated_at": "2024-11-18T06:05:00"
+  }
+}
+```
+
+#### 5.2.6 删除服务类型
+
+**接口地址**: `DELETE /api/service-management/service-types/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/service-types/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 服务类型 ID (UUID)
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "服务类型删除成功",
+  "data": null
+}
+```
+
+**注意**: 删除服务类型前，系统会检查是否有产品使用此服务类型。如果有产品关联，建议先更新产品或设置为非激活状态。
+
+---
+
+### 5.3 服务管理
+
+服务管理用于管理具体的服务项目，包括服务的创建、更新、查询和删除等操作。
+
+#### 5.3.1 创建服务
 
 **接口地址**: `POST /api/service-management/products`
 
@@ -798,7 +1104,7 @@ Authorization: Bearer <token>
 ```json
 {
   "code": 200,
-  "message": "产品/服务创建成功",
+  "message": "服务创建成功",
   "data": {
     "id": "uuid",
     "name": "印尼工作签证 B211",
@@ -849,7 +1155,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 6.2 获取产品/服务详情
+#### 5.3.2 获取服务详情
 
 **接口地址**: `GET /api/service-management/products/{id}`
 
@@ -864,7 +1170,7 @@ Authorization: Bearer <token>
 **路径参数**:
 - `id`: 产品 ID (UUID)
 
-### 6.3 获取产品/服务列表
+#### 5.3.3 获取服务列表
 
 **接口地址**: `GET /api/service-management/products`
 
@@ -917,7 +1223,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 6.4 更新产品/服务
+#### 5.3.4 更新服务
 
 **接口地址**: `PUT /api/service-management/products/{id}`
 
@@ -946,7 +1252,7 @@ Authorization: Bearer <token>
 
 **注意**: 所有字段都是可选的，只更新提供的字段
 
-### 6.5 删除产品/服务
+#### 5.3.5 删除服务
 
 **接口地址**: `DELETE /api/service-management/products/{id}`
 
@@ -961,7 +1267,7 @@ Authorization: Bearer <token>
 **路径参数**:
 - `id`: 产品 ID (UUID)
 
-### 6.6 查询供应商提供的产品/服务
+#### 5.3.6 查询供应商提供的服务
 
 **接口地址**: `GET /api/service-management/products/vendors/{vendor_id}`
 
@@ -1020,7 +1326,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 7. 统一响应格式
+## 6. 统一响应格式
 
 所有 API 响应都遵循以下格式：
 
@@ -1041,7 +1347,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 8. 错误码说明
+## 7. 错误码说明
 
 | 错误码 | 说明 |
 |--------|------|
@@ -1059,9 +1365,9 @@ Authorization: Bearer <token>
 
 ---
 
-## 9. 认证说明
+## 8. 认证说明
 
-### 9.1 获取 Token
+### 8.1 获取 Token
 
 通过登录接口获取 JWT Token：
 
@@ -1069,7 +1375,7 @@ Authorization: Bearer <token>
 POST /api/foundation/auth/login
 ```
 
-### 9.2 使用 Token
+### 8.2 使用 Token
 
 在需要认证的接口请求头中添加：
 
@@ -1077,16 +1383,16 @@ POST /api/foundation/auth/login
 Authorization: Bearer <token>
 ```
 
-### 9.3 Token 有效期
+### 8.3 Token 有效期
 
 - Access Token: 24 小时
 - Refresh Token: 7 天
 
 ---
 
-## 10. 快速开始
+## 9. 快速开始
 
-### 10.1 生产环境测试
+### 9.1 生产环境测试
 
 ```bash
 # 1. 测试登录
@@ -1103,7 +1409,7 @@ curl -k https://www.bantu.sbs/api/foundation/organizations \
   -H "Host: www.bantu.sbs"
 ```
 
-### 10.2 本地开发测试 (端口转发)
+### 9.2 本地开发测试 (端口转发)
 
 ```bash
 # 1. 启动端口转发
@@ -1121,7 +1427,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 11. API 端点汇总表
+## 10. API 端点汇总表
 
 | 方法 | 路径 | 说明 | 需要认证 |
 |------|------|------|----------|
@@ -1148,21 +1454,27 @@ curl http://localhost:8080/api/foundation/roles \
 | GET | `/api/foundation/roles/{id}` | 获取角色详情 | ✅ |
 | PUT | `/api/foundation/roles/{id}` | 更新角色 | ✅ |
 | DELETE | `/api/foundation/roles/{id}` | 删除角色 | ✅ |
-| POST | `/api/service-management/categories` | 创建产品分类 | ✅ |
-| GET | `/api/service-management/categories/{id}` | 获取产品分类详情 | ✅ |
-| GET | `/api/service-management/categories` | 获取产品分类列表 | ✅ |
-| PUT | `/api/service-management/categories/{id}` | 更新产品分类 | ✅ |
-| DELETE | `/api/service-management/categories/{id}` | 删除产品分类 | ✅ |
-| POST | `/api/service-management/products` | 创建产品/服务 | ✅ |
-| GET | `/api/service-management/products/{id}` | 获取产品/服务详情 | ✅ |
-| GET | `/api/service-management/products` | 获取产品/服务列表 | ✅ |
-| PUT | `/api/service-management/products/{id}` | 更新产品/服务 | ✅ |
-| DELETE | `/api/service-management/products/{id}` | 删除产品/服务 | ✅ |
-| GET | `/api/service-management/products/vendors/{vendor_id}` | 查询供应商提供的产品/服务 | ✅ |
+| POST | `/api/service-management/categories` | 创建服务分类 | ✅ |
+| GET | `/api/service-management/categories/{id}` | 获取服务分类详情 | ✅ |
+| GET | `/api/service-management/categories` | 获取服务分类列表 | ✅ |
+| PUT | `/api/service-management/categories/{id}` | 更新服务分类 | ✅ |
+| DELETE | `/api/service-management/categories/{id}` | 删除服务分类 | ✅ |
+| POST | `/api/service-management/service-types` | 创建服务类型 | ✅ |
+| GET | `/api/service-management/service-types/{id}` | 获取服务类型详情 | ✅ |
+| GET | `/api/service-management/service-types/code/{code}` | 根据代码查询服务类型 | ✅ |
+| GET | `/api/service-management/service-types` | 获取服务类型列表 | ✅ |
+| PUT | `/api/service-management/service-types/{id}` | 更新服务类型 | ✅ |
+| DELETE | `/api/service-management/service-types/{id}` | 删除服务类型 | ✅ |
+| POST | `/api/service-management/products` | 创建服务 | ✅ |
+| GET | `/api/service-management/products/{id}` | 获取服务详情 | ✅ |
+| GET | `/api/service-management/products` | 获取服务列表 | ✅ |
+| PUT | `/api/service-management/products/{id}` | 更新服务 | ✅ |
+| DELETE | `/api/service-management/products/{id}` | 删除服务 | ✅ |
+| GET | `/api/service-management/products/vendors/{vendor_id}` | 查询供应商提供的服务 | ✅ |
 
 ---
 
-## 12. 注意事项
+## 11. 注意事项
 
 1. **生产环境**: 使用 `https://www.bantu.sbs` (推荐)
 2. **直接访问 Foundation**: 可以通过 `https://www.bantu.sbs/api/foundation/*` 直接访问 Foundation Service，无需 Gateway 认证
@@ -1174,7 +1486,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 13. 联系与支持
+## 12. 联系与支持
 
 如有问题，请联系开发团队。
 

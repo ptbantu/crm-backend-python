@@ -95,16 +95,28 @@ class SQLParser:
             
             self.tables[table_name]['fields'].append(field_name)
         
-        # 解析 FOREIGN KEY 约束
+        # 解析独立的 FOREIGN KEY 约束（在 CREATE TABLE 中，且不在 ALTER TABLE ADD CONSTRAINT 中）
         fk_pattern = r'FOREIGN\s+KEY\s+\(`?(\w+)`?\)\s+REFERENCES\s+`?(\w+)`?'
         for match in re.finditer(fk_pattern, content, re.IGNORECASE):
             fk_field = match.group(1)
             ref_table = match.group(2)
             
-            # 找到这个外键属于哪个表
-            # 向前查找最近的 CREATE TABLE
+            # 检查是否已经在 ALTER TABLE ADD CONSTRAINT 中处理过
             pos = match.start()
             before = content[:pos]
+            
+            # 如果是在 ALTER TABLE ADD CONSTRAINT 中，跳过（已经处理过）
+            if re.search(r'ALTER\s+TABLE.*ADD\s+CONSTRAINT', before, re.IGNORECASE | re.DOTALL):
+                continue
+            
+            # 找到这个外键属于哪个表
+            # 向前查找最近的 CREATE TABLE（但不在 ALTER TABLE 中）
+            # 先检查是否在 ALTER TABLE 中
+            alter_match = re.search(r'ALTER\s+TABLE\s+`?(\w+)`?', before, re.IGNORECASE)
+            if alter_match:
+                # 在 ALTER TABLE 中，跳过（应该由 ALTER TABLE ADD CONSTRAINT 处理）
+                continue
+            
             table_match = re.search(r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?', before, re.IGNORECASE)
             if table_match:
                 table_name = table_match.group(1)
