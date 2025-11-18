@@ -14,6 +14,24 @@
 
 ## 文件说明
 
+### 数据库初始化脚本执行顺序
+
+1. **01_schema_unified.sql** - 创建基础表结构
+2. **05_product_service_enhancement.sql** - 添加产品/服务扩展字段（或使用 07_sync_database_fields.sql）
+3. **07_sync_database_fields.sql** - 同步数据库字段（确保所有新增字段存在）
+4. **02_seed_data.sql** - 创建预设角色和 BANTU 根组织
+5. **03_vendors_seed_data.sql** - 创建供应商组织（可选）
+6. **06_products_seed_data.sql** - 导入产品/服务数据（从 Products.xlsx）
+
+### 新增文件说明
+
+- **06_product_categories_seed_data.sql** - 从 Products.xlsx 提取的产品分类种子数据（5个分类）
+- **06_products_seed_data.sql** - 从 Products.xlsx 生成的产品种子数据（51条产品）
+- **07_sync_database_fields.sql** - 同步数据库字段脚本，确保所有新增字段存在
+- **08_service_types.sql** - 创建服务类型表和数据（10个服务类型：落地签、商务签、工作签等）
+- **09_update_service_types.sql** - 根据产品名称和编码更新产品的服务类型ID
+- **10_fix_collation_utf8mb4_0900_ai_ci.sql** - 统一数据库表排序规则为 utf8mb4_0900_ai_ci（推荐使用）
+
 ### 01_schema_unified.sql
 - 来源：`/home/bantu/crm-configuration/sql/schema_unified.sql`
 - 作用：创建所有数据库表、索引、约束、触发器等

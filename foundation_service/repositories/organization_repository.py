@@ -6,40 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from foundation_service.models.organization import Organization
 from foundation_service.models.organization_employee import OrganizationEmployee
+from common.utils.repository import BaseRepository
 
 
-class OrganizationRepository:
+class OrganizationRepository(BaseRepository[Organization]):
     """组织仓库"""
     
     def __init__(self, db: AsyncSession):
-        self.db = db
-    
-    async def get_by_id(self, organization_id: str) -> Optional[Organization]:
-        """根据ID查询组织"""
-        result = await self.db.execute(
-            select(Organization).where(Organization.id == organization_id)
-        )
-        return result.scalar_one_or_none()
-    
-    async def get_by_code(self, code: str) -> Optional[Organization]:
-        """根据编码查询组织"""
-        result = await self.db.execute(
-            select(Organization).where(Organization.code == code)
-        )
-        return result.scalar_one_or_none()
-    
-    async def create(self, organization: Organization) -> Organization:
-        """创建组织"""
-        self.db.add(organization)
-        await self.db.flush()
-        await self.db.refresh(organization)
-        return organization
-    
-    async def update(self, organization: Organization) -> Organization:
-        """更新组织"""
-        await self.db.flush()
-        await self.db.refresh(organization)
-        return organization
+        super().__init__(db, Organization)
     
     async def get_employees_count(self, organization_id: str) -> int:
         """获取员工数量"""

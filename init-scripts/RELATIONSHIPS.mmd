@@ -205,11 +205,11 @@ erDiagram
 
     product_categories {
         id string PK
+        parent_id string FK
         code string
         name string
         created_at string
         updated_at string
-        parent_id string
     }
 
     product_price_history {
@@ -250,6 +250,7 @@ erDiagram
         id string PK
         vendor_id string FK
         category_id string FK
+        service_type_id string FK
         id_external string
         owner_id_external string
         owner_name string
@@ -295,6 +296,19 @@ erDiagram
         code string
         name string
         description string
+        created_at string
+        updated_at string
+    }
+
+    service_types {
+        id string PK
+        service_type_id string FK
+        code string
+        name string
+        name_en string
+        description string
+        display_order string
+        is_active string
         created_at string
         updated_at string
     }
@@ -462,6 +476,7 @@ erDiagram
     roles ||--o{ order_stages : "order_stage_id"
     roles ||--o{ users : "uploaded_by"
     roles ||--o{ users : "confirmed_by"
+    product_categories ||--o{ product_categories : "parent_id"
     vendor_products ||--o{ organizations : "organization_id"
     vendor_products ||--o{ products : "product_id"
     vendor_products ||--o{ users : "created_by"
@@ -484,3 +499,5 @@ erDiagram
     vendor_products ||--o{ vendor_products : "vendor_product_id"
     vendor_products ||--o{ orders : "order_id"
     vendor_products ||--o{ payments : "payment_id"
+    products ||--o{ service_types : "service_type_id"
+    service_types ||--o{ service_types : "service_type_id"

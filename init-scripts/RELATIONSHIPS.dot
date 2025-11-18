@@ -10,8 +10,9 @@ digraph BANTU_CRM {
   organization_employees [label="organization_employees|id (PK)\luser_id (FK)\lorganization_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lfirst_name\llast_name\lfull_name\lemail\lphone\lposition\ldepartment\lemployee_number\lis_primary\lis_manager\lis_decision_maker\lis_active\l..."];
 
   // Product Domain
-  product_categories [label="product_categories|id (PK)\lcode\lname\lcreated_at\lupdated_at\lparent_id"];
-  products [label="products|id (PK)\lvendor_id (FK)\lcategory_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lname\lcode\l..."];
+  service_types [label="service_types|id (PK)\lservice_type_id (FK)\lcode\lname\lname_en\ldescription\ldisplay_order\lis_active\lcreated_at\lupdated_at"];
+  product_categories [label="product_categories|id (PK)\lparent_id (FK)\lcode\lname\lcreated_at\lupdated_at"];
+  products [label="products|id (PK)\lvendor_id (FK)\lcategory_id (FK)\lservice_type_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lname\lcode\l..."];
   vendor_products [label="vendor_products|id (PK)\lorganization_id (FK)\lproduct_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lapproved_by (FK)\lchanged_by (FK)\lvendor_product_id (FK)\lorder_id (FK)\lpayment_id (FK)\lis_primary\lpriority\lcost_price_idr\lcost_price_cny\lexchange_rate\lmin_quantity\lmax_quantity\llead_time_days\lprocessing_days\lis_available\lavailability_notes\lavailable_from\l..."];
   product_prices [label="product_prices|id (PK)\lproduct_id (FK)\lorganization_id (FK)\lapproved_by (FK)\lchanged_by (FK)\lprice_type\lcurrency\lamount\lexchange_rate\leffective_from\leffective_to\lsource\lis_approved\lapproved_at\lchange_reason\l..."];
   product_price_history [label="product_price_history|id (PK)\lproduct_id (FK)\lorganization_id (FK)\lchanged_by (FK)\lprice_type\lcurrency\lold_price\lnew_price\lchange_reason\leffective_from\leffective_to\lcreated_at"];
@@ -109,6 +110,7 @@ digraph BANTU_CRM {
   roles -> order_stages [label="order_stage_id"];
   roles -> users [label="uploaded_by"];
   roles -> users [label="confirmed_by"];
+  product_categories -> product_categories [label="parent_id"];
   vendor_products -> organizations [label="organization_id"];
   vendor_products -> products [label="product_id"];
   vendor_products -> users [label="created_by"];
@@ -131,4 +133,6 @@ digraph BANTU_CRM {
   vendor_products -> vendor_products [label="vendor_product_id"];
   vendor_products -> orders [label="order_id"];
   vendor_products -> payments [label="payment_id"];
+  products -> service_types [label="service_type_id"];
+  service_types -> service_types [label="service_type_id"];
 }

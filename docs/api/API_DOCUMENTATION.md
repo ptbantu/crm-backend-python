@@ -11,10 +11,11 @@
 - **本地开发 (端口转发)**: `http://localhost:8080` (需要运行 `kubectl port-forward`)
 
 **注意**：
-- 所有 API 请求通过 Gateway Service 路由（或直接访问 Foundation Service）
+- 所有 API 请求通过 Gateway Service 路由（或直接访问各服务）
 - 生产环境使用 HTTPS，HTTP 会自动重定向到 HTTPS
 - 需要认证的接口需要在 Header 中携带 JWT Token: `Authorization: Bearer <token>`
-- 可以通过 Ingress 直接访问 Foundation Service: `https://www.bantu.sbs/api/foundation/*`
+- Foundation Service: `https://www.bantu.sbs/api/foundation/*`
+- Service Management Service: `https://www.bantu.sbs/api/service-management/*`
 
 ---
 
@@ -24,8 +25,10 @@
 2. [用户管理接口](#2-用户管理接口)
 3. [组织管理接口](#3-组织管理接口)
 4. [角色管理接口](#4-角色管理接口)
-5. [统一响应格式](#5-统一响应格式)
-6. [错误码说明](#6-错误码说明)
+5. [产品分类管理接口](#5-产品分类管理接口)
+6. [产品/服务管理接口](#6-产品服务管理接口)
+7. [统一响应格式](#7-统一响应格式)
+8. [错误码说明](#8-错误码说明)
 
 ---
 
@@ -585,7 +588,439 @@ Authorization: Bearer <token>
 
 ---
 
-## 5. 统一响应格式
+## 5. 产品分类管理接口
+
+### 5.1 创建产品分类
+
+**接口地址**: `POST /api/service-management/categories`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/categories`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "code": "VISA_SERVICE",
+  "name": "签证服务",
+  "description": "各类签证办理服务",
+  "parent_id": null,
+  "display_order": 1,
+  "is_active": true
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "产品分类创建成功",
+  "data": {
+    "id": "uuid",
+    "code": "VISA_SERVICE",
+    "name": "签证服务",
+    "description": "各类签证办理服务",
+    "parent_id": null,
+    "parent_name": null,
+    "display_order": 1,
+    "is_active": true,
+    "created_at": "2024-11-10T05:00:00",
+    "updated_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+### 5.2 获取产品分类详情
+
+**接口地址**: `GET /api/service-management/categories/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/categories/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 分类 ID (UUID)
+
+### 5.3 获取产品分类列表
+
+**接口地址**: `GET /api/service-management/categories`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/categories`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10）
+- `code`: 分类编码（模糊查询）
+- `name`: 分类名称（模糊查询）
+- `parent_id`: 父分类ID（精确查询，空字符串表示查询顶级分类）
+- `is_active`: 是否激活（true/false）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "code": "VISA_SERVICE",
+        "name": "签证服务",
+        "description": "各类签证办理服务",
+        "parent_id": null,
+        "parent_name": null,
+        "display_order": 1,
+        "is_active": true,
+        "created_at": "2024-11-10T05:00:00",
+        "updated_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 10,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+### 5.4 更新产品分类
+
+**接口地址**: `PUT /api/service-management/categories/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/categories/{id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 分类 ID (UUID)
+
+**请求体**:
+```json
+{
+  "name": "新分类名称",
+  "description": "新描述",
+  "display_order": 2,
+  "is_active": true
+}
+```
+
+### 5.5 删除产品分类
+
+**接口地址**: `DELETE /api/service-management/categories/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/categories/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 分类 ID (UUID)
+
+---
+
+## 6. 产品/服务管理接口
+
+### 6.1 创建产品/服务
+
+**接口地址**: `POST /api/service-management/products`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/products`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "name": "印尼工作签证 B211",
+  "code": "VISA_B211",
+  "category_id": "uuid",
+  "service_type": "visa",
+  "service_subtype": "B211",
+  "validity_period": 365,
+  "processing_days": 5,
+  "processing_time_text": "5个工作日",
+  "is_urgent_available": true,
+  "urgent_processing_days": 3,
+  "urgent_price_surcharge": 500000,
+  "price_cost_idr": 2000000,
+  "price_cost_cny": 1000,
+  "price_channel_idr": 2500000,
+  "price_channel_cny": 1250,
+  "price_direct_idr": 3000000,
+  "price_direct_cny": 1500,
+  "price_list_idr": 3500000,
+  "price_list_cny": 1750,
+  "default_currency": "IDR",
+  "exchange_rate": 2000,
+  "commission_rate": 0.1,
+  "commission_amount": 500000,
+  "equivalent_cny": 1500,
+  "monthly_orders": 10,
+  "total_amount": 30000000,
+  "sla_description": "5个工作日内完成",
+  "service_level": "standard",
+  "status": "active",
+  "required_documents": "护照、照片、申请表",
+  "notes": "备注信息",
+  "tags": ["visa", "indonesia"],
+  "is_active": true
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "产品/服务创建成功",
+  "data": {
+    "id": "uuid",
+    "name": "印尼工作签证 B211",
+    "code": "VISA_B211",
+    "category_id": "uuid",
+    "category_name": "签证服务",
+    "service_type": "visa",
+    "service_subtype": "B211",
+    "validity_period": 365,
+    "processing_days": 5,
+    "processing_time_text": "5个工作日",
+    "is_urgent_available": true,
+    "urgent_processing_days": 3,
+    "urgent_price_surcharge": 500000,
+    "price_cost_idr": 2000000,
+    "price_cost_cny": 1000,
+    "price_channel_idr": 2500000,
+    "price_channel_cny": 1250,
+    "price_direct_idr": 3000000,
+    "price_direct_cny": 1500,
+    "price_list_idr": 3500000,
+    "price_list_cny": 1750,
+    "default_currency": "IDR",
+    "exchange_rate": 2000,
+    "channel_profit": 500000,
+    "channel_profit_rate": 0.2,
+    "channel_customer_profit": 500000,
+    "channel_customer_profit_rate": 0.25,
+    "direct_profit": 1000000,
+    "direct_profit_rate": 0.5,
+    "commission_rate": 0.1,
+    "commission_amount": 500000,
+    "equivalent_cny": 1500,
+    "monthly_orders": 10,
+    "total_amount": 30000000,
+    "sla_description": "5个工作日内完成",
+    "service_level": "standard",
+    "status": "active",
+    "suspended_reason": null,
+    "discontinued_at": null,
+    "required_documents": "护照、照片、申请表",
+    "notes": "备注信息",
+    "tags": ["visa", "indonesia"],
+    "is_active": true,
+    "created_at": "2024-11-10T05:00:00",
+    "updated_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+### 6.2 获取产品/服务详情
+
+**接口地址**: `GET /api/service-management/products/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/products/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 产品 ID (UUID)
+
+### 6.3 获取产品/服务列表
+
+**接口地址**: `GET /api/service-management/products`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/products`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10）
+- `name`: 产品名称（模糊查询）
+- `code`: 产品编码（模糊查询）
+- `category_id`: 分类ID（精确查询）
+- `service_type`: 服务类型（精确查询）
+- `service_subtype`: 服务子类型（精确查询）
+- `status`: 状态（active/suspended/discontinued）
+- `is_active`: 是否激活（true/false）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "name": "印尼工作签证 B211",
+        "code": "VISA_B211",
+        "category_id": "uuid",
+        "category_name": "签证服务",
+        "service_type": "visa",
+        "service_subtype": "B211",
+        "price_direct_idr": 3000000,
+        "price_direct_cny": 1500,
+        "status": "active",
+        "is_active": true,
+        "created_at": "2024-11-10T05:00:00",
+        "updated_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+### 6.4 更新产品/服务
+
+**接口地址**: `PUT /api/service-management/products/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/products/{id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 产品 ID (UUID)
+
+**请求体**:
+```json
+{
+  "name": "新产品名称",
+  "price_direct_idr": 3500000,
+  "price_direct_cny": 1750,
+  "status": "active",
+  "is_active": true
+}
+```
+
+**注意**: 所有字段都是可选的，只更新提供的字段
+
+### 6.5 删除产品/服务
+
+**接口地址**: `DELETE /api/service-management/products/{id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/products/{id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `id`: 产品 ID (UUID)
+
+### 6.6 查询供应商提供的产品/服务
+
+**接口地址**: `GET /api/service-management/products/vendors/{vendor_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/products/vendors/{vendor_id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `vendor_id`: 供应商组织ID (UUID)
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 10，最大: 100）
+- `is_available`: 是否可用（可选，true/false）
+- `is_primary`: 是否主要供应商（可选，true/false）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "name": "印尼工作签证 B211",
+        "code": "VISA_B211",
+        "category_id": "uuid",
+        "category_name": "签证服务",
+        "service_type": "visa",
+        "service_subtype": "B211",
+        "price_direct_idr": 3000000,
+        "price_direct_cny": 1500,
+        "status": "active",
+        "is_active": true,
+        "created_at": "2024-11-10T05:00:00",
+        "updated_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 50,
+    "page": 1,
+    "size": 10
+  }
+}
+```
+
+**说明**:
+- 该接口通过 `vendor_products` 表关联查询，返回指定供应商提供的所有产品/服务
+- 结果按主要供应商优先、优先级升序、创建时间降序排序
+- 可以通过 `is_available` 参数过滤可用性
+- 可以通过 `is_primary` 参数过滤是否为主要供应商
+
+---
+
+## 7. 统一响应格式
 
 所有 API 响应都遵循以下格式：
 
@@ -606,7 +1041,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 6. 错误码说明
+## 8. 错误码说明
 
 | 错误码 | 说明 |
 |--------|------|
@@ -624,9 +1059,9 @@ Authorization: Bearer <token>
 
 ---
 
-## 7. 认证说明
+## 9. 认证说明
 
-### 7.1 获取 Token
+### 9.1 获取 Token
 
 通过登录接口获取 JWT Token：
 
@@ -634,7 +1069,7 @@ Authorization: Bearer <token>
 POST /api/foundation/auth/login
 ```
 
-### 7.2 使用 Token
+### 9.2 使用 Token
 
 在需要认证的接口请求头中添加：
 
@@ -642,16 +1077,16 @@ POST /api/foundation/auth/login
 Authorization: Bearer <token>
 ```
 
-### 7.3 Token 有效期
+### 9.3 Token 有效期
 
 - Access Token: 24 小时
 - Refresh Token: 7 天
 
 ---
 
-## 8. 快速开始
+## 10. 快速开始
 
-### 8.1 生产环境测试
+### 10.1 生产环境测试
 
 ```bash
 # 1. 测试登录
@@ -668,7 +1103,7 @@ curl -k https://www.bantu.sbs/api/foundation/organizations \
   -H "Host: www.bantu.sbs"
 ```
 
-### 8.2 本地开发测试 (端口转发)
+### 10.2 本地开发测试 (端口转发)
 
 ```bash
 # 1. 启动端口转发
@@ -686,7 +1121,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 9. API 端点汇总表
+## 11. API 端点汇总表
 
 | 方法 | 路径 | 说明 | 需要认证 |
 |------|------|------|----------|
@@ -713,10 +1148,21 @@ curl http://localhost:8080/api/foundation/roles \
 | GET | `/api/foundation/roles/{id}` | 获取角色详情 | ✅ |
 | PUT | `/api/foundation/roles/{id}` | 更新角色 | ✅ |
 | DELETE | `/api/foundation/roles/{id}` | 删除角色 | ✅ |
+| POST | `/api/service-management/categories` | 创建产品分类 | ✅ |
+| GET | `/api/service-management/categories/{id}` | 获取产品分类详情 | ✅ |
+| GET | `/api/service-management/categories` | 获取产品分类列表 | ✅ |
+| PUT | `/api/service-management/categories/{id}` | 更新产品分类 | ✅ |
+| DELETE | `/api/service-management/categories/{id}` | 删除产品分类 | ✅ |
+| POST | `/api/service-management/products` | 创建产品/服务 | ✅ |
+| GET | `/api/service-management/products/{id}` | 获取产品/服务详情 | ✅ |
+| GET | `/api/service-management/products` | 获取产品/服务列表 | ✅ |
+| PUT | `/api/service-management/products/{id}` | 更新产品/服务 | ✅ |
+| DELETE | `/api/service-management/products/{id}` | 删除产品/服务 | ✅ |
+| GET | `/api/service-management/products/vendors/{vendor_id}` | 查询供应商提供的产品/服务 | ✅ |
 
 ---
 
-## 10. 注意事项
+## 12. 注意事项
 
 1. **生产环境**: 使用 `https://www.bantu.sbs` (推荐)
 2. **直接访问 Foundation**: 可以通过 `https://www.bantu.sbs/api/foundation/*` 直接访问 Foundation Service，无需 Gateway 认证
@@ -728,7 +1174,7 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
-## 11. 联系与支持
+## 13. 联系与支持
 
 如有问题，请联系开发团队。
 

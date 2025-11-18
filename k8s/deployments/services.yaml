@@ -37,4 +37,24 @@ spec:
   selector:
     app: crm-gateway-service
 
+---
+# Service Management Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-service-management-service
+  namespace: default
+  labels:
+    app: crm-service-management-service
+    service: service-management
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8082
+    targetPort: 8082
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-service-management-service
+
 

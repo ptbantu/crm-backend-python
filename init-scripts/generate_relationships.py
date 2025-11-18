@@ -28,6 +28,33 @@ class SQLParser:
         create_table_pattern = r'CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?\s*\((.*?)\);'
         alter_table_pattern = r'ALTER\s+TABLE\s+`?(\w+)`?\s+ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?\s+([^,;]+)'
         
+        # 解析 ALTER TABLE ADD CONSTRAINT（外键约束）
+        alter_constraint_pattern = r'ALTER\s+TABLE\s+`?(\w+)`?\s+ADD\s+CONSTRAINT\s+\w+\s+FOREIGN\s+KEY\s+\(`?(\w+)`?\)\s+REFERENCES\s+`?(\w+)`?'
+        for match in re.finditer(alter_constraint_pattern, content, re.IGNORECASE):
+            table_name = match.group(1)
+            fk_field = match.group(2)
+            ref_table = match.group(3)
+            
+            if table_name not in self.tables:
+                self.tables[table_name] = {
+                    'fields': [],
+                    'fks': [],
+                    'pks': []
+                }
+            
+            # 确保字段在字段列表中
+            if fk_field not in self.tables[table_name]['fields']:
+                self.tables[table_name]['fields'].append(fk_field)
+            
+            # 检查是否已存在
+            if not any(fk['field'] == fk_field and fk['ref_table'] == ref_table 
+                      for fk in self.tables[table_name]['fks']):
+                self.relationships.append((table_name, ref_table, fk_field))
+                self.tables[table_name]['fks'].append({
+                    'field': fk_field,
+                    'ref_table': ref_table
+                })
+        
         # 查找所有 CREATE TABLE
         for match in re.finditer(create_table_pattern, content, re.DOTALL | re.IGNORECASE):
             table_name = match.group(1)
@@ -129,8 +156,11 @@ class SQLParser:
                 field_name = field_match.group(1).strip()
                 field_def = field_match.group(2).strip()
                 
-                # 跳过关键字字段
-                if field_name.upper() in ['FOREIGN', 'KEY', 'CONSTRAINT', 'PRIMARY', 'UNIQUE']:
+                # 跳过关键字字段和 SQL 关键字
+                skip_keywords = ['FOREIGN', 'KEY', 'CONSTRAINT', 'PRIMARY', 'UNIQUE', 
+                               'INDEX', 'ALTER', 'ADD', 'CREATE', 'TABLE', 'IF', 'NOT', 
+                               'EXISTS', 'ENGINE', 'DEFAULT', 'CHARSET', 'COLLATE', 'COMMENT']
+                if field_name.upper() in skip_keywords:
                     continue
                 
                 # 检查主键
@@ -165,7 +195,7 @@ class SQLParser:
         # 按域分组表
         domains = {
             'Core': ['users', 'roles', 'user_roles', 'organizations', 'organization_employees'],
-            'Product': ['product_categories', 'products', 'vendor_products', 'product_prices', 
+            'Product': ['service_types', 'product_categories', 'products', 'vendor_products', 'product_prices', 
                        'product_price_history', 'vendor_product_financials'],
             'Customer': ['customers', 'contacts', 'customer_sources', 'customer_channels', 'visa_records'],
             'Order': ['orders', 'order_statuses', 'order_assignments', 'order_stages', 
@@ -261,7 +291,8 @@ def main():
     script_dir = Path(__file__).parent
     sql_files = [
         script_dir / '01_schema_unified.sql',
-        script_dir / '05_product_service_enhancement.sql'
+        script_dir / '05_product_service_enhancement.sql',
+        script_dir / '08_service_types.sql'
     ]
     
     parser = SQLParser()

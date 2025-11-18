@@ -8,20 +8,14 @@ from foundation_service.models.user import User
 from foundation_service.models.organization_employee import OrganizationEmployee
 from foundation_service.models.user_role import UserRole
 from foundation_service.models.role import Role
+from common.utils.repository import BaseRepository
 
 
-class UserRepository:
+class UserRepository(BaseRepository[User]):
     """用户仓库"""
     
     def __init__(self, db: AsyncSession):
-        self.db = db
-    
-    async def get_by_id(self, user_id: str) -> Optional[User]:
-        """根据ID查询用户"""
-        result = await self.db.execute(
-            select(User).where(User.id == user_id)
-        )
-        return result.scalar_one_or_none()
+        super().__init__(db, User)
     
     async def get_by_email(self, email: str) -> Optional[User]:
         """根据邮箱查询用户"""
@@ -29,19 +23,6 @@ class UserRepository:
             select(User).where(User.email == email)
         )
         return result.scalar_one_or_none()
-    
-    async def create(self, user: User) -> User:
-        """创建用户"""
-        self.db.add(user)
-        await self.db.flush()
-        await self.db.refresh(user)
-        return user
-    
-    async def update(self, user: User) -> User:
-        """更新用户"""
-        await self.db.flush()
-        await self.db.refresh(user)
-        return user
     
     async def get_list(
         self,

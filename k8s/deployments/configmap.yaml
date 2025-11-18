@@ -19,10 +19,14 @@ data:
   # Gateway Service 配置
   GATEWAY_JWT_ALGORITHM: "HS256"
   GATEWAY_FOUNDATION_SERVICE_URL: "http://crm-foundation-service:8081"
-  GATEWAY_BUSINESS_SERVICE_URL: "http://crm-business-service:8082"
-  GATEWAY_WORKFLOW_SERVICE_URL: "http://crm-workflow-service:8083"
-  GATEWAY_FINANCE_SERVICE_URL: "http://crm-finance-service:8084"
+  GATEWAY_SERVICE_MANAGEMENT_SERVICE_URL: "http://crm-service-management-service:8082"
+  GATEWAY_BUSINESS_SERVICE_URL: "http://crm-business-service:8083"
+  GATEWAY_WORKFLOW_SERVICE_URL: "http://crm-workflow-service:8084"
+  GATEWAY_FINANCE_SERVICE_URL: "http://crm-finance-service:8085"
   GATEWAY_DEBUG: "false"
+  
+  # Service Management Service 配置
+  SERVICE_MANAGEMENT_DEBUG: "false"
   
   # CORS 配置（JSON 格式）
   CORS_ALLOWED_ORIGINS: '["https://www.bantu.sbs","http://www.bantu.sbs","https://www.crmbantu.space","http://www.crmbantu.space","https://crmbantu.space","http://crmbantu.space","https://168.231.118.179","http://168.231.118.179","http://localhost:3000","http://localhost:5173","http://localhost:8080"]'

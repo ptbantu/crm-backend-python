@@ -38,6 +38,14 @@ spec:
                 name: crm-foundation-service
                 port:
                   number: 8081
+          # 直接访问 Service Management Service (用于测试，生产环境建议通过 Gateway)
+          - path: /api/service-management
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-service-management-service
+                port:
+                  number: 8082
           # 所有其他请求路由到 Gateway Service
           - path: /
             pathType: Prefix
