@@ -193,7 +193,44 @@ DROP PROCEDURE IF EXISTS add_fk_products_service_type$$
 DELIMITER ;
 
 -- ============================================================
--- 4. 验证字段同步
+-- 4. 创建服务记录表 (service_records)
+-- ============================================================
+-- 注意：完整的服务记录表创建脚本在 08_service_records.sql
+-- 这里只创建基础表结构，详细字段请参考 08_service_records.sql
+
+-- 如果表不存在，创建基础表（完整表结构请执行 08_service_records.sql）
+CREATE TABLE IF NOT EXISTS service_records (
+  id                      CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  customer_id             CHAR(36) NOT NULL,
+  service_type_id         CHAR(36),
+  product_id              CHAR(36),
+  contact_id              CHAR(36) COMMENT '接单人员ID（关联 contacts 表）',
+  sales_user_id           CHAR(36),
+  status                  VARCHAR(50) DEFAULT 'pending',
+  priority                VARCHAR(20) DEFAULT 'normal',
+  service_name            VARCHAR(255),
+  service_description     TEXT,
+  requirements            TEXT,
+  expected_start_date     DATE,
+  expected_completion_date DATE,
+  created_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+  FOREIGN KEY (service_type_id) REFERENCES service_types(id) ON DELETE SET NULL,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
+  FOREIGN KEY (sales_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+COMMENT='服务记录表 - 记录客户的服务需求/意向（基础结构，完整字段请执行 08_service_records.sql）';
+
+-- 创建基础索引
+CREATE INDEX IF NOT EXISTS ix_service_records_customer ON service_records(customer_id);
+CREATE INDEX IF NOT EXISTS ix_service_records_service_type ON service_records(service_type_id);
+CREATE INDEX IF NOT EXISTS ix_service_records_contact ON service_records(contact_id);
+CREATE INDEX IF NOT EXISTS ix_service_records_status ON service_records(status);
+
+-- ============================================================
+-- 5. 验证字段同步
 -- ============================================================
 
 -- 检查字段是否存在
