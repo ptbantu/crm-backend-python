@@ -1,0 +1,69 @@
+digraph CUSTOMER_RELATIONSHIPS {
+  rankdir=TB;
+  node [shape=record, style=filled];
+  
+  // Customer Core Domain
+  customers [label="customers|id (PK)\lsource_id (FK→customer_sources)\lchannel_id (FK→customer_channels)\lowner_name\lcreated_by_name\lupdated_by_external\lupdated_by_name\lupdated_at_src\l...", fillcolor="lightblue"];
+  contacts [label="contacts|id (PK)\lcustomer_id (FK→customer_sources)\lcustomer_id (FK→customer_documents)\lcustomer_id (FK→customer_channels)\lcustomer_id (FK→customers)\lfirst_name\llast_name\lfull_name\l...", fillcolor="lightblue"];
+  customer_sources [label="customer_sources|id (PK)\lcode\lname\lupdated_at", fillcolor="lightblue"];
+  customer_channels [label="customer_channels|id (PK)\lcode\lname\lupdated_at", fillcolor="lightblue"];
+  customer_documents [label="customer_documents|id (PK)\lcustomer_id (FK→customer_sources)\lcustomer_id (FK→customer_channels)\lcustomer_id (FK→customers)\lverified_by (FK→users)\lcreated_by (FK→users)\lupdated_by (FK→users)\lorder_id (FK→orders)\lservice_record_id (FK→service_records)\lpayment_stage_id (FK→payment_stages)\lcustomer_name\ldocument_type\ldocument_name\lissue_date\lexpiry_date\l...", fillcolor="lightblue"];
+
+  // Service Domain
+  service_records [label="service_records|id (PK)\lcustomer_id (FK→customer_sources)\lcustomer_id (FK→customer_documents)\lcustomer_id (FK→customer_channels)\lcustomer_id (FK→customers)\lproduct_id (FK→products)\lcontact_id (FK→contacts)\lservice_type_id (FK→service_types)\lsales_user_id (FK→users)\lreferral_customer_id (FK→customers)\lcreated_by (FK→users)\lupdated_by (FK→users)\lservice_record_id (FK→service_records)\lstatus\lservice_name\lexpected_start_date\l...", fillcolor="lightgreen"];
+  service_types [label="service_types|id (PK)\lservice_type_id (FK→service_types)\lcustomer_id (FK→customers)\lproduct_id (FK→products)\lcontact_id (FK→contacts)\lsales_user_id (FK→users)\lcode\lname\lname_en\lupdated_at\l...", fillcolor="lightgreen"];
+
+  // Order & Payment Domain
+  orders [label="orders|id (PK)\lcustomer_id (FK→customer_sources)\lcustomer_id (FK→customer_documents)\lcustomer_id (FK→customer_channels)\lcustomer_id (FK→customers)\lproduct_id (FK→products)\lservice_record_id (FK→service_records)\lproduct_name\lsales_username\ltotal_amount\lcurrency_code\l...", fillcolor="lightyellow"];
+  payment_stages [label="payment_stages|id (PK)\lorder_id (FK→orders)\lstage_name\lamount\lpaid_amount\lremaining_amount\lcurrency_code\l...", fillcolor="lightyellow"];
+  payments [label="payments|id (PK)\lorder_id (FK→orders)\lpayment_stage_id (FK→payment_stages)\lpayment_type\lamount\lcurrency_code\lpayment_date\lpayer_name\l...", fillcolor="lightyellow"];
+
+  // Related Domain
+  users [label="users|id (PK)\lusername\ldisplay_name\l...", fillcolor="lightgray"];
+  products [label="products|id (PK)\lservice_type_id (FK→service_types)\lowner_name\lcreated_by_name\lupdated_by_external\lupdated_by_name\lupdated_at_src\l...", fillcolor="lightgray"];
+  organizations [label="organizations|id (PK)\lname\lcode\lorganization_type\l...", fillcolor="lightgray"];
+
+  // Relationships
+  customers -> customer_sources [label="source_id"];
+  customers -> customer_channels [label="channel_id"];
+  contacts -> customer_sources [label="customer_id"];
+  contacts -> customer_documents [label="customer_id"];
+  contacts -> customer_channels [label="customer_id"];
+  contacts -> customers [label="customer_id"];
+  orders -> customer_sources [label="customer_id"];
+  orders -> customer_documents [label="customer_id"];
+  orders -> customer_channels [label="customer_id"];
+  orders -> customers [label="customer_id"];
+  orders -> products [label="product_id"];
+  payments -> orders [label="order_id"];
+  products -> service_types [label="service_type_id"];
+  service_records -> customer_sources [label="customer_id"];
+  service_records -> customer_documents [label="customer_id"];
+  service_records -> customer_channels [label="customer_id"];
+  service_records -> customers [label="customer_id"];
+  service_records -> products [label="product_id"];
+  service_records -> contacts [label="contact_id"];
+  service_types -> service_types [label="service_type_id"];
+  service_types -> customers [label="customer_id"];
+  service_types -> products [label="product_id"];
+  service_types -> contacts [label="contact_id"];
+  service_types -> users [label="sales_user_id"];
+  orders -> service_records [label="service_record_id"];
+  service_records -> service_types [label="service_type_id"];
+  service_records -> users [label="sales_user_id"];
+  service_records -> customers [label="referral_customer_id"];
+  service_records -> users [label="created_by"];
+  service_records -> users [label="updated_by"];
+  service_records -> service_records [label="service_record_id"];
+  payments -> payment_stages [label="payment_stage_id"];
+  customer_documents -> customer_sources [label="customer_id"];
+  customer_documents -> customer_channels [label="customer_id"];
+  customer_documents -> customers [label="customer_id"];
+  payment_stages -> orders [label="order_id"];
+  customer_documents -> users [label="verified_by"];
+  customer_documents -> users [label="created_by"];
+  customer_documents -> users [label="updated_by"];
+  customer_documents -> orders [label="order_id"];
+  customer_documents -> service_records [label="service_record_id"];
+  customer_documents -> payment_stages [label="payment_stage_id"];
+}
