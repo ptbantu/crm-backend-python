@@ -42,10 +42,11 @@ app.add_middleware(
 # 服务路由配置（从环境变量读取，如果没有则使用默认值）
 import os
 SERVICE_ROUTES = {
-    "/api/foundation": os.getenv("FOUNDATION_SERVICE_URL", "http://foundation-service:8081"),
-    "/api/business": os.getenv("BUSINESS_SERVICE_URL", "http://business-service:8082"),
-    "/api/workflow": os.getenv("WORKFLOW_SERVICE_URL", "http://workflow-service:8083"),
-    "/api/finance": os.getenv("FINANCE_SERVICE_URL", "http://finance-service:8084"),
+    "/api/foundation": os.getenv("FOUNDATION_SERVICE_URL", "http://crm-foundation-service:8081"),
+    "/api/business": os.getenv("BUSINESS_SERVICE_URL", "http://crm-business-service:8082"),
+    "/api/workflow": os.getenv("WORKFLOW_SERVICE_URL", "http://crm-workflow-service:8083"),
+    "/api/finance": os.getenv("FINANCE_SERVICE_URL", "http://crm-finance-service:8084"),
+    "/api/analytics-monitoring": os.getenv("ANALYTICS_MONITORING_SERVICE_URL", "http://crm-analytics-monitoring-service:8083"),
 }
 
 # 无需认证的路径

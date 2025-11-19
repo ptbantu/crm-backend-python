@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     BUSINESS_SERVICE_URL: str = "http://crm-business-service:8082"
     WORKFLOW_SERVICE_URL: str = "http://crm-workflow-service:8083"
     FINANCE_SERVICE_URL: str = "http://crm-finance-service:8084"
+    ANALYTICS_MONITORING_SERVICE_URL: str = "http://crm-analytics-monitoring-service:8083"
     
     class Config:
         env_file = ".env"

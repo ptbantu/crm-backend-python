@@ -41,6 +41,7 @@ loguru==0.7.2
 
 # 工具
 python-multipart==0.0.6  # 文件上传支持
+psutil==5.9.6  # 系统监控工具
 
 # 邮件发送
 aiosmtplib==3.0.1  # 异步 SMTP 客户端

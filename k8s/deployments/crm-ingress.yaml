@@ -46,6 +46,14 @@ spec:
                 name: crm-service-management-service
                 port:
                   number: 8082
+          # 直接访问 Analytics and Monitoring Service (用于测试，生产环境建议通过 Gateway)
+          - path: /api/analytics-monitoring
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-analytics-monitoring-service
+                port:
+                  number: 8083
           # 所有其他请求路由到 Gateway Service
           - path: /
             pathType: Prefix

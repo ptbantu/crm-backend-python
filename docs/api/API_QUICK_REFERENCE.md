@@ -50,6 +50,38 @@
 | PUT | `/api/foundation/roles/{id}` | `https://www.bantu.sbs/api/foundation/roles/{id}` |
 | DELETE | `/api/foundation/roles/{id}` | `https://www.bantu.sbs/api/foundation/roles/{id}` |
 
+## 数据分析 (Analytics and Monitoring Service)
+
+### 健康检查
+
+| 方法 | 路径 | 完整地址（生产环境） |
+|------|------|---------------------|
+| GET | `/api/analytics-monitoring/health` | `https://www.bantu.sbs/api/analytics-monitoring/health` |
+
+### 数据分析接口
+
+| 方法 | 路径 | 完整地址（生产环境） | 说明 |
+|------|------|---------------------|------|
+| GET | `/api/analytics-monitoring/analytics/customers/summary` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/customers/summary` | 获取客户统计摘要（缓存5分钟） |
+| GET | `/api/analytics-monitoring/analytics/customers/trend?period=day` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/customers/trend?period=day` | 获取客户增长趋势（period: day/week/month，缓存5分钟） |
+| GET | `/api/analytics-monitoring/analytics/orders/summary` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/orders/summary` | 获取订单统计摘要（缓存5分钟） |
+| GET | `/api/analytics-monitoring/analytics/orders/summary?start_date=&end_date=` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/orders/summary?start_date=&end_date=` | 获取指定日期范围的订单统计 |
+| GET | `/api/analytics-monitoring/analytics/orders/revenue?period=month` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/orders/revenue?period=month` | 获取收入统计（period: day/week/month，缓存5分钟） |
+| GET | `/api/analytics-monitoring/analytics/service-records/statistics` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/service-records/statistics` | 获取服务记录统计（缓存5分钟） |
+| GET | `/api/analytics-monitoring/analytics/users/activity` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/users/activity` | 获取用户活跃度统计（缓存5分钟） |
+| GET | `/api/analytics-monitoring/analytics/organizations/summary` | `https://www.bantu.sbs/api/analytics-monitoring/analytics/organizations/summary` | 获取组织统计摘要（缓存5分钟） |
+
+### 监控接口
+
+| 方法 | 路径 | 完整地址（生产环境） | 说明 |
+|------|------|---------------------|------|
+| GET | `/api/analytics-monitoring/monitoring/health/services` | `https://www.bantu.sbs/api/analytics-monitoring/monitoring/health/services` | 获取所有服务健康状态 |
+| GET | `/api/analytics-monitoring/monitoring/health/database` | `https://www.bantu.sbs/api/analytics-monitoring/monitoring/health/database` | 获取数据库健康状态 |
+| GET | `/api/analytics-monitoring/monitoring/metrics/system` | `https://www.bantu.sbs/api/analytics-monitoring/monitoring/metrics/system` | 获取系统指标（CPU、内存等） |
+| GET | `/api/analytics-monitoring/monitoring/metrics/database` | `https://www.bantu.sbs/api/analytics-monitoring/monitoring/metrics/database` | 获取数据库指标（连接数等） |
+| GET | `/api/analytics-monitoring/monitoring/alerts/active` | `https://www.bantu.sbs/api/analytics-monitoring/monitoring/alerts/active` | 获取活跃预警列表 |
+| POST | `/api/analytics-monitoring/monitoring/alerts/{alert_id}/acknowledge` | `https://www.bantu.sbs/api/analytics-monitoring/monitoring/alerts/{alert_id}/acknowledge` | 确认预警 |
+
 ## 使用示例
 
 ### JavaScript/TypeScript
@@ -103,6 +135,26 @@ const login = async (email: string, password: string) => {
 // 获取用户列表（需要 Token）
 const getUsers = async (token: string) => {
   const response = await api.get('/api/foundation/users', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+};
+
+// 获取客户统计摘要（缓存5分钟）
+const getCustomerSummary = async (token: string) => {
+  const response = await api.get('/api/analytics-monitoring/analytics/customers/summary', {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.data;
+};
+
+// 获取系统指标
+const getSystemMetrics = async (token: string) => {
+  const response = await api.get('/api/analytics-monitoring/monitoring/metrics/system', {
     headers: {
       Authorization: `Bearer ${token}`,
     },

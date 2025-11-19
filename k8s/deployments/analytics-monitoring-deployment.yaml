@@ -1,0 +1,160 @@
+# Analytics and Monitoring Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-analytics-monitoring-service
+  namespace: default
+  labels:
+    app: crm-analytics-monitoring-service
+    service: analytics-monitoring
+    version: python
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-analytics-monitoring-service
+  template:
+    metadata:
+      labels:
+        app: crm-analytics-monitoring-service
+        service: analytics-monitoring
+        version: python
+    spec:
+      containers:
+      - name: analytics-monitoring
+        image: bantu-crm-analytics-monitoring-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8083
+          protocol: TCP
+        # 开发模式：使用热重载启动命令
+        command: ["uvicorn", "analytics_monitoring_service.main:app", "--host", "0.0.0.0", "--port", "8083", "--reload", "--reload-dir", "/app", "--reload-include", "*.py", "--log-level", "debug"]
+        env:
+        # 从 MySQL ConfigMap 读取数据库配置
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        # 从 MySQL Secret 读取敏感配置
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+        # 从 ConfigMap 读取监控配置
+        - name: METRICS_COLLECTION_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_METRICS_COLLECTION_INTERVAL
+        - name: ALERT_CHECK_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_CHECK_INTERVAL
+        - name: CPU_THRESHOLD_WARNING
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_CPU_THRESHOLD_WARNING
+        - name: CPU_THRESHOLD_CRITICAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_CPU_THRESHOLD_CRITICAL
+        - name: MEMORY_THRESHOLD_WARNING
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_MEMORY_THRESHOLD_WARNING
+        - name: MEMORY_THRESHOLD_CRITICAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_MEMORY_THRESHOLD_CRITICAL
+        - name: ALERT_EMAIL_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_EMAIL_ENABLED
+        - name: ALERT_EMAIL_RECIPIENTS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_EMAIL_RECIPIENTS
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        # 开发模式环境变量
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        # 开发模式：覆盖 DEBUG 为 true
+        - name: DEBUG
+          value: "true"
+        volumeMounts:
+        # 挂载本地代码目录，实现热重载
+        - name: common-code
+          mountPath: /app/common
+        - name: analytics-monitoring-code
+          mountPath: /app/analytics_monitoring_service
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      volumes:
+      # 开发模式：挂载本地代码目录
+      - name: common-code
+        hostPath:
+          path: /home/bantu/crm-backend-python/common
+          type: Directory
+      - name: analytics-monitoring-code
+        hostPath:
+          path: /home/bantu/crm-backend-python/analytics_monitoring_service
+          type: Directory
+

@@ -57,4 +57,24 @@ spec:
   selector:
     app: crm-service-management-service
 
+---
+# Analytics and Monitoring Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-analytics-monitoring-service
+  namespace: default
+  labels:
+    app: crm-analytics-monitoring-service
+    service: analytics-monitoring
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8083
+    targetPort: 8083
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-analytics-monitoring-service
+
 
