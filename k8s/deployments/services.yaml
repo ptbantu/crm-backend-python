@@ -77,4 +77,24 @@ spec:
   selector:
     app: crm-analytics-monitoring-service
 
+---
+# Order and Workflow Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-order-workflow-service
+  namespace: default
+  labels:
+    app: crm-order-workflow-service
+    service: order-workflow
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8084
+    targetPort: 8084
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-order-workflow-service
+
 

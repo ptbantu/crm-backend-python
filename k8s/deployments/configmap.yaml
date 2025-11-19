@@ -41,5 +41,13 @@ data:
   
   # CORS 配置（JSON 格式）
   CORS_ALLOWED_ORIGINS: '["https://www.bantu.sbs","http://www.bantu.sbs","https://www.crmbantu.space","http://www.crmbantu.space","https://crmbantu.space","http://crmbantu.space","https://168.231.118.179","http://168.231.118.179","http://localhost:3000","http://localhost:5173","http://localhost:8080"]'
+  
+  # Redis 配置
+  REDIS_HOST: "redis.default.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  
+  # MinIO 配置
+  MINIO_ENDPOINT: "minio.default.svc.cluster.local"
 
 

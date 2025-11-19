@@ -47,6 +47,7 @@ SERVICE_ROUTES = {
     "/api/workflow": os.getenv("WORKFLOW_SERVICE_URL", "http://crm-workflow-service:8083"),
     "/api/finance": os.getenv("FINANCE_SERVICE_URL", "http://crm-finance-service:8084"),
     "/api/analytics-monitoring": os.getenv("ANALYTICS_MONITORING_SERVICE_URL", "http://crm-analytics-monitoring-service:8083"),
+    "/api/order-workflow": os.getenv("ORDER_WORKFLOW_SERVICE_URL", "http://crm-order-workflow-service:8084"),
 }
 
 # 无需认证的路径

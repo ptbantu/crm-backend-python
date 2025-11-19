@@ -16,6 +16,8 @@
 - 需要认证的接口需要在 Header 中携带 JWT Token: `Authorization: Bearer <token>`
 - Foundation Service: `https://www.bantu.sbs/api/foundation/*`
 - Service Management Service: `https://www.bantu.sbs/api/service-management/*`
+- Order and Workflow Service: `https://www.bantu.sbs/api/order-workflow/*`
+- Analytics and Monitoring Service: `https://www.bantu.sbs/api/analytics-monitoring/*`
 
 ---
 
@@ -33,8 +35,15 @@
    - [6.1 客户管理接口](#61-客户管理接口)
    - [6.2 联系人管理接口](#62-联系人管理接口)
    - [6.3 服务记录管理接口](#63-服务记录管理接口)
-7. [统一响应格式](#7-统一响应格式)
-8. [错误码说明](#8-错误码说明)
+7. [订单与工作流管理](#7-订单与工作流管理)
+   - [7.1 订单项管理](#71-订单项管理)
+   - [7.2 订单评论管理](#72-订单评论管理)
+   - [7.3 订单文件管理](#73-订单文件管理)
+8. [数据分析与监控](#8-数据分析与监控)
+   - [8.1 数据分析接口](#81-数据分析接口)
+   - [8.2 系统监控接口](#82-系统监控接口)
+9. [统一响应格式](#9-统一响应格式)
+10. [错误码说明](#10-错误码说明)
 
 ---
 
@@ -1921,11 +1930,482 @@ Authorization: Bearer <token>
 **路径参数**:
 - `id`: 服务记录 ID (UUID)
 
-**注意**: 删除服务记录前，系统会检查是否有订单关联。如果有订单关联，建议先处理订单。
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `order_id`: 订单 ID (UUID)
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页数量（默认: 50，最大: 200）
+- `order_item_id`: 订单项ID（可选）
+- `order_stage_id`: 订单阶段ID（可选）
+- `file_category`: 文件分类（可选：passport, visa, document, other）
+- `lang`: 语言代码（zh/id），默认 zh
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "order_id": "uuid",
+        "file_name": "passport.pdf",
+        "file_url": "https://minio.example.com/bucket/path/to/file.pdf",
+        "file_size": 1024000,
+        "file_category": "passport",
+        "is_required": false,
+        "is_verified": false,
+        "created_at": "2024-11-19T05:00:00"
+      }
+    ],
+    "total": 5,
+    "page": 1,
+    "size": 50
+  }
+}
+```
 
 ---
 
-## 7. 统一响应格式
+## 8. 数据分析与监控
+
+数据分析与监控模块提供数据统计分析和系统监控功能，所有数据分析接口支持 Redis 缓存（5分钟过期）。
+
+---
+
+### 8.1 数据分析接口
+
+#### 8.1.1 获取客户统计摘要
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/customers/summary`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/customers/summary`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取客户统计摘要成功",
+  "data": {
+    "total": 100,
+    "by_type": {
+      "individual": 60,
+      "organization": 40
+    },
+    "by_source": {
+      "own": 70,
+      "agent": 30
+    },
+    "active_count": 45
+  }
+}
+```
+
+**注意**: 数据缓存5分钟，缓存命中时响应更快
+
+#### 8.1.2 获取客户增长趋势
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/customers/trend?period=day`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/customers/trend?period=day`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `period`: 统计周期（day/week/month），默认 day
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取客户增长趋势成功",
+  "data": {
+    "period": "day",
+    "data_points": [
+      {
+        "date": "2024-11-01",
+        "count": 5,
+        "cumulative": 95
+      },
+      {
+        "date": "2024-11-02",
+        "count": 3,
+        "cumulative": 98
+      }
+    ]
+  }
+}
+```
+
+**注意**: 数据缓存5分钟
+
+#### 8.1.3 获取订单统计摘要
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/orders/summary?start_date=&end_date=`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/orders/summary?start_date=2024-11-01&end_date=2024-11-30`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `start_date`: 开始日期（可选，格式：YYYY-MM-DD）
+- `end_date`: 结束日期（可选，格式：YYYY-MM-DD）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取订单统计摘要成功",
+  "data": {
+    "total": 150,
+    "by_status": {
+      "submitted": 20,
+      "approved": 30,
+      "processing": 50,
+      "completed": 40,
+      "cancelled": 10
+    },
+    "total_amount": 50000000.00,
+    "currency_code": "IDR"
+  }
+}
+```
+
+**注意**: 数据缓存5分钟
+
+#### 8.1.4 获取收入统计
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/orders/revenue?period=month`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/orders/revenue?period=month`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `period`: 统计周期（day/week/month），默认 month
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取收入统计成功",
+  "data": {
+    "period": "month",
+    "total_revenue": 50000000.00,
+    "currency_code": "IDR",
+    "data_points": [
+      {
+        "date": "2024-11",
+        "revenue": 50000000.00
+      }
+    ]
+  }
+}
+```
+
+**注意**: 数据缓存5分钟
+
+#### 8.1.5 获取服务记录统计
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/service-records/statistics`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/service-records/statistics`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取服务记录统计成功",
+  "data": {
+    "total": 200,
+    "by_status": {
+      "pending": 30,
+      "in_progress": 50,
+      "completed": 100,
+      "cancelled": 20
+    },
+    "by_priority": {
+      "low": 40,
+      "normal": 100,
+      "high": 50,
+      "urgent": 10
+    }
+  }
+}
+```
+
+**注意**: 数据缓存5分钟
+
+#### 8.1.6 获取用户活跃度统计
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/users/activity`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/users/activity`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取用户活跃度统计成功",
+  "data": {
+    "total_users": 50,
+    "active_users": 35,
+    "inactive_users": 15,
+    "recent_login_count": 30
+  }
+}
+```
+
+**注意**: 数据缓存5分钟
+
+#### 8.1.7 获取组织统计摘要
+
+**接口地址**: `GET /api/analytics-monitoring/analytics/organizations/summary`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/analytics/organizations/summary`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取组织统计摘要成功",
+  "data": {
+    "total": 10,
+    "by_type": {
+      "internal": 5,
+      "vendor": 3,
+      "agent": 2
+    },
+    "active_count": 8
+  }
+}
+```
+
+**注意**: 数据缓存5分钟
+
+---
+
+### 8.2 系统监控接口
+
+#### 8.2.1 获取所有服务健康状态
+
+**接口地址**: `GET /api/analytics-monitoring/monitoring/health/services`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/monitoring/health/services`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取服务健康状态成功",
+  "data": {
+    "services": [
+      {
+        "name": "foundation-service",
+        "status": "healthy",
+        "uptime": 86400,
+        "version": "1.0.0"
+      },
+      {
+        "name": "order-workflow-service",
+        "status": "healthy",
+        "uptime": 3600,
+        "version": "1.0.0"
+      }
+    ],
+    "overall_status": "healthy"
+  }
+}
+```
+
+#### 8.2.2 获取数据库健康状态
+
+**接口地址**: `GET /api/analytics-monitoring/monitoring/health/database`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/monitoring/health/database`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取数据库健康状态成功",
+  "data": {
+    "status": "healthy",
+    "connection_pool_size": 10,
+    "active_connections": 5,
+    "response_time_ms": 10.5
+  }
+}
+```
+
+#### 8.2.3 获取系统指标
+
+**接口地址**: `GET /api/analytics-monitoring/monitoring/metrics/system`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/monitoring/metrics/system`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取系统指标成功",
+  "data": {
+    "cpu_percent": 45.5,
+    "memory_percent": 60.2,
+    "disk_percent": 35.8,
+    "timestamp": "2024-11-19T12:00:00"
+  }
+}
+```
+
+#### 8.2.4 获取数据库指标
+
+**接口地址**: `GET /api/analytics-monitoring/monitoring/metrics/database`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/monitoring/metrics/database`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取数据库指标成功",
+  "data": {
+    "connection_count": 15,
+    "query_count": 1000,
+    "slow_query_count": 5,
+    "timestamp": "2024-11-19T12:00:00"
+  }
+}
+```
+
+#### 8.2.5 获取活跃预警列表
+
+**接口地址**: `GET /api/analytics-monitoring/monitoring/alerts/active`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/monitoring/alerts/active`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取活跃预警列表成功",
+  "data": {
+    "alerts": [
+      {
+        "id": "uuid",
+        "type": "cpu_high",
+        "severity": "warning",
+        "message": "CPU使用率超过70%",
+        "created_at": "2024-11-19T11:00:00",
+        "acknowledged": false
+      }
+    ],
+    "total": 1
+  }
+}
+```
+
+#### 8.2.6 确认预警
+
+**接口地址**: `POST /api/analytics-monitoring/monitoring/alerts/{alert_id}/acknowledge`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/monitoring/alerts/{alert_id}/acknowledge`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `alert_id`: 预警 ID (UUID)
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "预警确认成功",
+  "data": true
+}
+```
+
+---
+
+## 9. 统一响应格式
+
 
 所有 API 响应都遵循以下格式：
 

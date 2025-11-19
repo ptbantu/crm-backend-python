@@ -54,6 +54,14 @@ spec:
                 name: crm-analytics-monitoring-service
                 port:
                   number: 8083
+          # 直接访问 Order and Workflow Service (用于测试，生产环境建议通过 Gateway)
+          - path: /api/order-workflow
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-order-workflow-service
+                port:
+                  number: 8084
           # 所有其他请求路由到 Gateway Service
           - path: /
             pathType: Prefix
