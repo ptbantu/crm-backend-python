@@ -2,6 +2,7 @@
 订单项模型
 """
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Numeric, Date, CheckConstraint, UniqueConstraint
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from order_workflow_service.database import Base
 import uuid
@@ -54,6 +55,9 @@ class OrderItem(Base):
     # 审计字段
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    # 关系
+    order = relationship("Order", back_populates="order_items")
     
     # 检查约束和唯一约束
     __table_args__ = (

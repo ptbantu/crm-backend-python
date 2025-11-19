@@ -2,6 +2,7 @@
 订单评论模型
 """
 from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from order_workflow_service.database import Base
 import uuid
@@ -36,6 +37,9 @@ class OrderComment(Base):
     created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    # 关系
+    order = relationship("Order", back_populates="order_comments")
     
     # 检查约束
     __table_args__ = (

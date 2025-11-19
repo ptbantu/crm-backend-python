@@ -117,7 +117,13 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 
 
 # 注册路由
-from order_workflow_service.api.v1 import order_items, order_comments, order_files
+from order_workflow_service.api.v1 import orders, order_items, order_comments, order_files
+
+app.include_router(
+    orders.router,
+    prefix="/api/order-workflow/orders",
+    tags=["订单管理"]
+)
 
 app.include_router(
     order_items.router,
