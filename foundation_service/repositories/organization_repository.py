@@ -40,7 +40,8 @@ class OrganizationRepository(BaseRepository[Organization]):
         name: Optional[str] = None,
         code: Optional[str] = None,
         organization_type: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        is_locked: Optional[bool] = None
     ) -> tuple[List[Organization], int]:
         """分页查询组织列表"""
         query = select(Organization)
@@ -51,6 +52,8 @@ class OrganizationRepository(BaseRepository[Organization]):
             query = query.where(Organization.code == code)
         if organization_type:
             query = query.where(Organization.organization_type == organization_type)
+        if is_locked is not None:
+            query = query.where(Organization.is_locked == is_locked)
         if is_active is not None:
             query = query.where(Organization.is_active == is_active)
         
@@ -67,33 +70,67 @@ class OrganizationRepository(BaseRepository[Organization]):
         
         return list(organizations), total
     
-    async def get_tree(self, root_id: Optional[str] = None) -> List[Organization]:
-        """获取组织树（递归查询）"""
-        if root_id:
-            # 从指定根节点开始
-            query = select(Organization).where(Organization.parent_id == root_id)
-        else:
-            # 获取所有根节点（parent_id 为 NULL）
-            query = select(Organization).where(Organization.parent_id.is_(None))
+    async def get_next_sequence_by_type(self, organization_type: str) -> int:
+        """获取指定组织类型的下一个序列号"""
+        # 查询该类型组织的最大序列号（从 code 中提取）
+        # code 格式：type + 序列号 + 年月日，例如：internal00120241119
+        from datetime import datetime
+        today = datetime.now().strftime("%Y%m%d")
         
+        # 查询所有该类型的组织，code 以 type + 数字 + today 开头
+        query = select(Organization).where(
+            Organization.organization_type == organization_type
+        )
         result = await self.db.execute(query)
-        roots = list(result.scalars().all())
+        all_orgs = list(result.scalars().all())
         
-        # 递归获取子节点
-        async def get_children(parent_id: str) -> List[Organization]:
-            query = select(Organization).where(Organization.parent_id == parent_id)
-            result = await self.db.execute(query)
-            return list(result.scalars().all())
+        # 提取序列号
+        max_seq = 0
+        prefix = f"{organization_type}"
+        for org in all_orgs:
+            if org.code and org.code.startswith(prefix):
+                try:
+                    # 尝试从 code 中提取序列号
+                    # code 格式：type + 序列号 + 年月日
+                    # 例如：internal00120241119 -> 提取 001
+                    code_without_prefix = org.code[len(prefix):]
+                    if len(code_without_prefix) >= 8:  # 至少包含序列号(3位) + 日期(8位)
+                        seq_str = code_without_prefix[:-8]  # 去掉最后8位日期
+                        if seq_str.isdigit():
+                            seq = int(seq_str)
+                            max_seq = max(max_seq, seq)
+                except (ValueError, IndexError):
+                    continue
         
-        # 构建树结构（这里只返回扁平列表，树结构在 Service 层构建）
-        all_orgs = []
-        async def collect_all(orgs: List[Organization]):
-            for org in orgs:
-                all_orgs.append(org)
-                children = await get_children(org.id)
-                if children:
-                    await collect_all(children)
+        return max_seq + 1
+    
+    async def get_bantu_organization(self) -> Optional[Organization]:
+        """获取 BANTU 内部组织（code 为 'BANTU' 或 name 包含 'BANTU'）"""
+        # 先尝试通过 code 查找
+        bantu = await self.get_by_code("BANTU")
+        if bantu:
+            return bantu
         
-        await collect_all(roots)
-        return all_orgs
+        # 如果 code 不存在，通过 name 查找
+        result = await self.db.execute(
+            select(Organization)
+            .where(
+                Organization.organization_type == "internal",
+                Organization.name.like("%BANTU%")
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+    
+    async def get_organization_user_count(self, organization_id: str) -> int:
+        """获取组织的用户数量（用于生成用户ID序号）"""
+        from foundation_service.models.organization_employee import OrganizationEmployee
+        result = await self.db.execute(
+            select(func.count(OrganizationEmployee.id))
+            .where(
+                OrganizationEmployee.organization_id == organization_id,
+                OrganizationEmployee.is_active == True
+            )
+        )
+        return result.scalar() or 0
 

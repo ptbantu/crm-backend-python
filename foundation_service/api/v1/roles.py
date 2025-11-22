@@ -23,6 +23,17 @@ async def get_role_list(
     return Result.success(data=roles)
 
 
+@router.get("/{role_id}", response_model=Result[RoleResponse])
+async def get_role(
+    role_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """获取角色详情"""
+    service = RoleService(db)
+    role = await service.get_role(role_id)
+    return Result.success(data=role)
+
+
 @router.post("", response_model=Result[RoleResponse])
 async def create_role(
     request: RoleCreateRequest,

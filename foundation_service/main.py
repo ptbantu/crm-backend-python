@@ -13,7 +13,7 @@ import json
 from common.schemas.response import Result
 from common.exceptions import BusinessException
 from common.utils.logger import Logger, get_logger
-from foundation_service.api.v1 import auth, users, organizations, roles
+from foundation_service.api.v1 import auth, users, organizations, roles, organization_domains, permissions, menus
 from foundation_service.config import settings
 
 # 初始化日志
@@ -120,6 +120,9 @@ app.include_router(auth.router, prefix="/api/foundation/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/foundation/users", tags=["用户管理"])
 app.include_router(organizations.router, prefix="/api/foundation/organizations", tags=["组织管理"])
 app.include_router(roles.router, prefix="/api/foundation/roles", tags=["角色管理"])
+app.include_router(organization_domains.router, prefix="/api/foundation/organization-domains", tags=["组织领域管理"])
+app.include_router(permissions.router, prefix="/api/foundation", tags=["权限管理"])
+app.include_router(menus.router, prefix="/api/foundation", tags=["菜单管理"])
 
 
 @app.get("/health")

@@ -53,7 +53,7 @@ WHERE NOT EXISTS (SELECT 1 FROM roles r WHERE r.code = v.code);
 CREATE TABLE IF NOT EXISTS users (
   id                CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   username          VARCHAR(255) NOT NULL,                    -- 用户名（用于登录，不唯一）
-  email             VARCHAR(255) UNIQUE,                      -- 全局唯一邮箱（用于登录，可空）
+  email             VARCHAR(255) NOT NULL UNIQUE,             -- 全局唯一邮箱（用于登录，必填）
   phone             VARCHAR(50),                              -- 手机号（用于登录验证，可空）
   display_name      VARCHAR(255),                             -- 显示名称
   password_hash     VARCHAR(255),                             -- 密码哈希（登录凭证）
@@ -80,7 +80,10 @@ CREATE INDEX ix_users_wechat ON users(wechat);
 -- =====================================
 -- Organizations (统一组织表)
 -- =====================================
--- Supports: 'internal' (内部组织), 'vendor' (供应商), 'agent' (渠道代理)
+-- 组织类型说明：
+--   'internal': BANTU 内部组织
+--   'vendor': 交付组织（做单组织）
+--   'agent': 外部代理（销售组织）
 -- 扩展字段：公司规模、性质、类型、领域、国别、logo等
 CREATE TABLE IF NOT EXISTS organizations (
   id                 CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -137,7 +140,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   
   -- 状态控制
   is_active          BOOLEAN NOT NULL DEFAULT TRUE,
-  is_locked          BOOLEAN,
+  is_locked          BOOLEAN NOT NULL DEFAULT FALSE,          -- 是否锁定：False=合作（默认），True=锁定（断开合作）
   is_verified        BOOLEAN DEFAULT FALSE,                    -- 是否已认证/审核
   verified_at        DATETIME,                                  -- 认证时间
   verified_by        CHAR(36),                                 -- 认证人

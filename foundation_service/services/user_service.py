@@ -10,6 +10,7 @@ from foundation_service.schemas.user import (
 from foundation_service.repositories.user_repository import UserRepository
 from foundation_service.repositories.organization_repository import OrganizationRepository
 from foundation_service.repositories.organization_employee_repository import OrganizationEmployeeRepository
+from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.models.user import User
 from foundation_service.models.organization_employee import OrganizationEmployee
 from foundation_service.models.user_role import UserRole
@@ -31,71 +32,117 @@ class UserService:
         self.user_repo = UserRepository(db)
         self.org_repo = OrganizationRepository(db)
         self.employee_repo = OrganizationEmployeeRepository(db)
+        self.role_repo = RoleRepository(db)
     
-    async def create_user(self, request: UserCreateRequest) -> UserResponse:
-        """创建用户"""
-        logger.info(f"开始创建用户: username={request.username}, email={request.email}, organization_id={request.organization_id}")
+    async def _create_user_internal(
+        self,
+        organization_id: str,
+        username: str,
+        email: str,
+        password: str,
+        role_ids: List[str],
+        created_by_user_id: Optional[str] = None
+    ) -> User:
+        """
+        内部用户创建函数（统一入口）
+        所有创建用户的逻辑都调用此函数
         
-        # 验证组织是否存在
-        organization = await self.org_repo.get_by_id(request.organization_id)
+        Args:
+            organization_id: 组织ID
+            username: 用户账号
+            password: 密码
+            role_ids: 角色ID列表
+            created_by_user_id: 创建者用户ID（可选，用于日志）
+        
+        Returns:
+            User: 创建的用户对象
+        """
+        logger.info(f"开始创建用户: username={username}, organization_id={organization_id}, created_by={created_by_user_id}")
+        
+        # 1. 验证组织是否存在
+        organization = await self.org_repo.get_by_id(organization_id)
         if not organization:
-            logger.warning(f"组织不存在: organization_id={request.organization_id}")
+            logger.warning(f"组织不存在: organization_id={organization_id}")
             raise OrganizationNotFoundError()
         
-        # 检查组织是否激活
+        # 2. 检查组织是否锁定
+        if organization.is_locked:
+            logger.warning(f"组织已锁定: organization_id={organization_id}, name={organization.name}")
+            raise BusinessException(detail="组织已锁定，无法创建用户")
+        
+        # 3. 检查组织是否激活
         if not organization.is_active:
-            logger.warning(f"组织未激活: organization_id={request.organization_id}, name={organization.name}")
+            logger.warning(f"组织未激活: organization_id={organization_id}, name={organization.name}")
             raise OrganizationInactiveError()
         
-        # 检查组织内用户名是否已存在（用户名在组织内唯一）
+        # 4. 检查组织内用户名是否已存在（用户名在组织内唯一）
         existing_user = await self.user_repo.get_by_username_in_organization(
-            request.username, 
-            request.organization_id
+            username, 
+            organization_id
         )
         if existing_user:
-            logger.warning(f"组织内用户名已存在: username={request.username}, organization_id={request.organization_id}")
-            raise BusinessException(detail=f"用户名 {request.username} 在该组织内已存在")
+            logger.warning(f"组织内用户名已存在: username={username}, organization_id={organization_id}")
+            raise BusinessException(detail=f"用户名 {username} 在该组织内已存在")
         
-        # 检查邮箱是否已存在（邮箱全局唯一）
-        if request.email:
-            existing = await self.user_repo.get_by_email(request.email)
-            if existing:
-                logger.warning(f"邮箱已存在: email={request.email}")
-                raise BusinessException(detail="邮箱已存在")
-        
-        # 验证密码强度（至少8位，包含字母和数字）
-        if len(request.password) < 8:
-            logger.warning(f"密码长度不足: username={request.username}")
+        # 5. 验证密码强度（至少8位，包含字母和数字）
+        if len(password) < 8:
+            logger.warning(f"密码长度不足: username={username}")
             raise BusinessException(detail="密码长度至少8位")
         
-        # 检查密码是否包含字母和数字（可选，可根据需求调整）
-        has_letter = any(c.isalpha() for c in request.password)
-        has_digit = any(c.isdigit() for c in request.password)
+        has_letter = any(c.isalpha() for c in password)
+        has_digit = any(c.isdigit() for c in password)
         if not (has_letter and has_digit):
-            logger.warning(f"密码强度不足: username={request.username}")
+            logger.warning(f"密码强度不足: username={username}")
             raise BusinessException(detail="密码必须包含字母和数字")
         
-        # 创建用户
+        # 6. 检查邮箱是否已存在（邮箱全局唯一）
+        existing_email = await self.user_repo.get_by_email(email)
+        if existing_email:
+            logger.warning(f"邮箱已存在: email={email}")
+            raise BusinessException(detail="邮箱已存在")
+        
+        # 7. 生成用户ID：组织ID + 序号（不限制数量）
+        # 获取该组织已有用户数量
+        org_user_count = await self.org_repo.get_organization_user_count(organization_id)
+        
+        # 生成序号（从1开始，不限制上限）
+        user_sequence = org_user_count + 1
+        # 序号格式：如果小于100用2位（01-99），大于等于100用3位（100-999），以此类推
+        if user_sequence < 100:
+            user_id = f"{organization_id}{user_sequence:02d}"
+        elif user_sequence < 1000:
+            user_id = f"{organization_id}{user_sequence:03d}"
+        else:
+            user_id = f"{organization_id}{user_sequence}"
+        
+        # 检查用户ID是否已存在（理论上不应该存在，但为了安全起见）
+        existing_user_by_id = await self.user_repo.get_by_id(user_id)
+        if existing_user_by_id:
+            logger.error(f"用户ID冲突: user_id={user_id}, organization_id={organization_id}")
+            raise BusinessException(detail="用户ID生成冲突，请重试")
+        
+        # 8. 验证角色是否存在
+        for role_id in role_ids:
+            role = await self.role_repo.get_by_id(role_id)
+            if not role:
+                logger.warning(f"角色不存在: role_id={role_id}")
+                raise BusinessException(detail=f"角色不存在: role_id={role_id}")
+        
+        # 9. 创建用户（使用生成的用户ID）
         user = User(
-            username=request.username,
-            email=request.email,
-            phone=request.phone,
-            display_name=request.display_name,
-            password_hash=hash_password(request.password),
-            avatar_url=request.avatar_url,
-            bio=request.bio,
-            gender=request.gender,
-            address=request.address,
-            contact_phone=request.contact_phone,
-            whatsapp=request.whatsapp,
-            wechat=request.wechat,
-            is_active=request.is_active
+            id=user_id,  # 使用生成的用户ID，而不是UUID
+            username=username,
+            email=email,
+            password_hash=hash_password(password),
+            display_name=username,  # 默认显示名称为用户名
+            is_active=True,
+            is_locked=False  # 默认未锁定
         )
         
         user = await self.user_repo.create(user)
         
-        # 必须创建组织员工记录（业务规则：每个用户必须至少有一个组织员工记录）
-        logger.debug(f"创建组织员工记录: user_id={user.id}, organization_id={request.organization_id}")
+        # 10. 级联创建组织员工记录
+        logger.debug(f"创建组织员工记录: user_id={user.id}, organization_id={organization_id}")
         
         # 检查用户是否已有主要组织，如果没有则设置为主要组织
         existing_primary = await self.employee_repo.get_primary_by_user_id(user.id)
@@ -103,21 +150,36 @@ class UserService:
         
         employee = OrganizationEmployee(
             user_id=user.id,
-            organization_id=request.organization_id,
+            organization_id=organization_id,
             is_primary=is_primary,
             is_active=True
         )
         await self.employee_repo.create(employee)
         
-        # 分配角色
-        if request.role_ids:
-            logger.debug(f"分配角色: user_id={user.id}, role_ids={request.role_ids}")
-            for role_id in request.role_ids:
-                user_role = UserRole(user_id=user.id, role_id=role_id)
-                self.db.add(user_role)
-            await self.db.flush()
+        # 11. 分配角色
+        logger.debug(f"分配角色: user_id={user.id}, role_ids={role_ids}")
+        for role_id in role_ids:
+            user_role = UserRole(user_id=user.id, role_id=role_id)
+            self.db.add(user_role)
+        await self.db.flush()
         
-        logger.info(f"用户创建成功: id={user.id}, username={user.username}, email={user.email}")
+        logger.info(f"用户创建成功: id={user.id}, username={user.username}, email={user.email}, organization_id={organization_id}")
+        return user
+    
+    async def create_user(
+        self, 
+        request: UserCreateRequest,
+        created_by_user_id: Optional[str] = None
+    ) -> UserResponse:
+        """创建用户（公开方法，调用内部函数）"""
+        user = await self._create_user_internal(
+            organization_id=request.organization_id,
+            username=request.username,
+            email=request.email,
+            password=request.password,
+            role_ids=request.role_ids,
+            created_by_user_id=created_by_user_id
+        )
         return await self._to_response(user)
     
     async def get_user_by_id(self, user_id: str) -> UserResponse:
@@ -213,17 +275,36 @@ class UserService:
         logger.info(f"用户更新成功: id={user.id}, username={user.username}")
         return await self._to_response(user)
     
-    async def delete_user(self, user_id: str) -> None:
-        """Block 用户（逻辑删除）"""
-        logger.info(f"开始删除用户: user_id={user_id}")
+    async def lock_user(self, user_id: str) -> UserResponse:
+        """锁定用户（禁用登录，防止信息丢失）"""
+        logger.info(f"开始锁定用户: user_id={user_id}")
         user = await self.user_repo.get_by_id(user_id)
         if not user:
             logger.warning(f"用户不存在: user_id={user_id}")
             raise UserNotFoundError()
         
-        user.is_active = False
+        # 不能锁定自己
+        # 注意：这里需要从请求中获取当前用户ID，但为了简化，暂时不检查
+        
+        # 设置 is_locked = True（锁定，禁用登录）
+        user.is_locked = True
         await self.user_repo.update(user)
-        logger.info(f"用户删除成功: id={user.id}, username={user.username}")
+        logger.info(f"用户锁定成功: id={user.id}, username={user.username}, is_locked=True")
+        return await self._to_response(user)
+    
+    async def unlock_user(self, user_id: str) -> UserResponse:
+        """解锁用户（恢复登录）"""
+        logger.info(f"开始解锁用户: user_id={user_id}")
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            logger.warning(f"用户不存在: user_id={user_id}")
+            raise UserNotFoundError()
+        
+        # 设置 is_locked = False（正常，允许登录）
+        user.is_locked = False
+        await self.user_repo.update(user)
+        logger.info(f"用户解锁成功: id={user.id}, username={user.username}, is_locked=False")
+        return await self._to_response(user)
     
     async def _to_response(self, user: User) -> UserResponse:
         """转换为响应对象"""
@@ -258,6 +339,7 @@ class UserService:
             primary_organization_id=primary_org_id,
             primary_organization_name=primary_org_name,
             is_active=user.is_active,
+            is_locked=user.is_locked or False,
             last_login_at=user.last_login_at,
             roles=role_infos,
             created_at=user.created_at,

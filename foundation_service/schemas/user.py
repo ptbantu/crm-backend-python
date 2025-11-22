@@ -7,22 +7,12 @@ from datetime import datetime
 
 
 class UserCreateRequest(BaseModel):
-    """创建用户请求"""
-    username: str = Field(..., min_length=3, max_length=50, description="用户名")
-    email: Optional[EmailStr] = Field(None, description="邮箱（全局唯一）")
-    phone: Optional[str] = Field(None, description="手机号")
-    display_name: Optional[str] = Field(None, description="显示名称")
-    password: str = Field(..., min_length=8, description="密码（至少8位）")
-    avatar_url: Optional[str] = Field(None, description="头像地址")
-    bio: Optional[str] = Field(None, description="个人简介")
-    gender: Optional[str] = Field(None, pattern="^(male|female|other)$", description="性别")
-    address: Optional[str] = Field(None, description="住址")
-    contact_phone: Optional[str] = Field(None, description="联系电话")
-    whatsapp: Optional[str] = Field(None, description="WhatsApp 号码")
-    wechat: Optional[str] = Field(None, description="微信号")
-    organization_id: str = Field(..., description="主要组织ID")
-    role_ids: List[str] = Field(default_factory=list, description="角色ID列表")
-    is_active: bool = Field(default=True, description="是否激活")
+    """创建用户请求（简化版：只需要组织ID、账号、邮箱、密码、角色）"""
+    organization_id: str = Field(..., description="组织ID")
+    username: str = Field(..., min_length=3, max_length=50, description="用户账号")
+    email: EmailStr = Field(..., description="邮箱（必填，全局唯一）")
+    password: str = Field(..., min_length=8, description="密码（至少8位，包含字母和数字）")
+    role_ids: List[str] = Field(..., min_length=1, description="角色ID列表（至少一个角色）")
 
 
 class UserUpdateRequest(BaseModel):
@@ -58,6 +48,7 @@ class UserResponse(BaseModel):
     primary_organization_id: Optional[str]
     primary_organization_name: Optional[str]
     is_active: bool
+    is_locked: bool = Field(False, description="是否锁定：False=正常（默认），True=锁定（禁用登录）")
     last_login_at: Optional[datetime]
     roles: List["RoleInfo"] = Field(default_factory=list)
     created_at: datetime

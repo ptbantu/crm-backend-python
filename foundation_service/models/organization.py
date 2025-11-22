@@ -15,8 +15,9 @@ class Organization(Base):
     name = Column(Text, nullable=False)
     code = Column(String(255), unique=True, nullable=True, index=True)
     external_id = Column(String(255), unique=True, nullable=True)
-    organization_type = Column(String(50), nullable=False, index=True)  # internal, vendor, agent
-    parent_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
+    organization_type = Column(String(50), nullable=False, index=True)  # internal: BANTU内部组织, vendor: 交付组织(做单组织), agent: 外部代理(销售组织)
+    # parent_id 字段已废弃，不再支持组织树形结构
+    # parent_id = Column(String(36), ForeignKey("organizations.id"), nullable=True, index=True)
     
     # 基本信息
     email = Column(String(255), nullable=True)
@@ -64,8 +65,8 @@ class Organization(Base):
     tax_certificate_url = Column(String(500), nullable=True)
     
     # 状态控制
-    is_active = Column(Boolean, nullable=False, default=True, index=True)
-    is_locked = Column(Boolean, nullable=True, default=False)
+    is_active = Column(Boolean, nullable=False, default=True, index=True, comment="是否激活")
+    is_locked = Column(Boolean, nullable=False, default=False, index=True, comment="是否锁定：False=合作（默认），True=锁定（断开合作）")
     is_verified = Column(Boolean, nullable=True, default=False)
     verified_at = Column(DateTime, nullable=True)
     verified_by = Column(String(36), nullable=True)

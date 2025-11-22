@@ -43,29 +43,37 @@ class AuthService:
         if not primary_employee:
             raise OrganizationNotFoundError()
         
-        # 4. 检查组织是否被 block
+        # 4. 检查组织状态
         organization = await self.org_repo.get_by_id(primary_employee.organization_id)
         if not organization:
             raise OrganizationNotFoundError()
         
+        # 检查组织是否锁定：is_locked=True 表示锁定（断开合作），该组织所有用户不能登录
         if organization.is_locked:
+            logger.warning(f"组织已锁定，用户无法登录: user_id={user.id}, organization_id={organization.id}, organization_name={organization.name}")
             raise OrganizationLockedError()
         
+        # 检查组织是否激活
         if not organization.is_active:
             raise OrganizationInactiveError()
         
-        # 5. 检查个人是否被 block
+        # 5. 检查用户是否被锁定
+        if user.is_locked:
+            logger.warning(f"用户已锁定，无法登录: user_id={user.id}, email={request.email}")
+            raise UserInactiveError()
+        
+        # 6. 检查用户是否激活
         if not user.is_active:
             raise UserInactiveError()
         
-        # 6. 查询用户角色
+        # 7. 查询用户角色
         roles = await self.user_repo.get_user_roles(user.id)
         role_codes = [role.code for role in roles]
         
-        # 7. 查询权限列表（简化处理，从配置获取）
+        # 8. 查询权限列表（简化处理，从配置获取）
         permissions = self._get_permissions_by_roles(role_codes)
         
-        # 8. 生成 JWT Token
+        # 9. 生成 JWT Token
         token_data = {
             "user_id": user.id,
             "username": user.username,
@@ -77,11 +85,11 @@ class AuthService:
         token = create_access_token(token_data)
         refresh_token = create_refresh_token(token_data)
         
-        # 9. 更新最后登录时间
+        # 10. 更新最后登录时间
         user.last_login_at = datetime.utcnow()
         await self.user_repo.update(user)
         
-        # 10. 构建响应
+        # 11. 构建响应
         user_info = UserInfo(
             id=user.id,
             username=user.username,

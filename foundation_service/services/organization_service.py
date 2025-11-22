@@ -2,13 +2,19 @@
 组织服务
 """
 from typing import Optional
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from foundation_service.schemas.organization import (
-    OrganizationCreateRequest, OrganizationUpdateRequest, OrganizationResponse,
-    OrganizationTreeNode
+    OrganizationCreateRequest, OrganizationUpdateRequest, OrganizationResponse
 )
 from foundation_service.repositories.organization_repository import OrganizationRepository
+from foundation_service.repositories.user_repository import UserRepository
+from foundation_service.repositories.role_repository import RoleRepository
+from foundation_service.repositories.organization_employee_repository import OrganizationEmployeeRepository
+from foundation_service.services.user_service import UserService
+from foundation_service.repositories.organization_domain_repository import OrganizationDomainRepository
 from foundation_service.models.organization import Organization
+from foundation_service.models.user import User
 from common.exceptions import OrganizationNotFoundError, BusinessException
 from common.utils.logger import get_logger
 from sqlalchemy import select
@@ -22,39 +28,66 @@ class OrganizationService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.org_repo = OrganizationRepository(db)
+        self.user_repo = UserRepository(db)
+        self.role_repo = RoleRepository(db)
+        self.employee_repo = OrganizationEmployeeRepository(db)
+        self.domain_repo = OrganizationDomainRepository(db)
+        self.user_service = UserService(db)
     
-    async def create_organization(self, request: OrganizationCreateRequest) -> OrganizationResponse:
+    async def create_organization(
+        self, 
+        request: OrganizationCreateRequest,
+        created_by_user_id: Optional[str] = None
+    ) -> OrganizationResponse:
         """创建组织"""
-        logger.info(f"开始创建组织: name={request.name}, code={request.code}, type={request.organization_type}, parent_id={request.parent_id}")
+        logger.info(f"开始创建组织: name={request.name}, code={request.code}, type={request.organization_type}, created_by={created_by_user_id}")
         
-        # 检查编码是否已存在
-        if request.code:
+        # 1. 权限检查：只有 BANTU 的 admin 用户可以创建组织
+        if created_by_user_id:
+            # 检查用户是否是 BANTU 的 admin
+            bantu_org = await self.org_repo.get_bantu_organization()
+            if not bantu_org:
+                logger.warning("BANTU 组织不存在，无法验证权限")
+                raise BusinessException(detail="系统配置错误：BANTU 组织不存在")
+            
+            # 检查用户是否属于 BANTU 组织且拥有 ADMIN 角色
+            user = await self.user_repo.get_by_id(created_by_user_id)
+            if not user:
+                raise BusinessException(detail="用户不存在")
+            
+            # 检查用户是否属于 BANTU 组织
+            bantu_employee = await self.employee_repo.get_primary_by_user_id(created_by_user_id)
+            if not bantu_employee or bantu_employee.organization_id != bantu_org.id:
+                logger.warning(f"用户不属于 BANTU 组织: user_id={created_by_user_id}")
+                raise BusinessException(detail="只有 BANTU 的 admin 用户可以创建组织")
+            
+            # 检查用户是否拥有 ADMIN 角色
+            user_roles = await self.user_repo.get_user_roles(created_by_user_id)
+            role_codes = [role.code for role in user_roles]
+            if "ADMIN" not in role_codes:
+                logger.warning(f"用户不是 ADMIN: user_id={created_by_user_id}, roles={role_codes}")
+                raise BusinessException(detail="只有 BANTU 的 admin 用户可以创建组织")
+        
+        # 2. 生成组织 code（如果未提供）
+        if not request.code:
+            # 生成格式：type + 序列号(3位) + 年月日(8位)
+            # 例如：internal00120241119, vendor00120241119, agent00120241119
+            sequence = await self.org_repo.get_next_sequence_by_type(request.organization_type)
+            today = datetime.now().strftime("%Y%m%d")
+            request.code = f"{request.organization_type}{sequence:03d}{today}"
+            logger.info(f"自动生成组织编码: code={request.code}")
+        else:
+            # 检查编码是否已存在
             existing = await self.org_repo.get_by_code(request.code)
             if existing:
                 logger.warning(f"组织编码已存在: code={request.code}")
                 raise BusinessException(detail=f"组织编码 {request.code} 已存在")
         
-        # 验证父组织（如果指定）
-        if request.parent_id:
-            parent_org = await self.org_repo.get_by_id(request.parent_id)
-            if not parent_org:
-                logger.warning(f"父组织不存在: parent_id={request.parent_id}")
-                raise OrganizationNotFoundError()
-            
-            if not parent_org.is_active:
-                logger.warning(f"父组织未激活: parent_id={request.parent_id}")
-                raise BusinessException(detail="父组织未激活")
-            
-            # 检查循环引用（防止父组织是自己的子组织）
-            if await self._check_circular_reference(request.parent_id, None):
-                logger.warning(f"检测到循环引用: parent_id={request.parent_id}")
-                raise BusinessException(detail="不能将组织设置为自己的子组织")
-        
+        # 3. 创建组织
         organization = Organization(
             name=request.name,
             code=request.code,
             organization_type=request.organization_type,
-            parent_id=request.parent_id,
             email=request.email,
             phone=request.phone,
             website=request.website,
@@ -92,7 +125,70 @@ class OrganizationService:
         
         organization = await self.org_repo.create(organization)
         logger.info(f"组织创建成功: id={organization.id}, name={organization.name}, code={organization.code}")
+        
+        # 4. 自动创建该组织的 admin 用户
+        await self._create_organization_admin(organization)
+        
         return await self._to_response(organization)
+    
+    async def _create_organization_admin(self, organization: Organization) -> User:
+        """为组织自动创建 admin 用户（使用统一的用户创建函数）"""
+        logger.info(f"开始为组织创建 admin 用户: organization_id={organization.id}, name={organization.name}")
+        
+        # 获取 ADMIN 角色
+        all_roles = await self.role_repo.get_all()
+        admin_role = next((r for r in all_roles if r.code == "ADMIN"), None)
+        if not admin_role:
+            logger.error("ADMIN 角色不存在，无法创建组织 admin 用户")
+            raise BusinessException(detail="系统配置错误：ADMIN 角色不存在")
+        
+        # 生成默认邮箱和密码
+        if organization.email:
+            # 从组织邮箱提取域名：contact@example.com -> example.com
+            email_parts = organization.email.split("@")
+            if len(email_parts) == 2:
+                email_domain = email_parts[1]
+            else:
+                email_domain = "bantu.sbs"
+        else:
+            email_domain = "bantu.sbs"
+        
+        admin_email = f"admin@{email_domain}"
+        
+        # 检查邮箱是否已存在（如果存在，添加组织code后缀）
+        existing_email = await self.user_repo.get_by_email(admin_email)
+        if existing_email:
+            logger.warning(f"Admin 邮箱已存在，使用组织code后缀: email={admin_email}, organization_id={organization.id}")
+            if organization.code:
+                admin_email = f"admin{organization.code.lower()}@{email_domain}"
+            else:
+                admin_email = f"admin{organization.id[:8]}@{email_domain}"
+        
+        # 生成默认密码：admin + "bantu"
+        default_password = "adminbantu"
+        
+        # 使用统一的用户创建函数
+        admin_user = await self.user_service._create_user_internal(
+            organization_id=organization.id,
+            username="admin",
+            email=admin_email,
+            password=default_password,
+            role_ids=[admin_role.id]
+        )
+        
+        # 更新显示名称和职位信息
+        admin_user.display_name = f"{organization.name} 管理员"
+        await self.user_repo.update(admin_user)
+        
+        # 更新员工记录，设置职位和管理员标记
+        admin_employee = await self.employee_repo.get_primary_by_user_id(admin_user.id)
+        if admin_employee:
+            admin_employee.position = "管理员"
+            admin_employee.is_manager = True
+            await self.employee_repo.update(admin_employee)
+        
+        logger.info(f"组织 admin 用户创建成功: user_id={admin_user.id}, email={admin_user.email}, password={default_password}")
+        return admin_user
     
     async def get_organization_by_id(self, organization_id: str) -> OrganizationResponse:
         """查询组织详情"""
@@ -129,28 +225,6 @@ class OrganizationService:
                 logger.debug(f"更新组织编码: organization_id={organization_id}, old_code={organization.code}, new_code={request.code}")
             organization.code = request.code
         
-        # 更新父组织（如果指定）
-        if hasattr(request, 'parent_id') and request.parent_id is not None:
-            if request.parent_id == organization_id:
-                logger.warning(f"不能将组织设置为自己的父组织: organization_id={organization_id}")
-                raise BusinessException(detail="不能将组织设置为自己的父组织")
-            
-            # 检查循环引用
-            if await self._check_circular_reference(request.parent_id, organization_id):
-                logger.warning(f"检测到循环引用: organization_id={organization_id}, parent_id={request.parent_id}")
-                raise BusinessException(detail="不能将组织设置为自己的子组织")
-            
-            # 验证父组织存在且激活
-            parent_org = await self.org_repo.get_by_id(request.parent_id)
-            if not parent_org:
-                logger.warning(f"父组织不存在: parent_id={request.parent_id}")
-                raise OrganizationNotFoundError()
-            if not parent_org.is_active:
-                logger.warning(f"父组织未激活: parent_id={request.parent_id}")
-                raise BusinessException(detail="父组织未激活")
-            
-            organization.parent_id = request.parent_id
-        
         if request.is_active is not None:
             organization.is_active = request.is_active
         if request.is_locked is not None:
@@ -160,58 +234,39 @@ class OrganizationService:
         logger.info(f"组织更新成功: id={organization.id}, name={organization.name}")
         return await self._to_response(organization)
     
-    async def delete_organization(self, organization_id: str) -> None:
-        """Block 组织（逻辑删除）"""
-        logger.info(f"开始删除组织: organization_id={organization_id}")
+    async def lock_organization(self, organization_id: str) -> OrganizationResponse:
+        """锁定组织（断开合作）"""
+        logger.info(f"开始锁定组织: organization_id={organization_id}")
         organization = await self.org_repo.get_by_id(organization_id)
         if not organization:
             logger.warning(f"组织不存在: organization_id={organization_id}")
             raise OrganizationNotFoundError()
         
-        # 检查是否有子组织（仅提示，不阻止删除）
-        from sqlalchemy import select
-        from foundation_service.models.organization import Organization
-        children_result = await self.db.execute(
-            select(Organization).where(Organization.parent_id == organization_id)
-        )
-        children = list(children_result.scalars().all())
-        if children:
-            active_children = [c for c in children if c.is_active]
-            if active_children:
-                logger.warning(f"组织存在活跃的子组织: organization_id={organization_id}, children_count={len(active_children)}")
-                # 仅记录警告，不阻止删除（业务规则允许）
+        # 不能锁定 BANTU 内部组织
+        bantu_org = await self.org_repo.get_bantu_organization()
+        if bantu_org and organization.id == bantu_org.id:
+            logger.warning(f"不能锁定 BANTU 内部组织: organization_id={organization_id}")
+            raise BusinessException(detail="不能锁定 BANTU 内部组织")
         
+        # 设置 is_locked = True（锁定，断开合作）
         organization.is_locked = True
-        organization.is_active = False
         await self.org_repo.update(organization)
-        logger.info(f"组织删除成功: id={organization.id}, name={organization.name}")
+        logger.info(f"组织锁定成功: id={organization.id}, name={organization.name}, is_locked=True")
+        return await self._to_response(organization)
     
-    async def _check_circular_reference(
-        self, 
-        parent_id: str, 
-        current_id: Optional[str] = None
-    ) -> bool:
-        """检查循环引用（递归检查父组织链）"""
-        if current_id and parent_id == current_id:
-            return True  # 发现循环引用
+    async def unlock_organization(self, organization_id: str) -> OrganizationResponse:
+        """解锁组织（恢复合作）"""
+        logger.info(f"开始解锁组织: organization_id={organization_id}")
+        organization = await self.org_repo.get_by_id(organization_id)
+        if not organization:
+            logger.warning(f"组织不存在: organization_id={organization_id}")
+            raise OrganizationNotFoundError()
         
-        if not parent_id:
-            return False
-        
-        parent_org = await self.org_repo.get_by_id(parent_id)
-        if not parent_org:
-            return False
-        
-        # 如果父组织没有父级，则没有循环引用
-        if not parent_org.parent_id:
-            return False
-        
-        # 如果父组织的父级是当前组织，则发现循环引用
-        if current_id and parent_org.parent_id == current_id:
-            return True
-        
-        # 递归检查父组织的父级链
-        return await self._check_circular_reference(parent_org.parent_id, current_id)
+        # 设置 is_locked = False（合作，默认状态）
+        organization.is_locked = False
+        await self.org_repo.update(organization)
+        logger.info(f"组织解锁成功: id={organization.id}, name={organization.name}, is_locked=False")
+        return await self._to_response(organization)
     
     async def get_organization_list(
         self,
@@ -220,17 +275,19 @@ class OrganizationService:
         name: Optional[str] = None,
         code: Optional[str] = None,
         organization_type: Optional[str] = None,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        is_locked: Optional[bool] = None
     ) -> dict:
         """分页查询组织列表"""
-        logger.debug(f"查询组织列表: page={page}, size={size}, name={name}, code={code}, type={organization_type}")
+        logger.debug(f"查询组织列表: page={page}, size={size}, name={name}, code={code}, type={organization_type}, is_locked={is_locked}")
         organizations, total = await self.org_repo.get_list(
             page=page,
             size=size,
             name=name,
             code=code,
             organization_type=organization_type,
-            is_active=is_active
+            is_active=is_active,
+            is_locked=is_locked
         )
         
         # 转换为响应对象
@@ -252,63 +309,41 @@ class OrganizationService:
         # 获取统计信息
         employees_count = await self.org_repo.get_employees_count(organization.id)
         
+        # 获取组织领域
+        domains = await self.domain_repo.get_by_organization_id(organization.id)
+        domain_infos = []
+        for domain in domains:
+            # 获取关联关系以确定是否为主要领域
+            from foundation_service.repositories.organization_domain_repository import OrganizationDomainRelationRepository
+            relation_repo = OrganizationDomainRelationRepository(self.db)
+            relations = await relation_repo.get_by_organization_id(organization.id)
+            is_primary = any(r.domain_id == domain.id and r.is_primary for r in relations)
+            
+            domain_infos.append({
+                "id": domain.id,
+                "code": domain.code,
+                "name_zh": domain.name_zh,
+                "name_id": domain.name_id,
+                "is_primary": is_primary
+            })
+        
         return OrganizationResponse(
             id=organization.id,
             name=organization.name,
             code=organization.code,
             organization_type=organization.organization_type,
+            is_locked=organization.is_locked or False,
             email=organization.email,
             phone=organization.phone,
             website=organization.website,
             logo_url=organization.logo_url,
             description=organization.description,
             is_active=organization.is_active,
-            is_locked=organization.is_locked or False,
             is_verified=organization.is_verified or False,
             employees_count=employees_count,
+            domains=domain_infos,
             created_at=organization.created_at,
             updated_at=organization.updated_at
         )
     
-    async def get_organization_tree(
-        self,
-        root_id: Optional[str] = None,
-        organization_type: Optional[str] = None
-    ) -> List[OrganizationTreeNode]:
-        """获取组织树结构"""
-        logger.debug(f"查询组织树: root_id={root_id}, type={organization_type}")
-        
-        # 获取所有组织
-        all_orgs = await self.org_repo.get_tree(root_id)
-        
-        # 如果指定了组织类型，进行过滤
-        if organization_type:
-            all_orgs = [org for org in all_orgs if org.organization_type == organization_type]
-        
-        # 构建树结构
-        org_dict: dict[str, OrganizationTreeNode] = {}
-        for org in all_orgs:
-            employees_count = await self.org_repo.get_employees_count(org.id)
-            org_dict[org.id] = OrganizationTreeNode(
-                id=org.id,
-                name=org.name,
-                code=org.code,
-                organization_type=org.organization_type,
-                is_active=org.is_active,
-                is_locked=org.is_locked or False,
-                employees_count=employees_count,
-                children=[]
-            )
-        
-        # 构建父子关系
-        root_nodes = []
-        for org in all_orgs:
-            node = org_dict[org.id]
-            if org.parent_id and org.parent_id in org_dict:
-                org_dict[org.parent_id].children.append(node)
-            else:
-                root_nodes.append(node)
-        
-        logger.debug(f"组织树查询成功: root_count={len(root_nodes)}")
-        return root_nodes
 

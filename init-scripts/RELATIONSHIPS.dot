@@ -1,0 +1,195 @@
+digraph BANTU_CRM {
+  rankdir=LR;
+  node [shape=record, style=filled, fillcolor=lightblue];
+  
+  // Core Domain
+  organization_domains [label="organization_domains|id (PK)\lorganization_id (FK)\ldomain_id (FK)\lcode\lname_zh\lname_id\ldescription_zh\ldescription_id\ldisplay_order\lis_active\lcreated_at\lupdated_at\lis_primary\lINSERT\lSELECT\l..."];
+  organization_employees [label="organization_employees|id (PK)\luser_id (FK)\lorganization_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lfirst_name\llast_name\lfull_name\lemail\lphone\lposition\ldepartment\lemployee_number\lis_primary\lis_manager\lis_decision_maker\lis_active\l..."];
+  organizations [label="organizations|id (PK)\lparent_id (FK)\lverified_by (FK)\lname\lcode\lexternal_id\lorganization_type\lemail\lphone\lwebsite\llogo_url\ldescription\lstreet\lcity\lstate_province\lpostal_code\l..."];
+  roles [label="roles|id (PK)\lparent_id (FK)\lverified_by (FK)\lorganization_id (FK)\luser_id (FK)\lrole_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lvendor_id (FK)\lcategory_id (FK)\lparent_customer_id (FK)\lsource_id (FK)\lchannel_id (FK)\lowner_user_id (FK)\lagent_user_id (FK)\lagent_id (FK)\lcustomer_id (FK)\lproduct_id (FK)\lsales_user_id (FK)\lstatus_id (FK)\lorder_id (FK)\lassigned_to_user_id (FK)\lassigned_by_user_id (FK)\lorganization_employee_id (FK)\lvendor_employee_id (FK)\lorder_stage_id (FK)\luploaded_by (FK)\lconfirmed_by (FK)\lcode\lname\ldescription\lcreated_at\lupdated_at"];
+  user_roles [label="user_roles|user_id (FK)\lrole_id (FK)"];
+  users [label="users|id (PK)\lusername\lemail\lphone\ldisplay_name\lpassword_hash\lavatar_url\lbio\lgender\laddress\lcontact_phone\lwhatsapp\lwechat\lis_active\llast_login_at\l..."];
+
+  // Permission Domain
+  menu_permissions [label="menu_permissions|menu_id (FK)\lpermission_id (FK)\lcreated_at"];
+  menus [label="menus|id (PK)\lparent_id (FK)\lcode\lname_zh\lname_id\ldescription_zh\ldescription_id\lpath\lcomponent\licon\ldisplay_order\lis_active\lis_visible\lcreated_at\lupdated_at"];
+  permissions [label="permissions|id (PK)\lrole_id (FK)\lpermission_id (FK)\lparent_id (FK)\lmenu_id (FK)\lcode\lname_zh\lname_id\ldescription_zh\ldescription_id\lresource_type\laction\ldisplay_order\lis_active\lcreated_at\lupdated_at"];
+  role_permissions [label="role_permissions|role_id (FK)\lpermission_id (FK)\lcreated_at"];
+
+  // Product Domain
+  product_categories [label="product_categories|id (PK)\lcode\lname\lcreated_at\lupdated_at"];
+  products [label="products|id (PK)\lvendor_id (FK)\lcategory_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lname\lcode\l..."];
+
+  // Customer Domain
+  contacts [label="contacts|id (PK)\lcustomer_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lfirst_name\llast_name\lfull_name\lemail\lphone\lmobile\lposition\ldepartment\lis_primary\lis_decision_maker\lcontact_role\laddress\lcity\l..."];
+  customer_channels [label="customer_channels|id (PK)\lcode\lname\lcreated_at\lupdated_at\ldescription\ldisplay_order\lis_active"];
+  customer_sources [label="customer_sources|id (PK)\lcode\lname\lcreated_at\lupdated_at\ldescription\ldisplay_order\lis_active"];
+  customers [label="customers|id (PK)\lparent_customer_id (FK)\lsource_id (FK)\lchannel_id (FK)\lowner_user_id (FK)\lagent_user_id (FK)\lagent_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\lchange_log_at_src\llinked_module\llinked_id_external\lname\l..."];
+  visa_records [label="visa_records|id (PK)\lcustomer_id (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lcustomer_name\l..."];
+
+  // Order Domain
+  deliverables [label="deliverables|id (PK)\lorder_id (FK)\lorder_stage_id (FK)\lverified_by (FK)\luploaded_by (FK)\ldeliverable_type\lname\ldescription\lfile_path\lfile_url\lfile_size\lmime_type\lis_verified\lverified_at\lcreated_at\l..."];
+  order_assignments [label="order_assignments|id (PK)\lorder_id (FK)\lassigned_to_user_id (FK)\lassigned_by_user_id (FK)\lvendor_id (FK)\lorganization_employee_id (FK)\lvendor_employee_id (FK)\lassignment_type\lis_primary\lassigned_at\lunassigned_at\lnotes\lcreated_at"];
+  order_stages [label="order_stages|id (PK)\lorder_id (FK)\lassigned_to_user_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lstage_name\lstage_code\lstage_order\lstatus\lstarted_at\lcompleted_at\lprogress_percent\lnotes\lcreated_at\lupdated_at"];
+  order_statuses [label="order_statuses|id (PK)\lcode\lname\ldescription\ldisplay_order\lis_active\lcreated_at\lupdated_at"];
+  orders [label="orders|id (PK)\lcustomer_id (FK)\lproduct_id (FK)\lsales_user_id (FK)\lstatus_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lservice_record_id (FK)\lworkflow_instance_id (FK)\lorder_number\ltitle\lproduct_name\lsales_username\lquantity\lunit_price\ltotal_amount\lcurrency_code\ldiscount_amount\lfinal_amount\l..."];
+  payments [label="payments|id (PK)\lorder_id (FK)\lconfirmed_by (FK)\lcreated_by (FK)\lpayment_stage_id (FK)\lpayment_type\lamount\lcurrency_code\lpayment_method\lpayment_date\lreceived_at\ltransaction_id\lbank_account\lpayer_name\lpayer_account\lstatus\lconfirmed_at\l..."];
+
+  // Workflow Domain
+  workflow_transitions [label="workflow_transitions|id (PK)\lworkflow_instance_id (FK)\ltriggered_by (FK)\lfrom_stage\lto_stage\ltransition_condition\ltriggered_at\lnotes\lcreated_at"];
+
+  // Extension Domain
+  agent_extensions [label="agent_extensions|organization_id (PK)\lorganization_id (FK)\laccount_group\lcategory_name\lcreated_at\lupdated_at"];
+  vendor_extensions [label="vendor_extensions|organization_id (PK)\lorganization_id (FK)\laccount_group\lcategory_name\lcreated_at\lupdated_at"];
+
+  // Other Domain
+  customer_documents [label="customer_documents|id (PK)\lcustomer_id (FK)\lverified_by (FK)\lcreated_by (FK)\lupdated_by (FK)\lorder_id (FK)\lservice_record_id (FK)\lcustomer_name\ldocument_type\ldocument_name\ldocument_number\lissuing_country\lissuing_authority\lissue_date\lexpiry_date\lis_valid\lfile_url\lfile_path\lfile_name\lfile_size\l..."];
+  order_comments [label="order_comments|id (PK)\lorder_id (FK)\lorder_stage_id (FK)\lreplied_to_comment_id (FK)\lcreated_by (FK)\lcomment_type\lcontent_zh\lcontent_id\lis_internal\lis_pinned\lcreated_at\lupdated_at"];
+  order_files [label="order_files|id (PK)\lorder_id (FK)\lorder_item_id (FK)\lorder_stage_id (FK)\lverified_by (FK)\luploaded_by (FK)\lfile_category\lfile_name_zh\lfile_name_id\lfile_type\lfile_path\lfile_url\lfile_size\lmime_type\ldescription_zh\ldescription_id\lis_required\l..."];
+  order_items [label="order_items|id (PK)\lorder_id (FK)\lproduct_id (FK)\lservice_type_id (FK)\litem_number\lproduct_name_zh\lproduct_name_id\lproduct_code\lservice_type_name_zh\lservice_type_name_id\lquantity\lunit\lunit_price\ldiscount_amount\litem_amount\l..."];
+  payment_stages [label="payment_stages|id (PK)\lorder_id (FK)\lservice_record_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lorder_number\lstage_number\lstage_name\lstage_description\lamount\lpaid_amount\lremaining_amount\lcurrency_code\lpayment_condition\lpayment_trigger\ltrigger_date\ltrigger_milestone\l..."];
+  service_records [label="service_records|id (PK)\lcustomer_id (FK)\lservice_type_id (FK)\lproduct_id (FK)\lcontact_id (FK)\lsales_user_id (FK)\lreferral_customer_id (FK)\lcreated_by (FK)\lupdated_by (FK)\lid_external\lowner_id_external\lowner_name\lcreated_by_external\lcreated_by_name\lupdated_by_external\lupdated_by_name\lcreated_at_src\lupdated_at_src\llast_action_at_src\llinked_module\llinked_id_external\lcustomer_name\l..."];
+  workflow_definitions [label="workflow_definitions|id (PK)\lcreated_by (FK)\lupdated_by (FK)\lworkflow_definition_id (FK)\lstarted_by (FK)\lworkflow_instance_id (FK)\lassigned_to_user_id (FK)\lassigned_to_role_id (FK)\lcompleted_by (FK)\ltriggered_by (FK)\lorder_id (FK)\lproduct_id (FK)\lservice_type_id (FK)\lorder_stage_id (FK)\lreplied_to_comment_id (FK)\lorder_item_id (FK)\lverified_by (FK)\luploaded_by (FK)\lname_zh\lname_id\lcode\ldescription_zh\ldescription_id\lworkflow_type\ldefinition_json\lversion\lis_active\lcreated_at\lupdated_at"];
+  workflow_instances [label="workflow_instances|id (PK)\lworkflow_definition_id (FK)\lstarted_by (FK)\lbusiness_type\lbusiness_id\lcurrent_stage\lstatus\lstarted_at\lcompleted_at\lvariables\lcreated_at\lupdated_at"];
+  workflow_tasks [label="workflow_tasks|id (PK)\lworkflow_instance_id (FK)\lassigned_to_user_id (FK)\lassigned_to_role_id (FK)\lcompleted_by (FK)\ltask_name_zh\ltask_name_id\ltask_code\ltask_type\lstatus\ldue_date\lcompleted_at\lvariables\lcreated_at\lupdated_at"];
+
+  // Relationships
+  organizations -> organizations [label="parent_id"];
+  organizations -> users [label="verified_by"];
+  vendor_extensions -> organizations [label="organization_id"];
+  agent_extensions -> organizations [label="organization_id"];
+  user_roles -> users [label="user_id"];
+  user_roles -> roles [label="role_id"];
+  organization_employees -> users [label="user_id"];
+  organization_employees -> organizations [label="organization_id"];
+  organization_employees -> users [label="created_by"];
+  organization_employees -> users [label="updated_by"];
+  products -> organizations [label="vendor_id"];
+  products -> product_categories [label="category_id"];
+  customers -> customers [label="parent_customer_id"];
+  customers -> customer_sources [label="source_id"];
+  customers -> customer_channels [label="channel_id"];
+  customers -> users [label="owner_user_id"];
+  customers -> users [label="agent_user_id"];
+  customers -> organizations [label="agent_id"];
+  contacts -> customers [label="customer_id"];
+  contacts -> users [label="created_by"];
+  contacts -> users [label="updated_by"];
+  visa_records -> customers [label="customer_id"];
+  orders -> customers [label="customer_id"];
+  orders -> products [label="product_id"];
+  orders -> users [label="sales_user_id"];
+  orders -> order_statuses [label="status_id"];
+  orders -> users [label="created_by"];
+  orders -> users [label="updated_by"];
+  order_assignments -> orders [label="order_id"];
+  order_assignments -> users [label="assigned_to_user_id"];
+  order_assignments -> users [label="assigned_by_user_id"];
+  order_assignments -> organizations [label="vendor_id"];
+  order_assignments -> organization_employees [label="organization_employee_id"];
+  order_assignments -> organization_employees [label="vendor_employee_id"];
+  order_stages -> orders [label="order_id"];
+  order_stages -> users [label="assigned_to_user_id"];
+  order_stages -> users [label="created_by"];
+  order_stages -> users [label="updated_by"];
+  deliverables -> orders [label="order_id"];
+  deliverables -> order_stages [label="order_stage_id"];
+  deliverables -> users [label="verified_by"];
+  deliverables -> users [label="uploaded_by"];
+  payments -> orders [label="order_id"];
+  payments -> users [label="confirmed_by"];
+  payments -> users [label="created_by"];
+  roles -> organizations [label="parent_id"];
+  roles -> users [label="verified_by"];
+  roles -> organizations [label="organization_id"];
+  roles -> users [label="user_id"];
+  roles -> roles [label="role_id"];
+  roles -> users [label="created_by"];
+  roles -> users [label="updated_by"];
+  roles -> organizations [label="vendor_id"];
+  roles -> product_categories [label="category_id"];
+  roles -> customers [label="parent_customer_id"];
+  roles -> customer_sources [label="source_id"];
+  roles -> customer_channels [label="channel_id"];
+  roles -> users [label="owner_user_id"];
+  roles -> users [label="agent_user_id"];
+  roles -> organizations [label="agent_id"];
+  roles -> customers [label="customer_id"];
+  roles -> products [label="product_id"];
+  roles -> users [label="sales_user_id"];
+  roles -> order_statuses [label="status_id"];
+  roles -> orders [label="order_id"];
+  roles -> users [label="assigned_to_user_id"];
+  roles -> users [label="assigned_by_user_id"];
+  roles -> organization_employees [label="organization_employee_id"];
+  roles -> organization_employees [label="vendor_employee_id"];
+  roles -> order_stages [label="order_stage_id"];
+  roles -> users [label="uploaded_by"];
+  roles -> users [label="confirmed_by"];
+  orders -> service_records [label="service_record_id"];
+  orders -> workflow_instances [label="workflow_instance_id"];
+  workflow_definitions -> users [label="created_by"];
+  workflow_definitions -> users [label="updated_by"];
+  workflow_instances -> workflow_definitions [label="workflow_definition_id"];
+  workflow_instances -> users [label="started_by"];
+  workflow_tasks -> workflow_instances [label="workflow_instance_id"];
+  workflow_tasks -> users [label="assigned_to_user_id"];
+  workflow_tasks -> roles [label="assigned_to_role_id"];
+  workflow_tasks -> users [label="completed_by"];
+  workflow_transitions -> workflow_instances [label="workflow_instance_id"];
+  workflow_transitions -> users [label="triggered_by"];
+  order_items -> orders [label="order_id"];
+  order_items -> products [label="product_id"];
+  order_comments -> orders [label="order_id"];
+  order_comments -> order_stages [label="order_stage_id"];
+  order_comments -> order_comments [label="replied_to_comment_id"];
+  order_comments -> users [label="created_by"];
+  order_files -> orders [label="order_id"];
+  order_files -> order_items [label="order_item_id"];
+  order_files -> order_stages [label="order_stage_id"];
+  order_files -> users [label="verified_by"];
+  order_files -> users [label="uploaded_by"];
+  workflow_definitions -> workflow_definitions [label="workflow_definition_id"];
+  workflow_definitions -> users [label="started_by"];
+  workflow_definitions -> workflow_instances [label="workflow_instance_id"];
+  workflow_definitions -> users [label="assigned_to_user_id"];
+  workflow_definitions -> roles [label="assigned_to_role_id"];
+  workflow_definitions -> users [label="completed_by"];
+  workflow_definitions -> users [label="triggered_by"];
+  workflow_definitions -> orders [label="order_id"];
+  workflow_definitions -> products [label="product_id"];
+  workflow_definitions -> order_stages [label="order_stage_id"];
+  workflow_definitions -> order_comments [label="replied_to_comment_id"];
+  workflow_definitions -> order_items [label="order_item_id"];
+  workflow_definitions -> users [label="verified_by"];
+  workflow_definitions -> users [label="uploaded_by"];
+  organization_domains -> organizations [label="organization_id"];
+  organization_domains -> organization_domains [label="domain_id"];
+  role_permissions -> roles [label="role_id"];
+  role_permissions -> permissions [label="permission_id"];
+  menus -> menus [label="parent_id"];
+  menu_permissions -> menus [label="menu_id"];
+  menu_permissions -> permissions [label="permission_id"];
+  permissions -> roles [label="role_id"];
+  permissions -> permissions [label="permission_id"];
+  permissions -> menus [label="parent_id"];
+  permissions -> menus [label="menu_id"];
+  service_records -> customers [label="customer_id"];
+  service_records -> products [label="product_id"];
+  service_records -> contacts [label="contact_id"];
+  service_records -> users [label="sales_user_id"];
+  service_records -> customers [label="referral_customer_id"];
+  service_records -> users [label="created_by"];
+  service_records -> users [label="updated_by"];
+  payments -> payment_stages [label="payment_stage_id"];
+  customer_documents -> customers [label="customer_id"];
+  customer_documents -> users [label="verified_by"];
+  customer_documents -> users [label="created_by"];
+  customer_documents -> users [label="updated_by"];
+  payment_stages -> orders [label="order_id"];
+  payment_stages -> service_records [label="service_record_id"];
+  payment_stages -> users [label="created_by"];
+  payment_stages -> users [label="updated_by"];
+  customer_documents -> orders [label="order_id"];
+  customer_documents -> service_records [label="service_record_id"];
+}

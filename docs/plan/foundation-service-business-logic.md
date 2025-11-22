@@ -17,14 +17,17 @@ Foundation Service 负责 CRM 系统的基础数据管理，包括用户、组�
 ### 1.1 核心表结构
 
 #### Organizations（组织表）
-- **类型**: `internal`（内部组织）、`vendor`（供应商）、`agent`（渠道代理）
-- **特点**: 支持树形结构（parent_id），统一管理所有组织类型，包含完整的公司信息
+- **类型**: 
+  - `internal`: BANTU 内部组织
+  - `vendor`: 交付组织（做单组织）
+  - `agent`: 外部代理（销售组织）
+- **特点**: 统一管理所有组织类型，包含完整的公司信息
+- **注意**: 组织树形结构功能已废弃，不再支持父子组织关系（parent_id）
 - **关键字段**:
   - `id`: UUID 主键
   - `code`: 组织编码（唯一）
   - `name`: 组织名称
   - `organization_type`: 组织类型（必填）
-  - `parent_id`: 父组织ID（支持树形结构）
   - `is_active`: 是否激活
   - `is_locked`: 是否锁定
   - `is_verified`: 是否已认证/审核

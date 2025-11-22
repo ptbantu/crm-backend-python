@@ -2,7 +2,7 @@
 用户管理 API
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.response import Result
@@ -11,20 +11,23 @@ from foundation_service.schemas.user import (
     UserListResponse
 )
 from foundation_service.services.user_service import UserService
-from foundation_service.dependencies import get_db
+from foundation_service.dependencies import get_db, require_organization_admin
 
 router = APIRouter()
-
 
 
 @router.post("", response_model=Result[UserResponse])
 async def create_user(
     request: UserCreateRequest,
+    request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    """创建用户"""
+    """创建用户（仅组织 admin 可以创建）"""
+    # 权限检查：只有该组织的 admin 可以创建用户
+    current_user_id = await require_organization_admin(request_obj, request.organization_id, db)
+    
     service = UserService(db)
-    user = await service.create_user(request)
+    user = await service.create_user(request, created_by_user_id=current_user_id)
     return Result.success(data=user, message="用户创建成功")
 
 
@@ -65,13 +68,24 @@ async def update_user(
     return Result.success(data=user, message="用户更新成功")
 
 
-@router.delete("/{user_id}", response_model=Result[None])
-async def delete_user(
+@router.post("/{user_id}/lock", response_model=Result[UserResponse])
+async def lock_user(
     user_id: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """Block 用户（逻辑删除）"""
+    """锁定用户（禁用登录，防止信息丢失）"""
     service = UserService(db)
-    await service.delete_user(user_id)
-    return Result.success(message="用户已禁用")
+    user = await service.lock_user(user_id)
+    return Result.success(data=user, message="用户已锁定，将无法登录")
+
+
+@router.post("/{user_id}/unlock", response_model=Result[UserResponse])
+async def unlock_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """解锁用户（恢复登录）"""
+    service = UserService(db)
+    user = await service.unlock_user(user_id)
+    return Result.success(data=user, message="用户已解锁，可以正常登录")
 

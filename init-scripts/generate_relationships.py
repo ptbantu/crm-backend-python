@@ -204,21 +204,34 @@ class SQLParser:
             '  ',
         ]
         
-        # 按域分组表
+        # 按域分组表（自动分组，未列出的表归入 Other）
         domains = {
-            'Core': ['users', 'roles', 'user_roles', 'organizations', 'organization_employees'],
-            'Product': ['service_types', 'product_categories', 'products', 'vendor_products', 'product_prices', 
-                       'product_price_history', 'vendor_product_financials'],
+            'Core': ['users', 'roles', 'user_roles', 'organizations', 'organization_employees', 
+                    'organization_domains', 'organization_domain_relations'],
+            'Permission': ['permissions', 'role_permissions', 'menus', 'menu_permissions'],
+            'Product': ['product_categories', 'products'],
             'Customer': ['customers', 'contacts', 'customer_sources', 'customer_channels', 'visa_records'],
             'Order': ['orders', 'order_statuses', 'order_assignments', 'order_stages', 
                      'deliverables', 'payments'],
+            'Workflow': ['workflows', 'workflow_stages', 'workflow_transitions'],
             'Extension': ['vendor_extensions', 'agent_extensions']
         }
+        
+        # 收集所有已解析的表
+        all_tables = set(self.tables.keys())
+        categorized_tables = set()
+        for table_list in domains.values():
+            categorized_tables.update(table_list)
+        
+        # 未分类的表归入 Other
+        other_tables = all_tables - categorized_tables
+        if other_tables:
+            domains['Other'] = sorted(other_tables)
         
         # 添加表定义
         for domain, table_list in domains.items():
             lines.append(f'  // {domain} Domain')
-            for table_name in table_list:
+            for table_name in sorted(table_list):
                 if table_name in self.tables:
                     table = self.tables[table_name]
                     fields = table['fields'][:15]  # 限制字段数量
@@ -301,20 +314,32 @@ class SQLParser:
 def main():
     """主函数"""
     script_dir = Path(__file__).parent
+    
+    # 定义需要解析的 SQL 文件（按顺序，确保依赖关系正确）
+    # 排除数据导入文件和迁移文件
     sql_files = [
-        script_dir / '01_schema_unified.sql',
-        script_dir / '05_product_service_enhancement.sql',
-        script_dir / '08_service_types.sql'
+        '01_schema_unified.sql',           # 核心表结构
+        '12_workflow_tables.sql',          # 工作流表
+        '16_organization_domains.sql',     # 组织领域表
+        '18_user_lock_migration.sql',      # 用户锁定字段（ALTER TABLE）
+        '19_permission_control_system.sql', # 权限控制系统表
+        '20_fix_field_inconsistencies.sql', # 字段修复（ALTER TABLE）
+        '08_service_records.sql',          # 服务记录表
+        '09_customer_documents_and_payment_stages.sql',  # 客户文档和支付阶段表
+        '10_enhance_customer_tables.sql',   # 客户表增强
     ]
+    
+    # 转换为完整路径
+    sql_file_paths = [script_dir / f for f in sql_files]
     
     parser = SQLParser()
     
     # 解析所有 SQL 文件
-    for sql_file in sql_files:
+    for sql_file in sql_file_paths:
         if sql_file.exists():
             parser.parse_sql_file(sql_file)
         else:
-            print(f"⚠️  文件不存在: {sql_file}")
+            print(f"⚠️  文件不存在: {sql_file.name}")
     
     print(f"\n✅ 解析完成: 发现 {len(parser.tables)} 个表, {len(parser.relationships)} 个关系\n")
     
@@ -332,26 +357,43 @@ def main():
         f.write(mermaid_content)
     print(f"✅ 生成 Mermaid 文件: {mermaid_file}")
     
-    # 尝试生成 SVG（如果 graphviz 可用）
+    # 尝试生成 SVG 和 PNG（如果 graphviz 可用）
     try:
         import subprocess
+        
+        # 生成 SVG
         svg_file = script_dir / 'RELATIONSHIPS.svg'
         result = subprocess.run(
             ['dot', '-Tsvg', str(dot_file), '-o', str(svg_file)],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=30
         )
         if result.returncode == 0:
             print(f"✅ 生成 SVG 文件: {svg_file}")
         else:
             print(f"⚠️  生成 SVG 失败: {result.stderr}")
-            print("   提示: 安装 graphviz 后可以自动生成 SVG")
+        
+        # 生成 PNG
+        png_file = script_dir / 'RELATIONSHIPS.png'
+        result = subprocess.run(
+            ['dot', '-Tpng', str(dot_file), '-o', str(png_file)],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode == 0:
+            print(f"✅ 生成 PNG 文件: {png_file}")
+        else:
+            print(f"⚠️  生成 PNG 失败: {result.stderr}")
+            
+        if result.returncode != 0:
+            print("   提示: 安装 graphviz 后可以自动生成图片")
     except FileNotFoundError:
-        print("⚠️  graphviz 未安装，跳过 SVG 生成")
-        print("   提示: 安装 graphviz 后可以自动生成 SVG")
+        print("⚠️  graphviz 未安装，跳过图片生成")
+        print("   提示: 安装 graphviz 后可以自动生成 SVG 和 PNG")
     except Exception as e:
-        print(f"⚠️  生成 SVG 时出错: {e}")
+        print(f"⚠️  生成图片时出错: {e}")
     
     print("\n📊 关系图文件已生成:")
     print(f"   - {dot_file.name} (Graphviz DOT)")
