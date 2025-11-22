@@ -24,6 +24,23 @@ class UserRepository(BaseRepository[User]):
         )
         return result.scalar_one_or_none()
     
+    async def get_by_username_in_organization(
+        self, 
+        username: str, 
+        organization_id: str
+    ) -> Optional[User]:
+        """根据用户名和组织ID查询用户（检查组织内用户名唯一性）"""
+        result = await self.db.execute(
+            select(User)
+            .join(OrganizationEmployee, User.id == OrganizationEmployee.user_id)
+            .where(
+                User.username == username,
+                OrganizationEmployee.organization_id == organization_id,
+                OrganizationEmployee.is_active == True
+            )
+        )
+        return result.scalar_one_or_none()
+    
     async def get_list(
         self,
         page: int = 1,

@@ -1,18 +1,225 @@
 """
 BANTU CRM 统一日志模块
 基于 loguru 提供统一的日志记录功能
+支持文件日志、控制台日志和 MongoDB 日志
 """
 import sys
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
+from datetime import datetime
 from loguru import logger
+from queue import Queue
+from threading import Thread
+
+
+class MongoDBSink:
+    """MongoDB 日志 Sink（异步写入）"""
+    
+    def __init__(
+        self,
+        collection_name: str = "logs",
+        database_name: str = "bantu_crm",
+        host: str = "mongodb.default.svc.cluster.local",
+        port: int = 27017,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        auth_source: str = "bantu_crm",
+        batch_size: int = 10,
+        flush_interval: float = 5.0,
+    ):
+        """
+        初始化 MongoDB Sink
+        
+        Args:
+            collection_name: 集合名称
+            database_name: 数据库名称
+            host: MongoDB 主机
+            port: MongoDB 端口
+            username: 用户名
+            password: 密码
+            auth_source: 认证数据库
+            batch_size: 批量写入大小
+            flush_interval: 刷新间隔（秒）
+        """
+        self.collection_name = collection_name
+        self.database_name = database_name
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.auth_source = auth_source
+        self.batch_size = batch_size
+        self.flush_interval = flush_interval
+        
+        self._queue: Queue = Queue()
+        self._thread: Optional[Thread] = None
+        self._running = False
+        self._client = None
+        self._collection = None
+        
+    def _init_mongodb(self):
+        """初始化 MongoDB 连接（使用 pymongo 同步客户端）"""
+        try:
+            from pymongo import MongoClient
+            
+            # 构建连接 URI
+            if self.username and self.password:
+                mongodb_uri = f"mongodb://{self.username}:{self.password}@{self.host}:{self.port}/{self.database_name}?authSource={self.auth_source}"
+            else:
+                mongodb_uri = f"mongodb://{self.host}:{self.port}/{self.database_name}"
+            
+            self._client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+            db = self._client[self.database_name]
+            self._collection = db[self.collection_name]
+            
+            # 创建索引
+            self._collection.create_index([("timestamp", -1)])
+            self._collection.create_index([("level", 1)])
+            self._collection.create_index([("service", 1)])
+            self._collection.create_index([("name", 1)])
+            
+        except ImportError:
+            raise ImportError("pymongo 未安装，请运行: pip install pymongo")
+        except Exception as e:
+            logger.error(f"MongoDB Sink 初始化失败: {e}")
+            raise
+    
+    def _worker(self):
+        """后台工作线程：批量写入 MongoDB"""
+        self._init_mongodb()
+        
+        batch = []
+        last_flush = datetime.now()
+        
+        while self._running:
+            try:
+                # 从队列获取日志（带超时）
+                try:
+                    log_record = self._queue.get(timeout=1.0)
+                    batch.append(log_record)
+                except:
+                    # 超时，检查是否需要刷新
+                    pass
+                
+                # 检查是否需要刷新
+                now = datetime.now()
+                should_flush = (
+                    len(batch) >= self.batch_size or
+                    (batch and (now - last_flush).total_seconds() >= self.flush_interval)
+                )
+                
+                if should_flush and batch:
+                    try:
+                        self._collection.insert_many(batch, ordered=False)
+                        batch.clear()
+                        last_flush = now
+                    except Exception as e:
+                        # 写入失败，记录错误但不阻塞
+                        print(f"MongoDB 日志写入失败: {e}", file=sys.stderr)
+                        batch.clear()
+                        
+            except Exception as e:
+                print(f"MongoDB Sink 工作线程错误: {e}", file=sys.stderr)
+        
+        # 退出前刷新剩余日志
+        if batch and self._collection:
+            try:
+                self._collection.insert_many(batch, ordered=False)
+            except:
+                pass
+    
+    def start(self):
+        """启动后台线程"""
+        if self._running:
+            return
+        
+        self._running = True
+        self._thread = Thread(target=self._worker, daemon=True)
+        self._thread.start()
+    
+    def stop(self):
+        """停止后台线程"""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=5.0)
+        if self._client:
+            self._client.close()
+    
+    def __call__(self, message):
+        """Loguru sink 接口"""
+        try:
+            record = message.record
+            
+            # 解析文件路径
+            file_path = ""
+            if hasattr(record, "file") and record.file:
+                if hasattr(record.file, "path"):
+                    file_path = record.file.path
+                elif isinstance(record.file, dict):
+                    file_path = record.file.get("path", "")
+                else:
+                    file_path = str(record.file)
+            
+            # 解析线程和进程信息
+            thread_id = 0
+            if hasattr(record, "thread") and record.thread:
+                if hasattr(record.thread, "id"):
+                    thread_id = record.thread.id
+                elif isinstance(record.thread, dict):
+                    thread_id = record.thread.get("id", 0)
+            
+            process_id = 0
+            if hasattr(record, "process") and record.process:
+                if hasattr(record.process, "id"):
+                    process_id = record.process.id
+                elif isinstance(record.process, dict):
+                    process_id = record.process.get("id", 0)
+            
+            # 解析日志记录
+            log_doc = {
+                "timestamp": datetime.fromtimestamp(record["time"].timestamp()),
+                "level": record["level"].name,
+                "message": record["message"],
+                "service": record.get("extra", {}).get("service", "unknown"),
+                "name": record.get("name", ""),
+                "function": record.get("function", ""),
+                "line": record.get("line", 0),
+                "file": file_path,
+                "module": record.get("module", ""),
+                "thread": thread_id,
+                "process": process_id,
+            }
+            
+            # 添加异常信息（如果有）
+            if record.get("exception"):
+                exc = record["exception"]
+                log_doc["exception"] = {
+                    "type": exc.type.__name__ if hasattr(exc.type, "__name__") else str(exc.type),
+                    "value": str(exc.value) if exc.value else "",
+                    "traceback": str(exc.traceback) if hasattr(exc, "traceback") else "",
+                }
+            
+            # 添加额外字段（排除 service，已单独处理）
+            extra = record.get("extra", {})
+            if extra:
+                extra_copy = {k: v for k, v in extra.items() if k != "service"}
+                if extra_copy:
+                    log_doc["extra"] = extra_copy
+            
+            # 添加到队列
+            self._queue.put(log_doc)
+            
+        except Exception as e:
+            # 避免日志记录本身出错导致循环
+            print(f"MongoDB Sink 处理日志失败: {e}", file=sys.stderr)
 
 
 class Logger:
     """统一日志管理器"""
     
     _initialized = False
+    _mongodb_sink: Optional[MongoDBSink] = None
     
     @classmethod
     def initialize(
@@ -22,7 +229,16 @@ class Logger:
         log_dir: Optional[str] = None,
         enable_file_logging: bool = True,
         enable_console_logging: bool = True,
+        enable_mongodb_logging: bool = False,
         log_format: Optional[str] = None,
+        # MongoDB 配置
+        mongodb_host: Optional[str] = None,
+        mongodb_port: int = 27017,
+        mongodb_database: str = "bantu_crm",
+        mongodb_collection: Optional[str] = None,
+        mongodb_username: Optional[str] = None,
+        mongodb_password: Optional[str] = None,
+        mongodb_auth_source: str = "bantu_crm",
     ):
         """
         初始化日志配置
@@ -33,7 +249,15 @@ class Logger:
             log_dir: 日志文件目录，默认为项目根目录下的 logs 目录
             enable_file_logging: 是否启用文件日志
             enable_console_logging: 是否启用控制台日志
+            enable_mongodb_logging: 是否启用 MongoDB 日志
             log_format: 自定义日志格式
+            mongodb_host: MongoDB 主机地址
+            mongodb_port: MongoDB 端口
+            mongodb_database: MongoDB 数据库名称
+            mongodb_collection: MongoDB 集合名称（默认: logs_{service_name}）
+            mongodb_username: MongoDB 用户名
+            mongodb_password: MongoDB 密码
+            mongodb_auth_source: MongoDB 认证数据库
         """
         if cls._initialized:
             logger.warning("Logger 已经初始化，跳过重复初始化")
@@ -101,6 +325,49 @@ class Logger:
                 diagnose=True,
             )
         
+        # MongoDB 日志
+        if enable_mongodb_logging:
+            try:
+                # 如果没有指定 collection，使用默认名称
+                if mongodb_collection is None:
+                    mongodb_collection = f"logs_{service_name}"
+                
+                # 如果没有指定 host，尝试从环境变量或配置读取
+                if mongodb_host is None:
+                    mongodb_host = os.getenv("MONGODB_HOST", "mongodb.default.svc.cluster.local")
+                
+                if mongodb_username is None:
+                    mongodb_username = os.getenv("MONGODB_USERNAME")
+                
+                if mongodb_password is None:
+                    mongodb_password = os.getenv("MONGODB_PASSWORD")
+                
+                # 创建 MongoDB Sink
+                cls._mongodb_sink = MongoDBSink(
+                    collection_name=mongodb_collection,
+                    database_name=mongodb_database,
+                    host=mongodb_host,
+                    port=mongodb_port,
+                    username=mongodb_username,
+                    password=mongodb_password,
+                    auth_source=mongodb_auth_source,
+                )
+                
+                # 启动后台线程
+                cls._mongodb_sink.start()
+                
+                # 添加到 loguru（使用 bind 为日志添加 service 标识）
+                logger_with_service = logger.bind(service=service_name)
+                logger_with_service.add(
+                    cls._mongodb_sink,
+                    format=log_format,
+                    level=log_level,
+                )
+                
+                logger_with_service.info(f"MongoDB 日志已启用 - 集合: {mongodb_collection}")
+            except Exception as e:
+                logger.warning(f"MongoDB 日志初始化失败: {e}，将继续使用文件和控制台日志")
+        
         cls._initialized = True
         logger.info(f"Logger 初始化完成 - 服务: {service_name}, 级别: {log_level}")
     
@@ -146,4 +413,11 @@ def get_logger(name: Optional[str] = None):
 
 # 导出默认 logger
 default_logger = Logger.get_logger()
+
+
+# 清理函数（应用关闭时调用）
+def cleanup_logger():
+    """清理日志资源"""
+    if Logger._mongodb_sink:
+        Logger._mongodb_sink.stop()
 

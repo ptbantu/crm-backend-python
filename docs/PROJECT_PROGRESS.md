@@ -1,8 +1,8 @@
 # BANTU CRM 项目开发进度汇总
 
-**最后更新**: 2025-11-19  
-**项目版本**: v1.0.0  
-**代码统计**: 约 3000+ 行 Service 层代码
+**最后更新**: 2024-11-19  
+**项目版本**: v1.1.0  
+**代码统计**: 约 7500+ 行 Service 层代码
 
 ---
 
@@ -16,11 +16,11 @@
 | **Foundation Service** | ✅ 已完成 | 100% | 8081 | 用户、组织、角色管理 |
 | **Service Management Service** | ✅ 已完成 | 100% | 8082 | 客户、联系人、产品、服务记录管理 |
 | **Analytics & Monitoring Service** | ✅ 已完成 | 100% | 8083 | 数据分析、系统监控、预警管理 |
-| **Business Service** | ⏳ 规划中 | 0% | 8084 | 订单管理（待开发） |
-| **Workflow Service** | ⏳ 规划中 | 0% | 8085 | 工作流引擎（待开发） |
-| **Finance Service** | ⏳ 规划中 | 0% | 8086 | 财务服务（待开发） |
+| **Order & Workflow Service** | ✅ 已完成 | 100% | 8084 | 订单、订单项、订单评论、订单文件、工作流管理 |
+| **Notification Service** | 📋 规划中 | 0% | 8086 | 通知管理（订单进度、工作流任务、系统预警） |
+| **Finance Service** | ⏳ 规划中 | 0% | 8085 | 财务服务（待开发） |
 
-**总体完成度**: **57%** (4/7 个服务已完成)
+**总体完成度**: **71%** (5/7 个服务已完成)
 
 ---
 
@@ -37,10 +37,10 @@
 
 **路由配置**:
 - `/api/foundation` → Foundation Service (8081)
-- `/api/business` → Business Service (8082) - 预留
 - `/api/service-management` → Service Management Service (8082)
 - `/api/analytics-monitoring` → Analytics & Monitoring Service (8083)
-- `/api/workflow` → Workflow Service (8084) - 预留
+- `/api/order-workflow` → Order & Workflow Service (8084)
+- `/api/notification` → Notification Service (8086) - 预留
 - `/api/finance` → Finance Service (8085) - 预留
 
 **部署状态**: ✅ 已部署到 Kubernetes
@@ -169,6 +169,71 @@
 
 ---
 
+### 5. Order & Workflow Service (订单与工作流服务) ✅
+
+**功能模块**:
+
+#### 5.1 订单管理 ✅
+- ✅ 订单 CRUD 操作
+- ✅ 订单号自动生成
+- ✅ 订单状态管理
+- ✅ 订单金额计算（从订单项汇总）
+- ✅ EVOA 字段支持（入境城市、护照ID、处理器）
+- ✅ 订单关联服务记录
+- ✅ 订单关联工作流实例
+
+**API 端点**: 5+ 个
+
+#### 5.2 订单项管理 ✅
+- ✅ 订单项 CRUD 操作
+- ✅ 多订单项支持（一个订单可包含多个服务项）
+- ✅ 订单项独立状态管理
+- ✅ 订单项金额计算
+- ✅ 中印尼双语字段支持
+- ✅ 订单项序号管理
+
+**API 端点**: 5+ 个
+
+#### 5.3 订单评论管理 ✅
+- ✅ 订单评论 CRUD 操作
+- ✅ 评论类型管理（普通/内部/客户/系统）
+- ✅ 评论回复功能
+- ✅ 评论置顶功能
+- ✅ 中印尼双语内容支持
+- ✅ 内部评论（客户不可见）
+
+**API 端点**: 6+ 个
+
+#### 5.4 订单文件管理 ✅
+- ✅ 订单文件上传（MinIO 集成）
+- ✅ 订单文件 CRUD 操作
+- ✅ 文件分类管理（护照/签证/文档/其他）
+- ✅ 文件验证状态管理
+- ✅ 文件必需标记
+- ✅ 中印尼双语文件名和描述支持
+- ✅ 文件访问 URL 生成（带过期时间）
+
+**API 端点**: 6+ 个
+
+#### 5.5 工作流管理 ✅
+- ✅ 工作流定义管理
+- ✅ 工作流实例管理
+- ✅ 工作流任务管理
+- ✅ 工作流状态转换
+- ✅ 订单与工作流关联
+
+**API 端点**: 待完善
+
+**部署状态**: ✅ 已部署到 Kubernetes
+
+**代码统计**:
+- **Python 文件**: 40 个
+- **代码行数**: 约 4560 行
+- **API 路由**: 20+ 个端点
+- **数据模型**: 8 个实体（Order, OrderItem, OrderComment, OrderFile, WorkflowDefinition, WorkflowInstance, WorkflowTask, WorkflowTransition）
+
+---
+
 ## 🛠️ 技术栈与基础设施
 
 ### 后端技术栈 ✅
@@ -179,6 +244,7 @@
 - ✅ **python-jose** - JWT 认证
 - ✅ **aiomysql** - 异步 MySQL 驱动
 - ✅ **redis.asyncio** - Redis 异步客户端
+- ✅ **minio** - MinIO 对象存储客户端
 - ✅ **psutil** - 系统监控
 - ✅ **Loguru** - 日志管理
 
@@ -211,10 +277,10 @@
 ## 📈 代码统计
 
 ### 服务层代码量
-- **Service 层代码**: 约 3000+ 行
-- **API 路由**: 50+ 个端点
-- **数据模型**: 20+ 个实体
-- **Repository 层**: 15+ 个仓库
+- **Service 层代码**: 约 7500+ 行
+- **API 路由**: 70+ 个端点
+- **数据模型**: 28+ 个实体
+- **Repository 层**: 20+ 个仓库
 
 ### 文件结构
 ```
@@ -246,6 +312,21 @@ crm-backend-python/
 │   ├── services/                  # 业务逻辑
 │   └── utils/                     # 工具类
 │
+├── order_workflow_service/          # 订单与工作流服务 ✅
+│   ├── api/v1/                   # API 路由
+│   ├── services/                  # 业务逻辑
+│   ├── repositories/              # 数据访问
+│   ├── models/                    # 数据模型
+│   └── schemas/                   # Pydantic 模型
+│
+├── notification_service/            # 通知管理服务 📋
+│   ├── api/v1/                   # API 路由
+│   ├── services/                  # 业务逻辑
+│   ├── repositories/              # 数据访问
+│   ├── models/                    # 数据模型
+│   ├── adapters/                  # 通知渠道适配器
+│   └── templates/                 # 通知模板
+│
 ├── gateway_service/                 # API 网关 ✅
 │   ├── main.py                    # 主入口
 │   └── middleware/                # 中间件
@@ -260,70 +341,96 @@ crm-backend-python/
 
 ### 已完成里程碑 ✅
 
-1. **✅ 项目初始化** (2025-11)
+1. **✅ 项目初始化** (2024-11)
    - 项目结构搭建
    - 技术栈选型
    - 开发环境配置
 
-2. **✅ Foundation Service 开发** (2025-11)
+2. **✅ Foundation Service 开发** (2024-11)
    - 用户管理模块
    - 组织管理模块
    - 角色管理模块
    - 认证授权模块
 
-3. **✅ Service Management Service 开发** (2025-11)
+3. **✅ Service Management Service 开发** (2024-11)
    - 客户管理模块
    - 联系人管理模块
    - 产品管理模块
    - 服务记录管理模块
 
-4. **✅ Analytics & Monitoring Service 开发** (2025-11)
+4. **✅ Analytics & Monitoring Service 开发** (2024-11)
    - 数据分析模块
    - 系统监控模块
    - 预警管理模块
    - Redis 缓存集成
 
-5. **✅ Gateway Service 开发** (2025-11)
+5. **✅ Gateway Service 开发** (2024-11)
    - 路由配置
    - JWT 认证
    - CORS 支持
 
-6. **✅ Kubernetes 部署** (2025-11)
+6. **✅ Kubernetes 部署** (2024-11)
    - 所有服务部署配置
    - Ingress 配置
    - ConfigMap 和 Secrets
 
-7. **✅ 日志与监控** (2025-11)
+7. **✅ 日志与监控** (2024-11)
    - 统一日志格式
    - Service 层调用日志
    - 缓存命中日志
    - 系统指标监控
 
+8. **✅ Order & Workflow Service 开发** (2024-11)
+   - 订单管理模块
+   - 订单项管理模块
+   - 订单评论管理模块
+   - 订单文件管理模块
+   - 工作流管理模块（基础）
+   - MinIO 文件存储集成
+   - 中印尼双语支持
+
+9. **✅ API 文档优化** (2024-11)
+   - API 文档拆分为4个部分
+   - 基础服务 API 文档
+   - 服务管理 API 文档
+   - 订单与工作流 API 文档
+   - 数据分析与监控 API 文档
+
+10. **📋 Notification Service 规划** (2024-11)
+    - 通知管理服务架构设计
+    - 订单进度通知规划
+    - 企业微信集成方案
+    - 数据库表设计
+    - 实施计划制定
+
 ### 进行中 ⏳
 
-- ⏳ API 文档完善
 - ⏳ 单元测试编写
 - ⏳ 集成测试编写
+- ⏳ 工作流引擎完善
+- ⏳ Notification Service 开发（规划完成，待实施）
 
 ### 待开发 📋
 
-1. **Business Service** (订单管理)
-   - 订单 CRUD
-   - 订单分配
-   - 订单状态管理
-   - 订单阶段管理
+1. **Notification Service** (通知管理服务) 📋 优先开发
+   - 订单进度通知（企业微信）
+   - 通知模板管理
+   - 通知历史记录
+   - 与 Order Service 集成
+   - 详细规划：`docs/plan/notification-service-plan.md`
 
-2. **Workflow Service** (工作流)
-   - Activiti 集成
-   - 流程定义管理
-   - 流程实例管理
-   - 任务管理
+2. **Workflow Service 完善** (工作流引擎)
+   - 工作流引擎完善
+   - 流程定义可视化
+   - 流程实例监控
+   - 任务分配和通知
 
 3. **Finance Service** (财务服务)
    - 收款管理
    - 付款管理
    - 财务报表
    - 财务统计
+   - 订单财务关联
 
 ---
 
@@ -331,8 +438,11 @@ crm-backend-python/
 
 | 文档类型 | 状态 | 说明 |
 |---------|------|------|
-| **API 快速参考** | ✅ 已完成 | API_QUICK_REFERENCE.md |
-| **API 详细文档** | ✅ 已完成 | API_DOCUMENTATION.md |
+| **API 文档索引** | ✅ 已完成 | API_DOCUMENTATION.md (索引文档) |
+| **基础服务 API 文档** | ✅ 已完成 | API_DOCUMENTATION_1_FOUNDATION.md |
+| **服务管理 API 文档** | ✅ 已完成 | API_DOCUMENTATION_2_SERVICE_MANAGEMENT.md |
+| **订单与工作流 API 文档** | ✅ 已完成 | API_DOCUMENTATION_3_ORDER_WORKFLOW.md |
+| **数据分析与监控 API 文档** | ✅ 已完成 | API_DOCUMENTATION_4_ANALYTICS.md |
 | **部署文档** | ✅ 已完成 | Kubernetes 部署配置 |
 | **架构文档** | ✅ 已完成 | 微服务架构规划 |
 | **业务逻辑文档** | ✅ 已完成 | 各服务业务逻辑说明 |
@@ -350,6 +460,8 @@ crm-backend-python/
 | Foundation Service | default | 1 | ✅ Running |
 | Service Management Service | default | 1 | ✅ Running |
 | Analytics & Monitoring Service | default | 1 | ✅ Running |
+| Order & Workflow Service | default | 1 | ✅ Running |
+| Notification Service | default | - | 📋 规划中 |
 
 ### 外部访问
 
@@ -435,6 +547,7 @@ crm-backend-python/
 - **核心框架**: FastAPI, Uvicorn
 - **数据库**: SQLAlchemy 2.0, aiomysql
 - **缓存**: redis, redis.asyncio
+- **对象存储**: minio
 - **认证**: python-jose, bcrypt
 - **验证**: Pydantic v2
 - **监控**: psutil
@@ -447,8 +560,9 @@ crm-backend-python/
 ## 🎉 项目亮点
 
 1. **✅ 完整的微服务架构**
-   - 4 个核心服务已实现并部署
+   - 5 个核心服务已实现并部署
    - 清晰的服务边界和职责划分
+   - 订单与工作流服务完整实现
 
 2. **✅ 高性能缓存策略**
    - Redis 缓存减少数据库压力
@@ -469,6 +583,18 @@ crm-backend-python/
    - 健康检查和自动重启
    - 配置管理和密钥管理
 
+6. **✅ 订单与工作流完整实现**
+   - 完整的订单生命周期管理
+   - 多订单项支持
+   - MinIO 文件存储集成
+   - 中印尼双语支持
+   - 工作流基础框架
+
+7. **✅ API 文档优化**
+   - 文档拆分为4个独立部分
+   - 便于查阅和维护
+   - 完整的 API 端点说明
+
 ---
 
 ## 📅 下一步计划
@@ -488,9 +614,16 @@ crm-backend-python/
 ### 中期目标 (1-2 月)
 
 1. **新服务开发**
-   - [ ] Business Service（订单管理）
-   - [ ] Workflow Service（工作流）
+   - [ ] Notification Service（通知管理服务）📋 优先
+     - [ ] 订单进度通知（企业微信）
+     - [ ] 通知模板管理
+     - [ ] 通知历史记录
    - [ ] Finance Service（财务服务）
+
+2. **功能完善**
+   - [ ] 工作流引擎完善
+   - [ ] 工作流可视化
+   - [ ] 工作流任务通知集成
 
 2. **功能增强**
    - [ ] 邮件通知功能完善
@@ -515,10 +648,10 @@ crm-backend-python/
 
 **项目仓库**: `crm-backend-python`  
 **分支**: `dev`  
-**最新提交**: `2f36c08` - feat: 添加 Analytics and Monitoring Service 微服务
+**最新提交**: `2105c64` - feat: 添加订单工作流服务和更新 API 文档
 
 ---
 
-**报告生成时间**: 2025-11-19  
-**报告版本**: v1.0.0
+**报告生成时间**: 2024-11-19  
+**报告版本**: v1.1.0
 

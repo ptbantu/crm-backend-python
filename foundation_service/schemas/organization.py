@@ -12,6 +12,7 @@ class OrganizationCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, description="组织名称")
     code: Optional[str] = Field(None, description="组织编码（唯一）")
     organization_type: str = Field(..., pattern="^(internal|vendor|agent)$", description="组织类型")
+    parent_id: Optional[str] = Field(None, description="父组织ID（支持树形结构）")
     
     # 基本信息
     email: Optional[EmailStr] = None
@@ -64,6 +65,7 @@ class OrganizationUpdateRequest(BaseModel):
     """更新组织请求"""
     name: Optional[str] = None
     code: Optional[str] = None
+    parent_id: Optional[str] = Field(None, description="父组织ID（支持树形结构）")
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     website: Optional[str] = None
@@ -100,4 +102,19 @@ class OrganizationListResponse(BaseModel):
     size: int
     current: int
     pages: int
+
+
+class OrganizationTreeNode(BaseModel):
+    """组织树节点"""
+    id: str
+    name: str
+    code: Optional[str]
+    organization_type: str
+    is_active: bool
+    is_locked: bool
+    employees_count: int = 0
+    children: List["OrganizationTreeNode"] = Field(default_factory=list)
+
+
+OrganizationTreeNode.model_rebuild()
 

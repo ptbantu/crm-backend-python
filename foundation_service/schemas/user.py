@@ -23,7 +23,6 @@ class UserCreateRequest(BaseModel):
     organization_id: str = Field(..., description="主要组织ID")
     role_ids: List[str] = Field(default_factory=list, description="角色ID列表")
     is_active: bool = Field(default=True, description="是否激活")
-    auto_create_employee: bool = Field(default=True, description="是否自动创建组织员工记录")
 
 
 class UserUpdateRequest(BaseModel):

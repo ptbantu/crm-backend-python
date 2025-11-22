@@ -47,12 +47,33 @@ class UserService:
             logger.warning(f"组织未激活: organization_id={request.organization_id}, name={organization.name}")
             raise OrganizationInactiveError()
         
-        # 检查邮箱是否已存在
+        # 检查组织内用户名是否已存在（用户名在组织内唯一）
+        existing_user = await self.user_repo.get_by_username_in_organization(
+            request.username, 
+            request.organization_id
+        )
+        if existing_user:
+            logger.warning(f"组织内用户名已存在: username={request.username}, organization_id={request.organization_id}")
+            raise BusinessException(detail=f"用户名 {request.username} 在该组织内已存在")
+        
+        # 检查邮箱是否已存在（邮箱全局唯一）
         if request.email:
             existing = await self.user_repo.get_by_email(request.email)
             if existing:
                 logger.warning(f"邮箱已存在: email={request.email}")
                 raise BusinessException(detail="邮箱已存在")
+        
+        # 验证密码强度（至少8位，包含字母和数字）
+        if len(request.password) < 8:
+            logger.warning(f"密码长度不足: username={request.username}")
+            raise BusinessException(detail="密码长度至少8位")
+        
+        # 检查密码是否包含字母和数字（可选，可根据需求调整）
+        has_letter = any(c.isalpha() for c in request.password)
+        has_digit = any(c.isdigit() for c in request.password)
+        if not (has_letter and has_digit):
+            logger.warning(f"密码强度不足: username={request.username}")
+            raise BusinessException(detail="密码必须包含字母和数字")
         
         # 创建用户
         user = User(
@@ -73,16 +94,20 @@ class UserService:
         
         user = await self.user_repo.create(user)
         
-        # 自动创建组织员工记录
-        if request.auto_create_employee:
-            logger.debug(f"自动创建组织员工记录: user_id={user.id}, organization_id={request.organization_id}")
-            employee = OrganizationEmployee(
-                user_id=user.id,
-                organization_id=request.organization_id,
-                is_primary=True,
-                is_active=True
-            )
-            await self.employee_repo.create(employee)
+        # 必须创建组织员工记录（业务规则：每个用户必须至少有一个组织员工记录）
+        logger.debug(f"创建组织员工记录: user_id={user.id}, organization_id={request.organization_id}")
+        
+        # 检查用户是否已有主要组织，如果没有则设置为主要组织
+        existing_primary = await self.employee_repo.get_primary_by_user_id(user.id)
+        is_primary = existing_primary is None  # 如果没有主要组织，则设为主要组织
+        
+        employee = OrganizationEmployee(
+            user_id=user.id,
+            organization_id=request.organization_id,
+            is_primary=is_primary,
+            is_active=True
+        )
+        await self.employee_repo.create(employee)
         
         # 分配角色
         if request.role_ids:

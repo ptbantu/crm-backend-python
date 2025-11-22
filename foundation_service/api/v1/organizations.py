@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from common.schemas.response import Result
 from foundation_service.schemas.organization import (
     OrganizationResponse, OrganizationCreateRequest, OrganizationUpdateRequest,
-    OrganizationListResponse
+    OrganizationListResponse, OrganizationTreeNode
 )
 from foundation_service.services.organization_service import OrganizationService
 from foundation_service.dependencies import get_db
