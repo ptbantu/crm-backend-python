@@ -59,9 +59,21 @@ async def get_organization_list(
     code: Optional[str] = None,
     organization_type: Optional[str] = None,
     is_active: Optional[bool] = None,
+    request_obj: Request = None,
     db: AsyncSession = Depends(get_db)
 ):
-    """分页查询组织列表"""
+    """
+    分页查询组织列表
+    
+    权限逻辑：
+    - 只有 internal 内部组织的 admin 用户才能看到所有组织列表
+    - 其他组织用户查询时，默认只展示自己的组织
+    """
+    from foundation_service.dependencies import get_current_user_id
+    
+    # 获取当前用户ID
+    current_user_id = get_current_user_id(request_obj)
+    
     service = OrganizationService(db)
     result = await service.get_organization_list(
         page=page,
@@ -69,7 +81,8 @@ async def get_organization_list(
         name=name,
         code=code,
         organization_type=organization_type,
-        is_active=is_active
+        is_active=is_active,
+        current_user_id=current_user_id
     )
     return Result.success(data=result)
 

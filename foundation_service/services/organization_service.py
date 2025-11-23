@@ -170,10 +170,10 @@ class OrganizationService:
         # 使用统一的用户创建函数
         admin_user = await self.user_service._create_user_internal(
             organization_id=organization.id,
-            username="admin",
             email=admin_email,
             password=default_password,
-            role_ids=[admin_role.id]
+            role_ids=[admin_role.id],
+            username="admin"  # 可选，提供默认用户名
         )
         
         # 更新显示名称和职位信息
@@ -276,19 +276,74 @@ class OrganizationService:
         code: Optional[str] = None,
         organization_type: Optional[str] = None,
         is_active: Optional[bool] = None,
-        is_locked: Optional[bool] = None
+        is_locked: Optional[bool] = None,
+        current_user_id: Optional[str] = None
     ) -> dict:
-        """分页查询组织列表"""
-        logger.debug(f"查询组织列表: page={page}, size={size}, name={name}, code={code}, type={organization_type}, is_locked={is_locked}")
-        organizations, total = await self.org_repo.get_list(
-            page=page,
-            size=size,
-            name=name,
-            code=code,
-            organization_type=organization_type,
-            is_active=is_active,
-            is_locked=is_locked
-        )
+        """
+        分页查询组织列表
+        
+        权限逻辑：
+        - 只有 internal 内部组织的 admin 用户才能看到所有组织列表
+        - 其他组织用户查询时，默认只展示自己的组织
+        """
+        logger.debug(f"查询组织列表: page={page}, size={size}, name={name}, code={code}, type={organization_type}, is_locked={is_locked}, current_user_id={current_user_id}")
+        
+        # 如果提供了当前用户ID，检查权限
+        if current_user_id:
+            # 获取当前用户所属的组织
+            current_employee = await self.employee_repo.get_primary_by_user_id(current_user_id)
+            if current_employee:
+                # 获取当前用户所属的组织信息
+                current_org = await self.org_repo.get_by_id(current_employee.organization_id)
+                
+                # 获取当前用户的角色
+                user_roles = await self.user_repo.get_user_roles(current_user_id)
+                role_codes = [role.code for role in user_roles]
+                is_admin = "ADMIN" in role_codes
+                
+                # 检查是否是 internal 内部组织的 admin
+                if current_org and current_org.organization_type == "internal" and is_admin:
+                    # 是 internal 组织的 admin，可以查看所有组织
+                    logger.debug(f"Internal admin 用户查询所有组织: user_id={current_user_id}, organization_id={current_org.id}")
+                    organizations, total = await self.org_repo.get_list(
+                        page=page,
+                        size=size,
+                        name=name,
+                        code=code,
+                        organization_type=organization_type,
+                        is_active=is_active,
+                        is_locked=is_locked
+                    )
+                else:
+                    # 其他用户，只能查看自己的组织
+                    logger.debug(f"普通用户只查询自己的组织: user_id={current_user_id}, organization_id={current_employee.organization_id}")
+                    # 只查询当前用户所属的组织
+                    organizations, total = await self.org_repo.get_list(
+                        page=page,
+                        size=size,
+                        name=name,
+                        code=code,
+                        organization_type=organization_type,
+                        is_active=is_active,
+                        is_locked=is_locked,
+                        organization_id=current_employee.organization_id  # 添加组织ID过滤
+                    )
+            else:
+                # 用户未关联到任何组织，返回空列表
+                logger.warning(f"用户未关联到任何组织: user_id={current_user_id}")
+                organizations, total = [], 0
+        else:
+            # 未提供用户ID，返回所有组织（兼容旧逻辑，但实际应该要求认证）
+            logger.warning("未提供当前用户ID，返回所有组织（可能存在安全风险）")
+            organizations, total = await self.org_repo.get_list(
+                page=page,
+                size=size,
+                name=name,
+                code=code,
+                organization_type=organization_type,
+                is_active=is_active,
+                is_locked=is_locked
+            )
         
         # 转换为响应对象
         records = []

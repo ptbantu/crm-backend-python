@@ -37,10 +37,10 @@ class UserService:
     async def _create_user_internal(
         self,
         organization_id: str,
-        username: str,
         email: str,
         password: str,
         role_ids: List[str],
+        username: Optional[str] = None,
         created_by_user_id: Optional[str] = None
     ) -> User:
         """
@@ -49,15 +49,16 @@ class UserService:
         
         Args:
             organization_id: 组织ID
-            username: 用户账号
+            email: 邮箱（必填，全局唯一，作为唯一标识）
             password: 密码
             role_ids: 角色ID列表
+            username: 用户账号（可选）
             created_by_user_id: 创建者用户ID（可选，用于日志）
         
         Returns:
             User: 创建的用户对象
         """
-        logger.info(f"开始创建用户: username={username}, organization_id={organization_id}, created_by={created_by_user_id}")
+        logger.info(f"开始创建用户: email={email}, organization_id={organization_id}, username={username}, created_by={created_by_user_id}")
         
         # 1. 验证组织是否存在
         organization = await self.org_repo.get_by_id(organization_id)
@@ -75,45 +76,30 @@ class UserService:
             logger.warning(f"组织未激活: organization_id={organization_id}, name={organization.name}")
             raise OrganizationInactiveError()
         
-        # 4. 检查组织内用户名是否已存在（用户名在组织内唯一）
-        existing_user = await self.user_repo.get_by_username_in_organization(
-            username, 
-            organization_id
-        )
-        if existing_user:
-            logger.warning(f"组织内用户名已存在: username={username}, organization_id={organization_id}")
-            raise BusinessException(detail=f"用户名 {username} 在该组织内已存在")
-        
-        # 5. 验证密码强度（至少8位，包含字母和数字）
-        if len(password) < 8:
-            logger.warning(f"密码长度不足: username={username}")
-            raise BusinessException(detail="密码长度至少8位")
-        
-        has_letter = any(c.isalpha() for c in password)
-        has_digit = any(c.isdigit() for c in password)
-        if not (has_letter and has_digit):
-            logger.warning(f"密码强度不足: username={username}")
-            raise BusinessException(detail="密码必须包含字母和数字")
-        
-        # 6. 检查邮箱是否已存在（邮箱全局唯一）
+        # 4. 检查邮箱是否已存在（邮箱全局唯一，作为唯一标识）
         existing_email = await self.user_repo.get_by_email(email)
         if existing_email:
             logger.warning(f"邮箱已存在: email={email}")
             raise BusinessException(detail="邮箱已存在")
         
-        # 7. 生成用户ID：组织ID + 序号（不限制数量）
+        # 5. 生成用户ID：组织ID + 序号（限制最大36位）
         # 获取该组织已有用户数量
         org_user_count = await self.org_repo.get_organization_user_count(organization_id)
         
         # 生成序号（从1开始，不限制上限）
         user_sequence = org_user_count + 1
-        # 序号格式：如果小于100用2位（01-99），大于等于100用3位（100-999），以此类推
-        if user_sequence < 100:
-            user_id = f"{organization_id}{user_sequence:02d}"
-        elif user_sequence < 1000:
-            user_id = f"{organization_id}{user_sequence:03d}"
+        seq_str = str(user_sequence)
+        
+        # 计算组织ID可以使用的最大长度（36位减去序号长度）
+        max_org_id_length = 36 - len(seq_str)
+        
+        if max_org_id_length > 0:
+            # 截取组织ID的前面部分，确保总长度不超过36位
+            truncated_org_id = organization_id[:max_org_id_length]
+            user_id = f"{truncated_org_id}{seq_str}"
         else:
-            user_id = f"{organization_id}{user_sequence}"
+            # 如果序号本身已经超过36位，只保留序号的后36位
+            user_id = seq_str[-36:]
         
         # 检查用户ID是否已存在（理论上不应该存在，但为了安全起见）
         existing_user_by_id = await self.user_repo.get_by_id(user_id)
@@ -121,20 +107,22 @@ class UserService:
             logger.error(f"用户ID冲突: user_id={user_id}, organization_id={organization_id}")
             raise BusinessException(detail="用户ID生成冲突，请重试")
         
-        # 8. 验证角色是否存在
+        # 7. 验证角色是否存在
         for role_id in role_ids:
             role = await self.role_repo.get_by_id(role_id)
             if not role:
                 logger.warning(f"角色不存在: role_id={role_id}")
                 raise BusinessException(detail=f"角色不存在: role_id={role_id}")
         
-        # 9. 创建用户（使用生成的用户ID）
+        # 8. 创建用户（使用生成的用户ID）
+        # 注意：username 由前端提供，如果未提供则使用邮箱前缀作为后备（数据库要求非空）
+        final_username = username if username else email.split("@")[0]
         user = User(
             id=user_id,  # 使用生成的用户ID，而不是UUID
-            username=username,
-            email=email,
+            username=final_username,  # 用户名（前端提供）
+            email=email,  # 邮箱（必填，全局唯一，作为唯一标识）
             password_hash=hash_password(password),
-            display_name=username,  # 默认显示名称为用户名
+            display_name=username or email.split("@")[0],  # 默认显示名称为用户名或邮箱前缀
             is_active=True,
             is_locked=False  # 默认未锁定
         )
@@ -174,10 +162,10 @@ class UserService:
         """创建用户（公开方法，调用内部函数）"""
         user = await self._create_user_internal(
             organization_id=request.organization_id,
-            username=request.username,
-            email=request.email,
+            email=request.email,  # 邮箱是必填的，作为唯一标识
             password=request.password,
             role_ids=request.role_ids,
+            username=request.username,  # 用户名是可选的
             created_by_user_id=created_by_user_id
         )
         return await self._to_response(user)
@@ -304,6 +292,50 @@ class UserService:
         user.is_locked = False
         await self.user_repo.update(user)
         logger.info(f"用户解锁成功: id={user.id}, username={user.username}, is_locked=False")
+        return await self._to_response(user)
+    
+    async def reset_password(self, user_id: str, new_password: str) -> UserResponse:
+        """
+        重置用户密码
+        
+        Args:
+            user_id: 用户ID
+            new_password: 新密码
+        
+        Returns:
+            UserResponse: 用户响应对象
+        """
+        logger.info(f"开始重置用户密码: user_id={user_id}")
+        
+        # 1. 验证用户是否存在
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            logger.warning(f"用户不存在: user_id={user_id}")
+            raise UserNotFoundError()
+        
+        # 2. 验证密码强度（至少8位，包含字母和数字）
+        if len(new_password) < 8:
+            logger.warning(f"密码长度不足: user_id={user_id}")
+            raise BusinessException(detail="密码长度至少8位")
+        
+        has_letter = any(c.isalpha() for c in new_password)
+        has_digit = any(c.isdigit() for c in new_password)
+        if not (has_letter and has_digit):
+            logger.warning(f"密码强度不足: user_id={user_id}")
+            raise BusinessException(detail="密码必须包含字母和数字")
+        
+        # 3. 检查新密码是否与旧密码相同
+        from passlib.context import CryptContext
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        if pwd_context.verify(new_password, user.password_hash):
+            logger.warning(f"新密码与旧密码相同: user_id={user_id}")
+            raise BusinessException(detail="新密码不能与旧密码相同")
+        
+        # 4. 更新密码
+        user.password_hash = hash_password(new_password)
+        await self.user_repo.update(user)
+        
+        logger.info(f"用户密码重置成功: id={user.id}, username={user.username}")
         return await self._to_response(user)
     
     async def _to_response(self, user: User) -> UserResponse:

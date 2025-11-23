@@ -137,6 +137,13 @@ async def forward_request(request: Request, service_url: str) -> JSONResponse:
     headers = dict(request.headers)
     headers.pop("host", None)  # 移除 host 头
     
+    # 将用户信息通过 HTTP 头传递给微服务
+    if hasattr(request.state, "user_id") and request.state.user_id:
+        headers["X-User-Id"] = str(request.state.user_id)
+    if hasattr(request.state, "roles") and request.state.roles:
+        # 将角色列表转换为逗号分隔的字符串
+        headers["X-User-Roles"] = ",".join(request.state.roles) if isinstance(request.state.roles, list) else str(request.state.roles)
+    
     async with httpx.AsyncClient() as client:
         try:
             response = await client.request(

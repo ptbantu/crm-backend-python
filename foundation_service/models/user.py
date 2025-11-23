@@ -11,8 +11,10 @@ class User(Base):
     """用户模型"""
     __tablename__ = "users"
     
-    # id 不再使用 UUID，而是由业务逻辑生成：组织ID + 序号（01-99）
-    id = Column(String(36), primary_key=True)
+    # id 由业务逻辑生成：组织ID + 序号，最大36位（如果超过则截取）
+    # 格式：{organization_id}{sequence} 例如：00000000-0000-0000-0000-00000000000101
+    # 如果超过36位，会截取组织ID前面部分，保留序号
+    id = Column(String(36), primary_key=True, comment="用户ID：组织ID + 序号（最大36位）")
     username = Column(String(255), nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True, comment="全局唯一邮箱（用于登录，必填）")
     phone = Column(String(50), nullable=True, index=True)

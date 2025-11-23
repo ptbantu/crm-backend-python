@@ -7,10 +7,10 @@ from datetime import datetime
 
 
 class UserCreateRequest(BaseModel):
-    """创建用户请求（简化版：只需要组织ID、账号、邮箱、密码、角色）"""
+    """创建用户请求（邮箱是唯一标识，用户名可选）"""
     organization_id: str = Field(..., description="组织ID")
-    username: str = Field(..., min_length=3, max_length=50, description="用户账号")
-    email: EmailStr = Field(..., description="邮箱（必填，全局唯一）")
+    username: Optional[str] = Field(None, max_length=50, description="用户账号（可选，支持中文）")
+    email: EmailStr = Field(..., description="邮箱（必填，全局唯一，作为唯一标识）")
     password: str = Field(..., min_length=8, description="密码（至少8位，包含字母和数字）")
     role_ids: List[str] = Field(..., min_length=1, description="角色ID列表（至少一个角色）")
 
@@ -29,6 +29,11 @@ class UserUpdateRequest(BaseModel):
     wechat: Optional[str] = None
     role_ids: Optional[List[str]] = None
     is_active: Optional[bool] = None
+
+
+class UserResetPasswordRequest(BaseModel):
+    """重置密码请求"""
+    new_password: str = Field(..., min_length=8, description="新密码（至少8位，包含字母和数字）")
 
 
 class UserResponse(BaseModel):

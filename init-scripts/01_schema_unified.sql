@@ -51,7 +51,7 @@ WHERE NOT EXISTS (SELECT 1 FROM roles r WHERE r.code = v.code);
 -- 职责：管理可以登录系统的用户账户信息
 -- 注意：每个用户必须至少有一个 organization_employees 记录
 CREATE TABLE IF NOT EXISTS users (
-  id                CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  id                CHAR(36) PRIMARY KEY COMMENT '用户ID：组织ID + 序号（最大36位）',
   username          VARCHAR(255) NOT NULL,                    -- 用户名（用于登录，不唯一）
   email             VARCHAR(255) NOT NULL UNIQUE,             -- 全局唯一邮箱（用于登录，必填）
   phone             VARCHAR(50),                              -- 手机号（用于登录验证，可空）

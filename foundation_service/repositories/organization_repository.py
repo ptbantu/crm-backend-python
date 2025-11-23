@@ -41,7 +41,8 @@ class OrganizationRepository(BaseRepository[Organization]):
         code: Optional[str] = None,
         organization_type: Optional[str] = None,
         is_active: Optional[bool] = None,
-        is_locked: Optional[bool] = None
+        is_locked: Optional[bool] = None,
+        organization_id: Optional[str] = None
     ) -> tuple[List[Organization], int]:
         """分页查询组织列表"""
         query = select(Organization)
@@ -56,6 +57,8 @@ class OrganizationRepository(BaseRepository[Organization]):
             query = query.where(Organization.is_locked == is_locked)
         if is_active is not None:
             query = query.where(Organization.is_active == is_active)
+        if organization_id:
+            query = query.where(Organization.id == organization_id)
         
         # 获取总数
         count_query = select(func.count()).select_from(query.subquery())
