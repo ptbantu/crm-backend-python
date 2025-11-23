@@ -13,7 +13,7 @@ _mongodb_database: Optional[AsyncIOMotorDatabase] = None
 
 
 def init_mongodb(
-    host: str = "mongodb.default.svc.cluster.local",
+    host: str = "mongodb",  # 使用短地址（同一 namespace 内），完整地址：mongodb.default.svc.cluster.local
     port: int = 27017,
     database: str = "bantu_crm",
     username: Optional[str] = None,

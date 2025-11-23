@@ -60,7 +60,7 @@ class BaseServiceSettings(BaseSettings):
         return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
     
     # MongoDB 配置
-    MONGO_HOST: str = "mongodb.default.svc.cluster.local"
+    MONGO_HOST: str = "mongodb"  # 使用短地址（同一 namespace 内），完整地址：mongodb.default.svc.cluster.local
     MONGO_PORT: int = 27017
     MONGO_DATABASE: str = "bantu_crm"
     MONGO_USERNAME: str = "bantu_mongo_user"

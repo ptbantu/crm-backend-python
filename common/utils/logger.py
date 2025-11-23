@@ -20,7 +20,7 @@ class MongoDBSink:
         self,
         collection_name: str = "logs",
         database_name: str = "bantu_crm",
-        host: str = "mongodb.default.svc.cluster.local",
+        host: str = "mongodb",  # 使用短地址（同一 namespace 内），完整地址：mongodb.default.svc.cluster.local
         port: int = 27017,
         username: Optional[str] = None,
         password: Optional[str] = None,
@@ -66,28 +66,53 @@ class MongoDBSink:
             # 构建连接 URI
             if self.username and self.password:
                 mongodb_uri = f"mongodb://{self.username}:{self.password}@{self.host}:{self.port}/{self.database_name}?authSource={self.auth_source}"
+                print(f"[MongoDB Sink] 正在连接 MongoDB: {self.host}:{self.port}/{self.database_name} (authSource={self.auth_source})")
             else:
                 mongodb_uri = f"mongodb://{self.host}:{self.port}/{self.database_name}"
+                print(f"[MongoDB Sink] 正在连接 MongoDB: {self.host}:{self.port}/{self.database_name} (无认证)")
             
             self._client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+            
+            # 测试连接
+            try:
+                result = self._client.admin.command('ping')
+                print(f"[MongoDB Sink] ✅ MongoDB 连接成功! Ping 响应: {result}")
+            except Exception as ping_error:
+                print(f"[MongoDB Sink] ⚠️  MongoDB Ping 失败: {ping_error}")
+                raise
+            
             db = self._client[self.database_name]
             self._collection = db[self.collection_name]
             
             # 创建索引
-            self._collection.create_index([("timestamp", -1)])
-            self._collection.create_index([("level", 1)])
-            self._collection.create_index([("service", 1)])
-            self._collection.create_index([("name", 1)])
+            try:
+                self._collection.create_index([("timestamp", -1)])
+                self._collection.create_index([("level", 1)])
+                self._collection.create_index([("service", 1)])
+                self._collection.create_index([("name", 1)])
+                print(f"[MongoDB Sink] ✅ 索引创建成功，集合: {self.collection_name}")
+            except Exception as index_error:
+                print(f"[MongoDB Sink] ⚠️  索引创建失败（可能已存在）: {index_error}")
             
         except ImportError:
-            raise ImportError("pymongo 未安装，请运行: pip install pymongo")
+            error_msg = "pymongo 未安装，请运行: pip install pymongo"
+            print(f"[MongoDB Sink] ❌ {error_msg}")
+            raise ImportError(error_msg)
         except Exception as e:
-            logger.error(f"MongoDB Sink 初始化失败: {e}")
+            error_msg = f"MongoDB Sink 初始化失败: {e}"
+            print(f"[MongoDB Sink] ❌ {error_msg}")
+            logger.error(error_msg)
             raise
     
     def _worker(self):
         """后台工作线程：批量写入 MongoDB"""
-        self._init_mongodb()
+        try:
+            self._init_mongodb()
+            print(f"[MongoDB Sink] ✅ 工作线程已启动，开始处理日志队列")
+        except Exception as e:
+            print(f"[MongoDB Sink] ❌ 工作线程启动失败: {e}")
+            self._running = False
+            return
         
         batch = []
         last_flush = datetime.now()
@@ -111,12 +136,13 @@ class MongoDBSink:
                 
                 if should_flush and batch:
                     try:
-                        self._collection.insert_many(batch, ordered=False)
+                        result = self._collection.insert_many(batch, ordered=False)
+                        print(f"[MongoDB Sink] ✅ 批量写入成功: {len(batch)} 条日志 -> {self.collection_name}")
                         batch.clear()
                         last_flush = now
                     except Exception as e:
                         # 写入失败，记录错误但不阻塞
-                        print(f"MongoDB 日志写入失败: {e}", file=sys.stderr)
+                        print(f"[MongoDB Sink] ❌ 批量写入失败: {e}", file=sys.stderr)
                         batch.clear()
                         
             except Exception as e:
@@ -125,9 +151,10 @@ class MongoDBSink:
         # 退出前刷新剩余日志
         if batch and self._collection:
             try:
-                self._collection.insert_many(batch, ordered=False)
-            except:
-                pass
+                result = self._collection.insert_many(batch, ordered=False)
+                print(f"[MongoDB Sink] ✅ 退出前刷新成功: {len(batch)} 条日志")
+            except Exception as e:
+                print(f"[MongoDB Sink] ❌ 退出前刷新失败: {e}", file=sys.stderr)
     
     def start(self):
         """启动后台线程"""
@@ -334,7 +361,7 @@ class Logger:
                 
                 # 如果没有指定 host，尝试从环境变量或配置读取
                 if mongodb_host is None:
-                    mongodb_host = os.getenv("MONGODB_HOST", "mongodb.default.svc.cluster.local")
+                    mongodb_host = os.getenv("MONGODB_HOST", "mongodb")  # 默认使用短地址
                 
                 if mongodb_username is None:
                     mongodb_username = os.getenv("MONGODB_USERNAME")
@@ -354,19 +381,43 @@ class Logger:
                 )
                 
                 # 启动后台线程
+                print(f"[Logger] 正在启动 MongoDB Sink...")
+                print(f"[Logger] 配置: host={mongodb_host}, port={mongodb_port}, database={mongodb_database}, collection={mongodb_collection}")
                 cls._mongodb_sink.start()
+                print(f"[Logger] ✅ MongoDB Sink 线程已启动")
                 
-                # 添加到 loguru（使用 bind 为日志添加 service 标识）
-                logger_with_service = logger.bind(service=service_name)
-                logger_with_service.add(
-                    cls._mongodb_sink,
+                # 创建一个包装函数，为日志记录添加 service 标识
+                class ServiceMongoDBSink:
+                    """包装 MongoDB Sink，自动添加 service 字段"""
+                    def __init__(self, sink, service_name):
+                        self.sink = sink
+                        self.service_name = service_name
+                    
+                    def __call__(self, message):
+                        # 确保 extra 字典存在
+                        if not hasattr(message.record, "extra"):
+                            message.record["extra"] = {}
+                        # 添加 service 字段
+                        message.record["extra"]["service"] = self.service_name
+                        # 调用原始 sink
+                        return self.sink(message)
+                
+                # 使用包装后的 sink
+                wrapped_sink = ServiceMongoDBSink(cls._mongodb_sink, service_name)
+                
+                # 添加到 loguru（直接添加到主 logger）
+                logger.add(
+                    wrapped_sink,
                     format=log_format,
                     level=log_level,
                 )
                 
-                logger_with_service.info(f"MongoDB 日志已启用 - 集合: {mongodb_collection}")
+                print(f"[Logger] ✅ MongoDB 日志已启用 - 集合: {mongodb_collection}")
+                logger.info(f"MongoDB 日志已启用 - 集合: {mongodb_collection}")
             except Exception as e:
-                logger.warning(f"MongoDB 日志初始化失败: {e}，将继续使用文件和控制台日志")
+                error_msg = f"MongoDB 日志初始化失败: {e}，将继续使用文件和控制台日志"
+                print(f"[Logger] ❌ {error_msg}")
+                logger.warning(error_msg)
         
         cls._initialized = True
         logger.info(f"Logger 初始化完成 - 服务: {service_name}, 级别: {log_level}")
