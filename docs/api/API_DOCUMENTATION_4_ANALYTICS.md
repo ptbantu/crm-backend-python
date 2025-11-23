@@ -20,9 +20,10 @@
 
 1. [数据分析接口](#81-数据分析接口)
 2. [系统监控接口](#82-系统监控接口)
-3. [统一响应格式](#统一响应格式)
-4. [错误码说明](#错误码说明)
-5. [认证说明](#认证说明)
+3. [日志查询接口](#83-日志查询接口)
+4. [统一响应格式](#统一响应格式)
+5. [错误码说明](#错误码说明)
+6. [认证说明](#认证说明)
 
 ---
 
@@ -277,6 +278,161 @@ Authorization: Bearer <token>
 ```
 
 **注意**: 数据缓存5分钟
+
+---
+
+###3 日志查询接口
+
+日志查询接口用于查询存储在 MongoDB 中的系统日志。支持多条件查询、倒序排序和分页。
+
+####3.1 查询日志（POST）
+
+**接口地址**: `POST /api/analytics-monitoring/logs/query`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/logs/query`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+**请求体**:
+```json
+{
+  "services": ["foundation-service", "order-workflow-service"],
+  "levels": ["ERROR", "WARNING"],
+  "start_time": "2025-01-01T00:00:00",
+  "end_time": "2025-01-01T23:59:59",
+  "keyword": "登录失败",
+  "file": "auth.py",
+  "function": "login",
+  "page": 1,
+  "page_size": 50
+}
+```
+
+**请求参数说明**:
+- `services` (可选): 服务名称列表，如 `["foundation-service", "order-workflow-service"]`
+- `levels` (可选): 日志级别列表，如 `["ERROR", "WARNING", "INFO"]`
+- `start_time` (可选): 开始时间（ISO 8601 格式）
+- `end_time` (可选): 结束时间（ISO 8601 格式）
+- `keyword` (可选): 关键词搜索（在 message 字段中搜索，不区分大小写）
+- `file` (可选): 文件名过滤（支持部分匹配，不区分大小写）
+- `function` (可选): 函数名过滤（支持部分匹配，不区分大小写）
+- `page` (必需): 页码（从1开始），默认 1
+- `page_size` (必需): 每页数量（最大500），默认 50
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "查询日志成功",
+  "data": {
+    "logs": [
+      {
+        "id": "507f1f77bcf86cd799439011",
+        "timestamp": "2025-01-01T12:00:00",
+        "level": "ERROR",
+        "message": "用户登录失败：用户名或密码错误",
+        "service": "foundation-service",
+        "name": "foundation_service.api.v1.auth",
+        "function": "login",
+        "line": 45,
+        "file": "/app/foundation_service/api/v1/auth.py",
+        "module": "auth",
+        "thread": 12345,
+        "process": 1,
+        "exception": null,
+        "extra": null
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "page_size": 50,
+    "total_pages": 2
+  }
+}
+```
+
+**注意**: 
+- 结果按时间戳倒序排列（最新的在前）
+- 支持跨服务查询（如果 services 为空，则查询所有服务的日志）
+- 关键词搜索使用正则表达式，支持部分匹配
+
+####3.2 查询日志（GET）
+
+**接口地址**: `GET /api/analytics-monitoring/logs/query`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/logs/query?services=foundation-service&levels=ERROR,WARNING&page=1&page_size=50`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `services` (可选): 服务名称列表，逗号分隔（如：`foundation-service,order-workflow-service`）
+- `levels` (可选): 日志级别列表，逗号分隔（如：`ERROR,WARNING,INFO`）
+- `start_time` (可选): 开始时间（ISO 8601 格式，如：`2025-01-01T00:00:00`）
+- `end_time` (可选): 结束时间（ISO 8601 格式，如：`2025-01-01T23:59:59`）
+- `keyword` (可选): 关键词搜索（在 message 字段中搜索）
+- `file` (可选): 文件名过滤（支持部分匹配）
+- `function` (可选): 函数名过滤（支持部分匹配）
+- `page` (可选): 页码（从1开始），默认 1
+- `page_size` (可选): 每页数量（最大500），默认 50
+
+**响应示例**: 同 POST 接口
+
+**注意**: GET 方式方便浏览器直接访问和调试
+
+####3.3 获取日志统计
+
+**接口地址**: `GET /api/analytics-monitoring/logs/statistics`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/analytics-monitoring/logs/statistics?services=foundation-service&start_time=2025-01-01T00:00:00&end_time=2025-01-01T23:59:59`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `services` (可选): 服务名称列表，逗号分隔（如：`foundation-service,order-workflow-service`）
+- `start_time` (可选): 开始时间（ISO 8601 格式）
+- `end_time` (可选): 结束时间（ISO 8601 格式）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "获取日志统计成功",
+  "data": {
+    "total_logs": 1000,
+    "by_level": {
+      "INFO": 800,
+      "WARNING": 150,
+      "ERROR": 50
+    },
+    "by_service": {
+      "foundation-service": 500,
+      "order-workflow-service": 300,
+      "analytics-monitoring-service": 200
+    },
+    "error_count": 50,
+    "warning_count": 150,
+    "time_range": {
+      "start": "2025-01-01T00:00:00",
+      "end": "2025-01-01T23:59:59"
+    }
+  }
+}
+```
+
+**注意**: 统计信息包括总日志数、按级别统计、按服务统计、错误和警告数量
 
 ---
 

@@ -32,12 +32,14 @@ class RoleService:
             # 获取角色的权限列表
             permissions = await self.role_permission_repo.get_role_permissions(role.id)
             from foundation_service.schemas.permission import PermissionInfo
+            from foundation_service.utils.charset_fix import fix_encoding
+            
             permission_infos = [
                 PermissionInfo(
                     id=p.id,
                     code=p.code,
-                    name_zh=p.name_zh,
-                    name_id=p.name_id,
+                    name_zh=fix_encoding(p.name_zh) if p.name_zh else None,
+                    name_id=fix_encoding(p.name_id) if p.name_id else None,
                     resource_type=p.resource_type,
                     action=p.action
                 )
@@ -47,12 +49,12 @@ class RoleService:
             result.append(RoleResponse(
                 id=role.id,
                 code=role.code,
-                name=role.name,
-                name_zh=role.name_zh,
-                name_id=role.name_id,
-                description=role.description,
-                description_zh=role.description_zh,
-                description_id=role.description_id,
+                name=fix_encoding(role.name) if role.name else None,
+                name_zh=fix_encoding(role.name_zh) if role.name_zh else None,
+                name_id=fix_encoding(role.name_id) if role.name_id else None,
+                description=fix_encoding(role.description) if role.description else None,
+                description_zh=fix_encoding(role.description_zh) if role.description_zh else None,
+                description_id=fix_encoding(role.description_id) if role.description_id else None,
                 permissions=permission_infos,
                 created_at=role.created_at,
                 updated_at=role.updated_at
@@ -79,15 +81,18 @@ class RoleService:
         
         role = await self.role_repo.create(role)
         
+        # 修复字符编码问题（如果存在乱码）
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         return RoleResponse(
             id=role.id,
             code=role.code,
-            name=role.name,
-            name_zh=role.name_zh,
-            name_id=role.name_id,
-            description=role.description,
-            description_zh=role.description_zh,
-            description_id=role.description_id,
+            name=fix_encoding(role.name) if role.name else None,
+            name_zh=fix_encoding(role.name_zh) if role.name_zh else None,
+            name_id=fix_encoding(role.name_id) if role.name_id else None,
+            description=fix_encoding(role.description) if role.description else None,
+            description_zh=fix_encoding(role.description_zh) if role.description_zh else None,
+            description_id=fix_encoding(role.description_id) if role.description_id else None,
             permissions=[],
             created_at=role.created_at,
             updated_at=role.updated_at
@@ -153,12 +158,14 @@ class RoleService:
         # 获取角色的权限列表
         permissions = await self.role_permission_repo.get_role_permissions(role.id)
         from foundation_service.schemas.permission import PermissionInfo
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         permission_infos = [
             PermissionInfo(
                 id=p.id,
                 code=p.code,
-                name_zh=p.name_zh,
-                name_id=p.name_id,
+                name_zh=fix_encoding(p.name_zh) if p.name_zh else None,
+                name_id=fix_encoding(p.name_id) if p.name_id else None,
                 resource_type=p.resource_type,
                 action=p.action
             )
@@ -168,12 +175,12 @@ class RoleService:
         return RoleResponse(
             id=role.id,
             code=role.code,
-            name=role.name,
-            name_zh=role.name_zh,
-            name_id=role.name_id,
-            description=role.description,
-            description_zh=role.description_zh,
-            description_id=role.description_id,
+            name=fix_encoding(role.name) if role.name else None,
+            name_zh=fix_encoding(role.name_zh) if role.name_zh else None,
+            name_id=fix_encoding(role.name_id) if role.name_id else None,
+            description=fix_encoding(role.description) if role.description else None,
+            description_zh=fix_encoding(role.description_zh) if role.description_zh else None,
+            description_id=fix_encoding(role.description_id) if role.description_id else None,
             permissions=permission_infos,
             created_at=role.created_at,
             updated_at=role.updated_at

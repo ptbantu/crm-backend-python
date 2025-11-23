@@ -43,24 +43,31 @@ def init_database(database_url: str, debug: bool = False) -> AsyncEngine:
         async_database_url += "&use_unicode=true"
     
     # 创建异步引擎
+    # 对于 aiomysql，需要确保字符集参数正确传递
+    # 注意：aiomysql 不支持 init_command，需要在连接后执行 SET NAMES
+    connect_args = {}
+    if "aiomysql" in async_database_url:
+        connect_args = {
+            "charset": "utf8mb4",
+            "use_unicode": True,
+        }
+    
     _engine = create_async_engine(
         async_database_url,
         echo=debug,
         pool_pre_ping=True,
         pool_size=10,
         max_overflow=20,
-        # aiomysql 连接参数，确保使用 UTF-8 编码
-        connect_args={
-            "charset": "utf8mb4",
-            "use_unicode": True,
-        } if "aiomysql" in async_database_url else {},
+        connect_args=connect_args,
     )
     
-    # 在连接建立后执行 SET NAMES 命令，确保字符集正确
+    # 对于异步连接（aiomysql），使用事件监听器设置字符集
+    # 注意：aiomysql 使用不同的连接方式，需要在连接建立时设置
     @event.listens_for(_engine.sync_engine, "connect")
     def set_charset(dbapi_conn, connection_record):
         """连接建立后设置字符集"""
         try:
+            # 对于 aiomysql，直接执行 SQL 设置字符集
             cursor = dbapi_conn.cursor()
             cursor.execute("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci")
             cursor.execute("SET character_set_client = utf8mb4")
@@ -111,10 +118,12 @@ async def get_db() -> AsyncSession:
     async with session_local() as session:
         try:
             # 每次会话开始时设置字符集，确保数据正确编码
+            # 使用同步方式执行，确保字符集设置生效
             await session.execute(text("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"))
             await session.execute(text("SET character_set_client = utf8mb4"))
             await session.execute(text("SET character_set_connection = utf8mb4"))
             await session.execute(text("SET character_set_results = utf8mb4"))
+            await session.commit()  # 提交字符集设置
             yield session
             await session.commit()
         except Exception:

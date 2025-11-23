@@ -115,13 +115,15 @@ class PermissionService:
     
     async def _permission_to_response(self, permission: Permission) -> PermissionResponse:
         """转换为响应对象"""
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         return PermissionResponse(
             id=permission.id,
             code=permission.code,
-            name_zh=permission.name_zh,
-            name_id=permission.name_id,
-            description_zh=permission.description_zh,
-            description_id=permission.description_id,
+            name_zh=fix_encoding(permission.name_zh) if permission.name_zh else None,
+            name_id=fix_encoding(permission.name_id) if permission.name_id else None,
+            description_zh=fix_encoding(permission.description_zh) if permission.description_zh else None,
+            description_id=fix_encoding(permission.description_id) if permission.description_id else None,
             resource_type=permission.resource_type,
             action=permission.action,
             display_order=permission.display_order,
@@ -143,20 +145,10 @@ class PermissionService:
         await self.role_permission_repo.assign_permissions_to_role(role_id, request.permission_ids)
         logger.info(f"角色权限分配成功: role_id={role_id}, permission_count={len(request.permission_ids)}")
     
-    async def get_role_permissions(self, role_id: str) -> List[PermissionInfo]:
+    async def get_role_permissions(self, role_id: str) -> List[PermissionResponse]:
         """获取角色的权限列表"""
         permissions = await self.role_permission_repo.get_role_permissions(role_id)
-        return [
-            PermissionInfo(
-                id=p.id,
-                code=p.code,
-                name_zh=p.name_zh,
-                name_id=p.name_id,
-                resource_type=p.resource_type,
-                action=p.action
-            )
-            for p in permissions
-        ]
+        return [await self._permission_to_response(p) for p in permissions]
     
     async def check_user_permission(self, user_id: str, permission_code: str) -> bool:
         """检查用户是否拥有指定权限"""
@@ -165,13 +157,15 @@ class PermissionService:
     
     async def get_user_permissions(self, user_id: str) -> List[PermissionInfo]:
         """获取用户的所有权限"""
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         permissions = await self.role_permission_repo.get_user_permissions(user_id)
         return [
             PermissionInfo(
                 id=p.id,
                 code=p.code,
-                name_zh=p.name_zh,
-                name_id=p.name_id,
+                name_zh=fix_encoding(p.name_zh) if p.name_zh else None,
+                name_id=fix_encoding(p.name_id) if p.name_id else None,
                 resource_type=p.resource_type,
                 action=p.action
             )
@@ -276,13 +270,15 @@ class PermissionService:
     
     async def _menu_to_response(self, menu: Menu) -> MenuResponse:
         """转换为响应对象（单个菜单）"""
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         permissions = await self.menu_permission_repo.get_menu_permissions(menu.id)
         permission_infos = [
             PermissionInfo(
                 id=p.id,
                 code=p.code,
-                name_zh=p.name_zh,
-                name_id=p.name_id,
+                name_zh=fix_encoding(p.name_zh) if p.name_zh else None,
+                name_id=fix_encoding(p.name_id) if p.name_id else None,
                 resource_type=p.resource_type,
                 action=p.action
             )
@@ -292,10 +288,10 @@ class PermissionService:
         return MenuResponse(
             id=menu.id,
             code=menu.code,
-            name_zh=menu.name_zh,
-            name_id=menu.name_id,
-            description_zh=menu.description_zh,
-            description_id=menu.description_id,
+            name_zh=fix_encoding(menu.name_zh) if menu.name_zh else None,
+            name_id=fix_encoding(menu.name_id) if menu.name_id else None,
+            description_zh=fix_encoding(menu.description_zh) if menu.description_zh else None,
+            description_id=fix_encoding(menu.description_id) if menu.description_id else None,
             parent_id=menu.parent_id,
             path=menu.path,
             component=menu.component,
@@ -311,13 +307,15 @@ class PermissionService:
     
     async def _menu_to_response_tree(self, menu: Menu) -> MenuResponse:
         """转换为响应对象（树形结构）"""
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         permissions = await self.menu_permission_repo.get_menu_permissions(menu.id)
         permission_infos = [
             PermissionInfo(
                 id=p.id,
                 code=p.code,
-                name_zh=p.name_zh,
-                name_id=p.name_id,
+                name_zh=fix_encoding(p.name_zh) if p.name_zh else None,
+                name_id=fix_encoding(p.name_id) if p.name_id else None,
                 resource_type=p.resource_type,
                 action=p.action
             )
@@ -332,10 +330,10 @@ class PermissionService:
         return MenuResponse(
             id=menu.id,
             code=menu.code,
-            name_zh=menu.name_zh,
-            name_id=menu.name_id,
-            description_zh=menu.description_zh,
-            description_id=menu.description_id,
+            name_zh=fix_encoding(menu.name_zh) if menu.name_zh else None,
+            name_id=fix_encoding(menu.name_id) if menu.name_id else None,
+            description_zh=fix_encoding(menu.description_zh) if menu.description_zh else None,
+            description_id=fix_encoding(menu.description_id) if menu.description_id else None,
             parent_id=menu.parent_id,
             path=menu.path,
             component=menu.component,
@@ -371,6 +369,8 @@ class PermissionService:
     
     async def _menu_to_user_response(self, menu: Menu) -> UserMenuResponse:
         """转换为用户菜单响应"""
+        from foundation_service.utils.charset_fix import fix_encoding
+        
         children = []
         if hasattr(menu, '_children'):
             children = [await self._menu_to_user_response(child) for child in menu._children]
@@ -378,8 +378,8 @@ class PermissionService:
         return UserMenuResponse(
             id=menu.id,
             code=menu.code,
-            name_zh=menu.name_zh,
-            name_id=menu.name_id,
+            name_zh=fix_encoding(menu.name_zh) if menu.name_zh else None,
+            name_id=fix_encoding(menu.name_id) if menu.name_id else None,
             path=menu.path,
             component=menu.component,
             icon=menu.icon,

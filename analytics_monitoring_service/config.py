@@ -40,6 +40,10 @@ class Settings(BaseServiceSettings):
     CACHE_ENABLED: bool = True  # 是否启用缓存
     CACHE_TTL: int = 300  # 缓存过期时间（秒），5分钟
     CACHE_KEY_PREFIX: str = "analytics:"  # 缓存键前缀
+    
+    # MongoDB 配置（继承自 BaseServiceSettings，这里可以覆盖）
+    # MONGODB_HOST, MONGODB_PORT, MONGODB_DATABASE, MONGODB_USERNAME, MONGODB_PASSWORD, MONGODB_AUTH_SOURCE
+    # 已从 BaseServiceSettings 继承，无需重复定义
 
 
 settings = Settings()

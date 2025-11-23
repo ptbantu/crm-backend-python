@@ -14,6 +14,7 @@ from common.schemas.response import Result
 from common.exceptions import BusinessException
 from common.utils.logger import Logger, get_logger
 from common.redis_client import init_redis, get_redis
+from common.mongodb_client import init_mongodb
 from analytics_monitoring_service.config import settings
 
 # 初始化日志
@@ -22,6 +23,13 @@ Logger.initialize(
     log_level="DEBUG" if settings.DEBUG else "INFO",
     enable_file_logging=True,
     enable_console_logging=True,
+    enable_mongodb_logging=True,  # 启用 MongoDB 日志
+    mongodb_host=settings.MONGO_HOST,
+    mongodb_port=settings.MONGO_PORT,
+    mongodb_database=settings.MONGO_DATABASE,
+    mongodb_username=settings.MONGO_USERNAME,
+    mongodb_password=settings.MONGO_PASSWORD,
+    mongodb_auth_source=settings.MONGO_AUTH_SOURCE,
 )
 
 # 获取 logger
@@ -61,6 +69,20 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Redis 连接已初始化")
     except Exception as e:
         logger.warning(f"⚠️ Redis 连接初始化失败: {str(e)}，将不使用缓存功能")
+    
+    # 初始化 MongoDB 连接（用于日志查询）
+    try:
+        init_mongodb(
+            host=settings.MONGO_HOST,
+            port=settings.MONGO_PORT,
+            database=settings.MONGO_DATABASE,
+            username=settings.MONGO_USERNAME,
+            password=settings.MONGO_PASSWORD,
+            auth_source=settings.MONGO_AUTH_SOURCE,
+        )
+        logger.info("✅ MongoDB 连接已初始化")
+    except Exception as e:
+        logger.warning(f"⚠️ MongoDB 连接初始化失败: {str(e)}，日志查询功能将不可用")
     
     yield
     # 关闭时执行
@@ -131,7 +153,7 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 
 
 # 注册路由
-from analytics_monitoring_service.api.v1 import analytics, monitoring
+from analytics_monitoring_service.api.v1 import analytics, monitoring, logs
 
 app.include_router(
     analytics.router,
@@ -142,6 +164,11 @@ app.include_router(
     monitoring.router,
     prefix="/api/analytics-monitoring/monitoring",
     tags=["系统监控"]
+)
+app.include_router(
+    logs.router,
+    prefix="/api/analytics-monitoring/logs",
+    tags=["日志查询"]
 )
 
 
