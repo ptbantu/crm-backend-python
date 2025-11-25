@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # JWT 配置（用于验证）
-    JWT_SECRET: str = "your-secret-key-change-in-production"
+    JWT_SECRET: str = "bantucrm-key-20251101-jwt"
     JWT_ALGORITHM: str = "HS256"
     
     # CORS 配置（支持从环境变量读取 JSON 字符串）

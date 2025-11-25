@@ -99,6 +99,394 @@ curl http://localhost:8080/api/foundation/roles \
 
 ---
 
+## 前端请求示例
+
+### JavaScript/TypeScript (Fetch API)
+
+#### 基础请求示例
+
+```typescript
+// 1. 登录获取 Token
+const login = async (email: string, password: string) => {
+  const response = await fetch('https://www.bantu.sbs/api/foundation/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  
+  const result = await response.json();
+  if (result.code === 200) {
+    // 保存 Token
+    localStorage.setItem('token', result.data.token);
+    return result.data;
+  } else {
+    throw new Error(result.message);
+  }
+};
+
+// 2. 使用 Token 请求需要认证的接口
+const getRoles = async () => {
+  const token = localStorage.getItem('token');
+  const response = await fetch('https://www.bantu.sbs/api/foundation/roles', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  const result = await response.json();
+  if (result.code === 200) {
+    return result.data;
+  } else {
+    throw new Error(result.message);
+  }
+};
+
+// 3. POST 请求示例（创建线索）
+const createLead = async (leadData: any) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch('https://www.bantu.sbs/api/order-workflow/leads', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(leadData),
+  });
+  
+  const result = await response.json();
+  if (result.code === 200) {
+    return result.data;
+  } else {
+    throw new Error(result.message);
+  }
+};
+```
+
+#### 封装请求函数（推荐）
+
+```typescript
+// api/client.ts
+const API_BASE_URL = 'https://www.bantu.sbs';
+
+interface ApiResult<T> {
+  code: number;
+  message: string;
+  data: T;
+  timestamp?: string;
+}
+
+async function request<T = any>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ApiResult<T>> {
+  const token = localStorage.getItem('token');
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  // 添加认证 Token（登录接口除外）
+  if (token && !path.includes('/auth/login')) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+    mode: 'cors',
+    credentials: 'omit',
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      code: response.status,
+      message: `HTTP ${response.status}: ${response.statusText}`,
+    }));
+    throw new Error(error.message || '请求失败');
+  }
+  
+  const result: ApiResult<T> = await response.json();
+  
+  // 检查业务错误码
+  if (result.code !== 200) {
+    throw new Error(result.message || '请求失败');
+  }
+  
+  return result;
+}
+
+// 使用示例
+export const api = {
+  // 登录
+  login: (email: string, password: string) =>
+    request<{ token: string; user: any }>('/api/foundation/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  
+  // 获取角色列表
+  getRoles: () =>
+    request<any[]>('/api/foundation/roles'),
+  
+  // 创建线索
+  createLead: (leadData: any) =>
+    request('/api/order-workflow/leads', {
+      method: 'POST',
+      body: JSON.stringify(leadData),
+    }),
+  
+  // 获取线索列表
+  getLeads: (params?: { page?: number; size?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.size) query.append('size', params.size.toString());
+    return request(`/api/order-workflow/leads?${query.toString()}`);
+  },
+};
+```
+
+### React 示例
+
+```typescript
+// hooks/useApi.ts
+import { useState, useCallback } from 'react';
+import { request } from '../api/client';
+
+export function useApi<T = any>() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const callApi = useCallback(async (
+    path: string,
+    options?: RequestInit
+  ): Promise<T | null> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await request<T>(path, options);
+      return result.data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '请求失败';
+      setError(message);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  return { callApi, loading, error };
+}
+
+// 组件中使用
+function LeadList() {
+  const { callApi, loading, error } = useApi();
+  const [leads, setLeads] = useState([]);
+  
+  const fetchLeads = async () => {
+    const data = await callApi('/api/order-workflow/leads?page=1&size=20');
+    if (data) {
+      setLeads(data.items);
+    }
+  };
+  
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+  
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error}</div>;
+  
+  return (
+    <div>
+      {leads.map(lead => (
+        <div key={lead.id}>{lead.name}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+### 文件上传示例
+
+```typescript
+// 上传订单文件
+const uploadOrderFile = async (orderId: string, file: File) => {
+  const token = localStorage.getItem('token');
+  const formData = new FormData();
+  formData.append('order_id', orderId);
+  formData.append('file', file);
+  formData.append('file_category', 'passport');
+  formData.append('file_name_zh', '护照扫描件');
+  formData.append('file_name_id', 'Passport Scan');
+  
+  const response = await fetch(
+    'https://www.bantu.sbs/api/order-workflow/order-files/upload',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // 注意：不要设置 Content-Type，浏览器会自动设置 multipart/form-data
+      },
+      body: formData,
+    }
+  );
+  
+  const result = await response.json();
+  if (result.code === 200) {
+    return result.data;
+  } else {
+    throw new Error(result.message);
+  }
+};
+```
+
+### 错误处理
+
+```typescript
+// 统一错误处理
+async function requestWithErrorHandling<T = any>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  try {
+    const result = await request<T>(path, options);
+    return result.data;
+  } catch (error) {
+    // 处理不同类型的错误
+    if (error instanceof Error) {
+      // 401: 未授权，需要重新登录
+      if (error.message.includes('401') || error.message.includes('未授权')) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        throw new Error('登录已过期，请重新登录');
+      }
+      
+      // 403: 权限不足
+      if (error.message.includes('403') || error.message.includes('权限不足')) {
+        throw new Error('您没有权限执行此操作');
+      }
+      
+      // 404: 资源不存在
+      if (error.message.includes('404')) {
+        throw new Error('请求的资源不存在');
+      }
+      
+      // 500: 服务器错误
+      if (error.message.includes('500')) {
+        throw new Error('服务器错误，请稍后重试');
+      }
+    }
+    
+    throw error;
+  }
+}
+```
+
+### 环境配置
+
+#### 开发环境（使用 Vite 代理）
+
+```typescript
+// vite.config.ts
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://www.bantu.sbs',
+        changeOrigin: true,
+        secure: false, // 忽略 SSL 证书验证（开发环境）
+      },
+    },
+  },
+});
+
+// 前端代码中使用相对路径
+const response = await fetch('/api/foundation/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password }),
+});
+```
+
+#### 生产环境
+
+```typescript
+// 直接使用完整 URL
+const API_BASE_URL = 'https://www.bantu.sbs';
+
+const response = await fetch(`${API_BASE_URL}/api/foundation/auth/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password }),
+});
+```
+
+### 请求拦截器示例（Axios）
+
+如果使用 Axios，可以这样配置：
+
+```typescript
+import axios from 'axios';
+
+const apiClient = axios.create({
+  baseURL: 'https://www.bantu.sbs',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// 请求拦截器：自动添加 Token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// 响应拦截器：统一处理错误
+apiClient.interceptors.response.use(
+  (response) => {
+    const result = response.data;
+    if (result.code === 200) {
+      return result.data;
+    } else {
+      throw new Error(result.message || '请求失败');
+    }
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// 使用示例
+export const api = {
+  login: (email: string, password: string) =>
+    apiClient.post('/api/foundation/auth/login', { email, password }),
+  
+  getRoles: () => apiClient.get('/api/foundation/roles'),
+  
+  createLead: (leadData: any) =>
+    apiClient.post('/api/order-workflow/leads', leadData),
+};
+```
+
+---
+
 ## 注意事项
 
 1. **生产环境**: 使用 `https://www.bantu.sbs` (推荐)

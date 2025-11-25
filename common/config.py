@@ -174,6 +174,11 @@ class BaseServiceSettings(BaseSettings):
     WHATSAPP_VERIFY_TOKEN: Optional[str] = None
     WHATSAPP_APP_SECRET: Optional[str] = None
     
+    # JWT 配置
+    JWT_SECRET: str = "bantucrm-key-20251101-jwt"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION: int = 86400000  # 24小时（毫秒）
+    
     # CORS 配置（支持从环境变量读取 JSON 字符串）
     @property
     def CORS_ALLOWED_ORIGINS(self) -> List[str]:

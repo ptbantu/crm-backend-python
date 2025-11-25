@@ -59,6 +59,18 @@ from .whatsapp_client import (
     send_document_message, upload_media, get_message_status,
     close_whatsapp, verify_webhook
 )
+from .auth import (
+    JWTAuth,
+    get_jwt_auth,
+    extract_token_from_request,
+    get_token_payload,
+    get_current_user_id,
+    get_current_user_roles,
+    get_current_organization_id,
+    require_auth,
+    require_role,
+    security
+)
 
 __all__ = [
     "Logger",
@@ -127,5 +139,16 @@ __all__ = [
     "get_message_status",
     "close_whatsapp",
     "verify_webhook",
+    # JWT Auth
+    "JWTAuth",
+    "get_jwt_auth",
+    "extract_token_from_request",
+    "get_token_payload",
+    "get_current_user_id",
+    "get_current_user_roles",
+    "get_current_organization_id",
+    "require_auth",
+    "require_role",
+    "security",
 ]
 

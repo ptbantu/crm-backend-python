@@ -13,7 +13,7 @@ class Settings(BaseServiceSettings):
     DEBUG: bool = False
     
     # JWT 配置
-    JWT_SECRET: str = "your-secret-key-change-in-production"
+    JWT_SECRET: str = "bantucrm-key-20251101-jwt"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION: int = 86400000  # 24小时
 

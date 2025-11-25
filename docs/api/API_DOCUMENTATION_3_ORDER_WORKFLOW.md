@@ -2,7 +2,7 @@
 
 ## 概述
 
-本文档包含 BANTU CRM 系统订单与工作流管理的所有 API 接口，包括订单、订单项、订单评论和订单文件管理。
+本文档包含 BANTU CRM 系统订单与工作流管理的所有 API 接口，包括订单、订单项、订单评论、订单文件和线索管理。
 
 **访问地址**：
 - **生产环境 (HTTPS)**: `https://www.bantu.sbs` (通过 Kubernetes Ingress)
@@ -22,9 +22,10 @@
 2. [订单项管理](#2-订单项管理)
 3. [订单评论管理](#3-订单评论管理)
 4. [订单文件管理](#4-订单文件管理)
-5. [统一响应格式](#5-统一响应格式)
-6. [错误码说明](#6-错误码说明)
-7. [认证说明](#7-认证说明)
+5. [线索管理](#5-线索管理)
+6. [统一响应格式](#6-统一响应格式)
+7. [错误码说明](#7-错误码说明)
+8. [认证说明](#8-认证说明)
 
 ---
 
@@ -800,7 +801,497 @@ Authorization: Bearer <token>
 
 ---
 
-## 5. 统一响应格式
+## 5. 线索管理
+
+### 5.1 创建线索
+
+**接口地址**: `POST /api/order-workflow/leads`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "name": "线索名称",
+  "company_name": "公司名称",
+  "contact_name": "联系人姓名",
+  "phone": "13800138000",
+  "email": "contact@example.com",
+  "address": "地址信息",
+  "customer_id": "uuid",
+  "owner_user_id": "uuid",
+  "status": "new",
+  "level": "2",
+  "next_follow_up_at": "2024-12-01T10:00:00"
+}
+```
+
+**字段说明**:
+- `status`: 状态，可选值：`new`（新建）、`contacted`（已联系）、`qualified`（已确认）、`converted`（已转化）、`lost`（已丢失）
+- `level`: 客户分级代码（从 `customer_levels` 表获取，如：2, 3, 4, 5, 6）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "线索创建成功",
+  "data": {
+    "id": "uuid",
+    "name": "线索名称",
+    "company_name": "公司名称",
+    "contact_name": "联系人姓名",
+    "phone": "13800138000",
+    "email": "contact@example.com",
+    "status": "new",
+    "level": "2",
+    "level_name_zh": "央企总部和龙头企业",
+    "level_name_id": "Perusahaan Pusat BUMN dan Perusahaan Terkemuka",
+    "is_in_public_pool": false,
+    "created_at": "2024-11-19T05:00:00"
+  }
+}
+```
+
+### 5.2 获取线索列表
+
+**接口地址**: `GET /api/order-workflow/leads`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page`: 页码（默认: 1）
+- `size`: 每页大小（默认: 20，最大: 100）
+- `owner_user_id`: 销售负责人ID（可选）
+- `status`: 状态（可选：new, contacted, qualified, converted, lost）
+- `is_in_public_pool`: 是否在公海池（可选：true/false）
+- `customer_id`: 客户ID（可选）
+- `company_name`: 公司名称（模糊查询，可选）
+- `phone`: 电话（可选）
+- `email`: 邮箱（可选）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "name": "线索名称",
+        "company_name": "公司名称",
+        "contact_name": "联系人姓名",
+        "phone": "13800138000",
+        "status": "new",
+        "owner_user_id": "uuid",
+        "is_in_public_pool": false,
+        "created_at": "2024-11-19T05:00:00"
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+### 5.3 获取线索详情
+
+**接口地址**: `GET /api/order-workflow/leads/{lead_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": "uuid",
+    "name": "线索名称",
+    "company_name": "公司名称",
+    "contact_name": "联系人姓名",
+    "phone": "13800138000",
+    "email": "contact@example.com",
+    "status": "new",
+    "level": "2",
+    "level_name_zh": "央企总部和龙头企业",
+    "level_name_id": "Perusahaan Pusat BUMN dan Perusahaan Terkemuka",
+    "is_in_public_pool": false,
+    "tianyancha_data": null,
+    "last_follow_up_at": null,
+    "next_follow_up_at": "2024-12-01T10:00:00",
+    "created_at": "2024-11-19T05:00:00"
+  }
+}
+```
+
+### 5.4 更新线索
+
+**接口地址**: `PUT /api/order-workflow/leads/{lead_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**请求体**:
+```json
+{
+  "name": "更新后的线索名称",
+  "status": "contacted",
+  "level": "3",
+  "next_follow_up_at": "2024-12-02T10:00:00"
+}
+```
+
+### 5.5 删除线索
+
+**接口地址**: `DELETE /api/order-workflow/leads/{lead_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**注意**: 仅管理员可以删除线索
+
+### 5.6 移入公海池
+
+**接口地址**: `POST /api/order-workflow/leads/{lead_id}/move-to-pool`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}/move-to-pool`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**请求体**:
+```json
+{
+  "pool_id": "uuid"
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "线索已移入公海池",
+  "data": {
+    "id": "uuid",
+    "is_in_public_pool": true,
+    "pool_id": "uuid",
+    "moved_to_pool_at": "2024-11-19T05:00:00"
+  }
+}
+```
+
+### 5.7 分配线索
+
+**接口地址**: `POST /api/order-workflow/leads/{lead_id}/assign`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}/assign`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**请求体**:
+```json
+{
+  "owner_user_id": "uuid"
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "线索分配成功",
+  "data": {
+    "id": "uuid",
+    "owner_user_id": "uuid",
+    "is_in_public_pool": false
+  }
+}
+```
+
+### 5.8 线索查重
+
+**接口地址**: `POST /api/order-workflow/leads/check-duplicate`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/check-duplicate`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "company_name": "公司名称",
+  "phone": "13800138000",
+  "email": "contact@example.com",
+  "exclude_lead_id": "uuid"
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "has_duplicate": true,
+    "duplicates": [
+      {
+        "id": "uuid",
+        "name": "线索名称",
+        "company_name": "公司名称",
+        "phone": "13800138000"
+      }
+    ],
+    "similarity_score": 0.95
+  }
+}
+```
+
+### 5.9 天眼查数据填充
+
+**接口地址**: `POST /api/order-workflow/leads/tianyancha-enrich`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/tianyancha-enrich`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `lead_id`: 线索ID（必填）
+- `company_name`: 公司名称（必填）
+
+**注意**: 此接口为预留接口，用于未来集成天眼查数据
+
+---
+
+## 5.10 线索跟进记录管理
+
+### 5.10.1 获取线索跟进记录列表
+
+**接口地址**: `GET /api/order-workflow/leads/{lead_id}/follow-ups`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}/follow-ups`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": [
+    {
+      "id": "uuid",
+      "lead_id": "uuid",
+      "follow_up_type": "call",
+      "content": "电话沟通，客户表示有兴趣",
+      "follow_up_date": "2024-11-19T10:00:00",
+      "created_by": "uuid",
+      "created_at": "2024-11-19T10:00:00"
+    }
+  ]
+}
+```
+
+### 5.10.2 创建跟进记录
+
+**接口地址**: `POST /api/order-workflow/leads/{lead_id}/follow-ups`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}/follow-ups`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**请求体**:
+```json
+{
+  "follow_up_type": "call",
+  "content": "电话沟通，客户表示有兴趣",
+  "follow_up_date": "2024-11-19T10:00:00"
+}
+```
+
+**字段说明**:
+- `follow_up_type`: 跟进类型，可选值：`call`（电话）、`meeting`（会议）、`email`（邮件）、`note`（备注）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "跟进记录创建成功",
+  "data": {
+    "id": "uuid",
+    "lead_id": "uuid",
+    "follow_up_type": "call",
+    "content": "电话沟通，客户表示有兴趣",
+    "follow_up_date": "2024-11-19T10:00:00",
+    "created_at": "2024-11-19T10:00:00"
+  }
+}
+```
+
+---
+
+## 5.11 线索备注管理
+
+### 5.11.1 获取线索备注列表
+
+**接口地址**: `GET /api/order-workflow/leads/{lead_id}/notes`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}/notes`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": [
+    {
+      "id": "uuid",
+      "lead_id": "uuid",
+      "note_type": "comment",
+      "content": "重要客户，需要重点关注",
+      "is_important": true,
+      "created_by": "uuid",
+      "created_at": "2024-11-19T10:00:00"
+    }
+  ]
+}
+```
+
+### 5.11.2 创建备注
+
+**接口地址**: `POST /api/order-workflow/leads/{lead_id}/notes`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/order-workflow/leads/{lead_id}/notes`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `lead_id`: 线索 ID (UUID)
+
+**请求体**:
+```json
+{
+  "note_type": "comment",
+  "content": "重要客户，需要重点关注",
+  "is_important": true
+}
+```
+
+**字段说明**:
+- `note_type`: 备注类型，可选值：`comment`（评论）、`reminder`（提醒）、`task`（任务）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "备注创建成功",
+  "data": {
+    "id": "uuid",
+    "lead_id": "uuid",
+    "note_type": "comment",
+    "content": "重要客户，需要重点关注",
+    "is_important": true,
+    "created_at": "2024-11-19T10:00:00"
+  }
+}
+```
+
+---
+
+## 6. 统一响应格式
 
 所有 API 响应都遵循以下格式：
 
@@ -821,7 +1312,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 6. 错误码说明
+## 7. 错误码说明
 
 | 错误码 | 说明 |
 |--------|------|
@@ -839,7 +1330,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 7. 认证说明
+## 8. 认证说明
 
 ### 获取 Token
 

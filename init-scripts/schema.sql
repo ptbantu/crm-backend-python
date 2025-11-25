@@ -20,8 +20,6 @@ CREATE TABLE IF NOT EXISTS `agent_extensions` (
   PRIMARY KEY (`organization_id`),
   CONSTRAINT `agent_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `collection_tasks` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
@@ -90,8 +88,6 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   CONSTRAINT `contacts_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `contacts_ibfk_3` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `customer_channels` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) DEFAULT NULL,
@@ -106,8 +102,6 @@ CREATE TABLE IF NOT EXISTS `customer_channels` (
   KEY `ix_customer_channels_active` (`is_active`),
   KEY `ix_customer_channels_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `customer_documents` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `customer_id` char(36) NOT NULL COMMENT '客户ID',
@@ -186,25 +180,6 @@ CREATE TABLE IF NOT EXISTS `customer_levels` (
   KEY `idx_customer_levels_active` (`is_active`),
   KEY `idx_customer_levels_sort` (`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户等级配置表';
-SET @saved_cs_client     = @@character_set_client;
- 1 AS `id`,
- 1 AS `name`,
- 1 AS `code`,
- 1 AS `customer_source_type`,
- 1 AS `customer_type`,
- 1 AS `owner_user_id`,
- 1 AS `owner_name`,
- 1 AS `owner_username`,
- 1 AS `agent_user_id`,
- 1 AS `agent_name`,
- 1 AS `agent_username`,
- 1 AS `agent_id`,
- 1 AS `agent_organization_name`,
- 1 AS `agent_organization_code`,
- 1 AS `parent_customer_id`,
- 1 AS `parent_customer_name`,
- 1 AS `created_at`*/;
-SET character_set_client = @saved_cs_client;
 CREATE TABLE IF NOT EXISTS `customer_sources` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) DEFAULT NULL,
@@ -219,8 +194,6 @@ CREATE TABLE IF NOT EXISTS `customer_sources` (
   KEY `ix_customer_sources_active` (`is_active`),
   KEY `ix_customer_sources_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `customers` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
@@ -281,8 +254,6 @@ CREATE TABLE IF NOT EXISTS `customers` (
   CONSTRAINT `chk_customer_source_type` CHECK ((`customer_source_type` in (_utf8mb4'own',_utf8mb4'agent'))),
   CONSTRAINT `chk_customer_type` CHECK ((`customer_type` in (_utf8mb4'individual',_utf8mb4'organization')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `deliverables` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) DEFAULT NULL,
@@ -311,8 +282,6 @@ CREATE TABLE IF NOT EXISTS `deliverables` (
   CONSTRAINT `deliverables_ibfk_4` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_deliverables_file_size_nonneg` CHECK ((coalesce(`file_size`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `follow_up_statuses` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL COMMENT '状态代码（如：1, 2, 3, 4, 5）',
@@ -636,8 +605,6 @@ CREATE TABLE IF NOT EXISTS `order_stages` (
   CONSTRAINT `order_stages_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_order_stages_progress_range` CHECK (((`progress_percent` >= 0) and (`progress_percent` <= 100)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `order_statuses` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL,
@@ -650,8 +617,6 @@ CREATE TABLE IF NOT EXISTS `order_statuses` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `orders` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_number` varchar(100) NOT NULL,
@@ -707,18 +672,6 @@ CREATE TABLE IF NOT EXISTS `orders` (
   CONSTRAINT `orders_ibfk_6` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_orders_amounts_nonneg` CHECK (((coalesce(`quantity`,0) >= 0) and (coalesce(`unit_price`,0) >= 0) and (coalesce(`total_amount`,0) >= 0) and (coalesce(`discount_amount`,0) >= 0) and (coalesce(`final_amount`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
-SET @saved_cs_client     = @@character_set_client;
- 1 AS `customer_id`,
- 1 AS `organization_name`,
- 1 AS `customer_source_type`,
- 1 AS `owner_user_id`,
- 1 AS `agent_user_id`,
- 1 AS `agent_id`,
- 1 AS `contacts_count`,
- 1 AS `primary_contacts_count`*/;
-SET character_set_client = @saved_cs_client;
 CREATE TABLE IF NOT EXISTS `organization_domain_relations` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `organization_id` char(36) NOT NULL COMMENT 'ç»„ç»‡ID',
@@ -790,8 +743,6 @@ CREATE TABLE IF NOT EXISTS `organization_employees` (
   CONSTRAINT `organization_employees_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `organization_employees_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `organizations` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `name` text NOT NULL,
@@ -885,8 +836,6 @@ CREATE TABLE IF NOT EXISTS `organizations` (
   CONSTRAINT `chk_organizations_status` CHECK (((`company_status` is null) or (`company_status` in (_utf8mb4'normal',_utf8mb4'cancelled',_utf8mb4'revoked',_utf8mb4'liquidated',_utf8mb4'other')))),
   CONSTRAINT `chk_organizations_type` CHECK ((`organization_type` in (_utf8mb4'internal',_utf8mb4'vendor',_utf8mb4'agent')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `payment_stages` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
@@ -976,8 +925,6 @@ CREATE TABLE IF NOT EXISTS `payments` (
   CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`confirmed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `payments_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `permissions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) NOT NULL COMMENT 'æƒé™ç¼–ç ï¼ˆå”¯ä¸€ï¼Œå¦‚ï¼šuser.createï¼‰',
@@ -1011,8 +958,6 @@ CREATE TABLE IF NOT EXISTS `product_categories` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `products` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
@@ -1093,8 +1038,6 @@ CREATE TABLE IF NOT EXISTS `products` (
   KEY `ix_products_active` (`is_active`),
   CONSTRAINT `chk_products_prices_nonneg` CHECK (((coalesce(`price_list`,0) >= 0) and (coalesce(`price_channel`,0) >= 0) and (coalesce(`price_cost`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `role_permissions` (
   `role_id` char(36) NOT NULL,
   `permission_id` char(36) NOT NULL,
@@ -1119,8 +1062,6 @@ CREATE TABLE IF NOT EXISTS `roles` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `service_records` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL COMMENT '外部系统ID',
@@ -1305,8 +1246,6 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `ix_users_wechat` (`wechat`),
   KEY `ix_users_locked` (`is_locked`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `vendor_extensions` (
   `organization_id` char(36) NOT NULL,
   `account_group` varchar(255) DEFAULT NULL,
@@ -1316,8 +1255,6 @@ CREATE TABLE IF NOT EXISTS `vendor_extensions` (
   PRIMARY KEY (`organization_id`),
   CONSTRAINT `vendor_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `visa_records` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
@@ -1353,8 +1290,6 @@ CREATE TABLE IF NOT EXISTS `visa_records` (
   CONSTRAINT `chk_visa_fx_rate_nonneg` CHECK ((coalesce(`fx_rate`,0) >= 0)),
   CONSTRAINT `chk_visa_payment_nonneg` CHECK ((coalesce(`payment_amount`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
 CREATE TABLE IF NOT EXISTS `workflow_definitions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `name_zh` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆä¸­æ–‡ï¼‰',
