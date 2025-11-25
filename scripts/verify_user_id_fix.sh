@@ -25,3 +25,4 @@ WHERE TABLE_SCHEMA = 'bantu_crm'
 echo ""
 echo "如果 DATA_TYPE 显示为 'varchar' 且 CHARACTER_MAXIMUM_LENGTH 为 50，则修改成功！"
 
+

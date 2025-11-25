@@ -26,3 +26,4 @@ WHERE TABLE_SCHEMA = 'bantu_crm'
   AND COLUMN_NAME = 'id';
 SQL
 
+

@@ -11,6 +11,15 @@ from order_workflow_service.repositories.workflow_repository import (
     WorkflowTaskRepository,
     WorkflowTransitionRepository,
 )
+from order_workflow_service.repositories.lead_repository import LeadRepository
+from order_workflow_service.repositories.lead_follow_up_repository import LeadFollowUpRepository
+from order_workflow_service.repositories.lead_note_repository import LeadNoteRepository
+from order_workflow_service.repositories.lead_pool_repository import LeadPoolRepository
+from order_workflow_service.repositories.collection_task_repository import CollectionTaskRepository
+from order_workflow_service.repositories.temporary_link_repository import TemporaryLinkRepository
+from order_workflow_service.repositories.notification_repository import NotificationRepository
+from order_workflow_service.repositories.customer_level_repository import CustomerLevelRepository
+from order_workflow_service.repositories.follow_up_status_repository import FollowUpStatusRepository
 
 __all__ = [
     "OrderRepository",
@@ -21,4 +30,13 @@ __all__ = [
     "WorkflowInstanceRepository",
     "WorkflowTaskRepository",
     "WorkflowTransitionRepository",
+    "LeadRepository",
+    "LeadFollowUpRepository",
+    "LeadNoteRepository",
+    "LeadPoolRepository",
+    "CollectionTaskRepository",
+    "TemporaryLinkRepository",
+    "NotificationRepository",
+    "CustomerLevelRepository",
+    "FollowUpStatusRepository",
 ]

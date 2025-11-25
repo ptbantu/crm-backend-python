@@ -9,6 +9,15 @@ from order_workflow_service.models.order import Order
 from order_workflow_service.models.order_item import OrderItem
 from order_workflow_service.models.order_comment import OrderComment
 from order_workflow_service.models.order_file import OrderFile
+from order_workflow_service.models.lead import Lead
+from order_workflow_service.models.lead_pool import LeadPool
+from order_workflow_service.models.lead_follow_up import LeadFollowUp
+from order_workflow_service.models.lead_note import LeadNote
+from order_workflow_service.models.collection_task import CollectionTask
+from order_workflow_service.models.temporary_link import TemporaryLink
+from order_workflow_service.models.notification import Notification
+from order_workflow_service.models.customer_level import CustomerLevel
+from order_workflow_service.models.follow_up_status import FollowUpStatus
 
 __all__ = [
     "WorkflowDefinition",
@@ -19,4 +28,13 @@ __all__ = [
     "OrderItem",
     "OrderComment",
     "OrderFile",
+    "Lead",
+    "LeadPool",
+    "LeadFollowUp",
+    "LeadNote",
+    "CollectionTask",
+    "TemporaryLink",
+    "Notification",
+    "CustomerLevel",
+    "FollowUpStatus",
 ]

@@ -68,3 +68,4 @@ fi
 echo ""
 echo "✅ 完成！users.id 字段已修改为 VARCHAR(50)"
 
+

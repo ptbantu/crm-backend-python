@@ -79,3 +79,4 @@ SELECT 'opportunities', COUNT(*) FROM opportunities WHERE agent_id = @new_org_id
 UNION ALL
 SELECT 'orders', COUNT(*) FROM orders WHERE vendor_id = @new_org_id;
 
+

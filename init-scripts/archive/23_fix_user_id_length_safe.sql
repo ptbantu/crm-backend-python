@@ -82,3 +82,4 @@ WHERE TABLE_SCHEMA = 'bantu_crm'
   AND TABLE_NAME = 'users'
   AND COLUMN_NAME = 'id';
 
+
