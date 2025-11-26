@@ -35,7 +35,7 @@ class LeadNoteService:
         """创建备注"""
         # 验证线索存在（需要organization_id，但这里先简化处理）
         from sqlalchemy import select
-        from common.models import Lead
+        from order_workflow_service.models import Lead
         result = await self.db.execute(select(Lead).where(Lead.id == lead_id))
         lead = result.scalar_one_or_none()
         if not lead:

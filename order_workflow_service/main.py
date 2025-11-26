@@ -116,6 +116,32 @@ async def validation_exception_handler(request, exc: RequestValidationError):
     )
 
 
+# 导入所有模型，确保它们被注册到 SQLAlchemy metadata 中
+# 这对于外键关系的正确解析至关重要
+from order_workflow_service.models import (
+    Lead,
+    Order,
+    Customer,
+    CustomerSource,
+    CustomerChannel,
+    User,
+    OrderItem,
+    OrderComment,
+    OrderFile,
+    WorkflowDefinition,
+    WorkflowInstance,
+    WorkflowTask,
+    WorkflowTransition,
+    CollectionTask,
+    TemporaryLink,
+    Notification,
+    CustomerLevel,
+    FollowUpStatus,
+    LeadPool,
+    LeadFollowUp,
+    LeadNote,
+)
+
 # 注册路由
 from order_workflow_service.api.v1 import (
     orders,

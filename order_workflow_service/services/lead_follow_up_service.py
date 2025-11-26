@@ -37,7 +37,7 @@ class LeadFollowUpService:
         # 验证线索存在（需要organization_id，但这里先简化处理）
         # 注意：这里应该从上下文获取organization_id，暂时先查询
         from sqlalchemy import select
-        from common.models import Lead
+        from order_workflow_service.models import Lead
         result = await self.db.execute(select(Lead).where(Lead.id == lead_id))
         lead = result.scalar_one_or_none()
         if not lead:
