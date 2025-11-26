@@ -19,15 +19,16 @@ from common.models.workflow_task import WorkflowTask
 from common.models.workflow_transition import WorkflowTransition
 from common.models.collection_task import CollectionTask
 from common.models.temporary_link import TemporaryLink
-from common.models.notification import Notification
+# 注意：不导入 Notification，因为 order_workflow_service 有自己的版本（带外键约束）
+# 如果其他服务需要，可以直接从 common.models.notification 导入
 from common.models.customer_level import CustomerLevel
 from common.models.follow_up_status import FollowUpStatus
 from common.models.lead_pool import LeadPool
-from common.models.lead_follow_up import LeadFollowUp
-from common.models.lead_note import LeadNote
+# 注意：不导入 LeadFollowUp 和 LeadNote，因为 order_workflow_service 有自己的版本（带外键约束）
+# 如果其他服务需要，可以直接从 common.models.lead_follow_up 或 common.models.lead_note 导入
 
-# 注意：Order 和 Lead 不在 __all__ 中导出，因为 order_workflow_service 有自己的版本
-# 如果其他服务需要，可以直接从 common.models.order 或 common.models.lead 导入
+# 注意：Order、Lead、Notification、LeadFollowUp 和 LeadNote 不在 __all__ 中导出，因为 order_workflow_service 有自己的版本（带外键约束）
+# 如果其他服务需要，可以直接从对应的 common.models 模块导入
 __all__ = [
     "User",
     "Organization",
@@ -41,11 +42,8 @@ __all__ = [
     "WorkflowTransition",
     "CollectionTask",
     "TemporaryLink",
-    "Notification",
     "CustomerLevel",
     "FollowUpStatus",
     "LeadPool",
-    "LeadFollowUp",
-    "LeadNote",
 ]
 

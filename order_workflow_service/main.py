@@ -121,6 +121,9 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 from order_workflow_service.models import (
     Lead,
     Order,
+    Notification,  # 本地定义的 Notification（带外键约束）
+    LeadFollowUp,  # 本地定义的 LeadFollowUp（带外键约束）
+    LeadNote,  # 本地定义的 LeadNote（带外键约束）
     Customer,
     CustomerSource,
     CustomerChannel,
@@ -134,12 +137,9 @@ from order_workflow_service.models import (
     WorkflowTransition,
     CollectionTask,
     TemporaryLink,
-    Notification,
     CustomerLevel,
     FollowUpStatus,
     LeadPool,
-    LeadFollowUp,
-    LeadNote,
 )
 
 # 注册路由

@@ -4,7 +4,7 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
-from common.models import LeadNote
+from order_workflow_service.models import LeadNote
 from common.utils.repository import BaseRepository
 
 
