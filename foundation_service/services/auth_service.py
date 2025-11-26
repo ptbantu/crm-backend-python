@@ -15,6 +15,9 @@ from common.exceptions import (
     UserNotFoundError, PasswordIncorrectError, OrganizationNotFoundError,
     OrganizationLockedError, OrganizationInactiveError, UserInactiveError
 )
+from common.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class AuthService:
@@ -57,39 +60,44 @@ class AuthService:
         if not organization.is_active:
             raise OrganizationInactiveError()
         
-        # 5. 检查用户是否被锁定
+        # 5. 查询用户的所有激活的组织（用于前端缓存）
+        all_employees = await self.employee_repo.get_all_by_user_id(user.id)
+        organization_ids = [emp.organization_id for emp in all_employees]
+        
+        # 6. 检查用户是否被锁定
         if user.is_locked:
             logger.warning(f"用户已锁定，无法登录: user_id={user.id}, email={request.email}")
             raise UserInactiveError()
         
-        # 6. 检查用户是否激活
+        # 7. 检查用户是否激活
         if not user.is_active:
             raise UserInactiveError()
         
-        # 7. 查询用户角色
+        # 8. 查询用户角色
         roles = await self.user_repo.get_user_roles(user.id)
         role_codes = [role.code for role in roles]
         
-        # 8. 查询权限列表（简化处理，从配置获取）
+        # 9. 查询权限列表（简化处理，从配置获取）
         permissions = self._get_permissions_by_roles(role_codes)
         
-        # 9. 生成 JWT Token
+        # 10. 生成 JWT Token（包含主要组织ID，用于快速访问）
         token_data = {
             "user_id": user.id,
             "username": user.username,
             "email": user.email,
             "primary_organization_id": organization.id,
+            "organization_id": organization.id,  # 兼容字段，与 get_current_organization_id 保持一致
             "roles": role_codes,
             "permissions": permissions
         }
         token = create_access_token(token_data)
         refresh_token = create_refresh_token(token_data)
         
-        # 10. 更新最后登录时间
+        # 11. 更新最后登录时间
         user.last_login_at = datetime.utcnow()
         await self.user_repo.update(user)
         
-        # 11. 构建响应
+        # 12. 构建响应（包含所有组织ID，供前端缓存）
         user_info = UserInfo(
             id=user.id,
             username=user.username,
@@ -97,6 +105,7 @@ class AuthService:
             display_name=user.display_name,
             primary_organization_id=organization.id,
             primary_organization_name=organization.name,
+            organization_ids=organization_ids,  # 所有组织ID列表
             roles=role_codes,
             permissions=permissions
         )

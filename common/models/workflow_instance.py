@@ -3,7 +3,7 @@
 """
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, JSON, CheckConstraint
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 import uuid
 
 
@@ -26,7 +26,7 @@ class WorkflowInstance(Base):
     status = Column(String(50), nullable=False, default="running", index=True, comment="实例状态：running, completed, cancelled, suspended")
     
     # 启动信息
-    started_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    started_by = Column(String(36), nullable=True, index=True, comment="启动人ID（跨服务引用）")
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     

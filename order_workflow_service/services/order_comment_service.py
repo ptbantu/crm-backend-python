@@ -4,7 +4,7 @@
 import time
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from order_workflow_service.models.order_comment import OrderComment
+from common.models import OrderComment
 from order_workflow_service.repositories.order_comment_repository import OrderCommentRepository
 from order_workflow_service.schemas.order_comment import (
     OrderCommentCreateRequest,

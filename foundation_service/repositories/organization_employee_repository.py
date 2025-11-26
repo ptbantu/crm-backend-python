@@ -1,7 +1,7 @@
 """
 组织员工数据访问层
 """
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from foundation_service.models.organization_employee import OrganizationEmployee
@@ -26,6 +26,21 @@ class OrganizationEmployeeRepository:
             )
         )
         return result.scalar_one_or_none()
+    
+    async def get_all_by_user_id(self, user_id: str) -> List[OrganizationEmployee]:
+        """获取用户的所有激活的组织员工记录"""
+        from typing import List
+        result = await self.db.execute(
+            select(OrganizationEmployee)
+            .where(
+                and_(
+                    OrganizationEmployee.user_id == user_id,
+                    OrganizationEmployee.is_active == True
+                )
+            )
+            .order_by(OrganizationEmployee.is_primary.desc())  # 主要组织排在前面
+        )
+        return list(result.scalars().all())
     
     async def create(self, employee: OrganizationEmployee) -> OrganizationEmployee:
         """创建组织员工记录"""

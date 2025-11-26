@@ -4,7 +4,7 @@
 import time
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from order_workflow_service.models.order_file import OrderFile
+from common.models import OrderFile
 from order_workflow_service.repositories.order_file_repository import OrderFileRepository
 from order_workflow_service.schemas.order_file import (
     OrderFileCreateRequest,

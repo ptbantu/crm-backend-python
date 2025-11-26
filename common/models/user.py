@@ -5,6 +5,7 @@
 from sqlalchemy import Column, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
 from common.database import Base
+import uuid
 
 
 class User(Base):
@@ -14,7 +15,7 @@ class User(Base):
     # id 由业务逻辑生成：组织ID + 序号，最大36位（如果超过则截取）
     # 格式：{organization_id}{sequence} 例如：00000000-0000-0000-0000-00000000000101
     # 如果超过36位，会截取组织ID前面部分，保留序号
-    id = Column(String(36), primary_key=True, comment="用户ID：组织ID + 序号（最大36位）")
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), comment="用户ID：组织ID + 序号（最大36位）")
     username = Column(String(255), nullable=False, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True, comment="全局唯一邮箱（用于登录，必填）")
     phone = Column(String(50), nullable=True, index=True)

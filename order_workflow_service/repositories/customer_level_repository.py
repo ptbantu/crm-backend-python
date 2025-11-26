@@ -4,7 +4,7 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from order_workflow_service.models.customer_level import CustomerLevel
+from common.models import CustomerLevel
 from common.utils.repository import BaseRepository
 
 

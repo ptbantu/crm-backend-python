@@ -68,7 +68,12 @@ def get_current_user_roles(request: Request) -> List[str]:
 
 def get_current_organization_id(request: Request) -> Optional[str]:
     """
-    从请求中获取当前组织ID（由 Gateway Service 通过 HTTP 头传递）
+    从请求中获取当前组织ID
+    
+    支持以下方式（按优先级）：
+    1. HTTP 头中的 X-Organization-Id 或 Organization-Id（由前端从缓存中读取并传递）
+    2. JWT token 中的 organization_id 或 primary_organization_id（从登录时缓存的 token 中读取）
+    3. request.state.organization_id（兼容模式）
     
     Args:
         request: FastAPI Request 对象
@@ -76,14 +81,30 @@ def get_current_organization_id(request: Request) -> Optional[str]:
     Returns:
         组织ID或None
     """
-    # 优先从 HTTP 头获取
+    # 方式1: 优先从 HTTP 头获取（前端从 localStorage 缓存中读取并传递）
     org_id = request.headers.get("X-Organization-Id") or request.headers.get("Organization-Id")
     if org_id:
         return org_id
-    # 兼容从 request.state 获取
+    
+    # 方式2: 从 JWT token 中获取（如果前端没有传递，则从 token 中读取）
+    # 注意：这里需要导入 common.auth 模块
+    try:
+        from common.auth import get_token_payload_from_request
+        from order_workflow_service.config import settings
+        payload = get_token_payload_from_request(request, settings)
+        if payload:
+            org_id = payload.get("organization_id") or payload.get("primary_organization_id")
+            if org_id:
+                return str(org_id)
+    except Exception:
+        # 如果无法从 token 读取，继续尝试其他方式
+        pass
+    
+    # 方式3: 兼容从 request.state 获取
     org_id = getattr(request.state, "organization_id", None)
     if org_id:
         return org_id
+    
     return None
 
 

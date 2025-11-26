@@ -4,7 +4,7 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from order_workflow_service.models.notification import Notification
+from common.models import Notification
 from order_workflow_service.repositories.notification_repository import NotificationRepository
 from order_workflow_service.schemas.notification import (
     NotificationResponse,

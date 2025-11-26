@@ -4,7 +4,7 @@
 from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from order_workflow_service.models.temporary_link import TemporaryLink
+from common.models import TemporaryLink
 from common.utils.repository import BaseRepository
 
 

@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Text, Integer, Date, DateTime, ForeignKey, Boolean, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 import uuid
 
 
@@ -17,7 +17,7 @@ class CollectionTask(Base):
     
     # 关联信息
     order_id = Column(String(36), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True, comment="订单ID")
-    payment_stage_id = Column(String(36), ForeignKey("payment_stages.id", ondelete="SET NULL"), nullable=True, index=True, comment="付款阶段ID")
+    payment_stage_id = Column(String(36), nullable=True, index=True, comment="付款阶段ID（跨服务引用）")
     
     # 任务信息
     task_type = Column(String(50), nullable=False, comment="任务类型：auto(自动), manual(手动)")
@@ -31,10 +31,10 @@ class CollectionTask(Base):
     notes = Column(Text, nullable=True, comment="备注")
     
     # 分配信息
-    assigned_to_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="分配给的用户ID（销售负责人）")
+    assigned_to_user_id = Column(String(36), nullable=True, index=True, comment="分配给的用户ID（销售负责人，跨服务引用）")
     
     # 审计字段
-    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
+    created_by = Column(String(36), nullable=True, comment="创建人ID（跨服务引用）")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     

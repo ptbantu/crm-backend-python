@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Text, BigInteger, Boolean, DateTime, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 import uuid
 
 
@@ -18,7 +18,7 @@ class OrderFile(Base):
     # 订单关联
     order_id = Column(String(36), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
     order_item_id = Column(String(36), ForeignKey("order_items.id", ondelete="SET NULL"), nullable=True, index=True)
-    order_stage_id = Column(String(36), ForeignKey("order_stages.id", ondelete="SET NULL"), nullable=True, index=True)
+    order_stage_id = Column(String(36), nullable=True, index=True, comment="订单阶段ID（跨服务引用）")
     
     # 文件分类
     file_category = Column(String(100), nullable=True, index=True, comment="文件分类：passport, visa, document, other")
@@ -43,11 +43,11 @@ class OrderFile(Base):
     # 文件属性
     is_required = Column(Boolean, nullable=False, default=False, comment="是否必需文件")
     is_verified = Column(Boolean, nullable=False, default=False, index=True, comment="是否已验证")
-    verified_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    verified_by = Column(String(36), nullable=True, comment="验证人ID（跨服务引用）")
     verified_at = Column(DateTime, nullable=True)
     
     # 上传信息
-    uploaded_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    uploaded_by = Column(String(36), nullable=True, index=True, comment="上传人ID（跨服务引用）")
     
     # 审计字段
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True)

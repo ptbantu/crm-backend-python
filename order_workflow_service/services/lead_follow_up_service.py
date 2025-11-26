@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
-from order_workflow_service.models.lead_follow_up import LeadFollowUp
+from common.models import LeadFollowUp
 from order_workflow_service.repositories.lead_follow_up_repository import LeadFollowUpRepository
 from order_workflow_service.repositories.lead_repository import LeadRepository
 from order_workflow_service.schemas.lead_follow_up import (
@@ -37,7 +37,7 @@ class LeadFollowUpService:
         # 验证线索存在（需要organization_id，但这里先简化处理）
         # 注意：这里应该从上下文获取organization_id，暂时先查询
         from sqlalchemy import select
-        from order_workflow_service.models.lead import Lead
+        from common.models import Lead
         result = await self.db.execute(select(Lead).where(Lead.id == lead_id))
         lead = result.scalar_one_or_none()
         if not lead:

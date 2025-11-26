@@ -21,15 +21,16 @@ class LoginResponse(BaseModel):
 
 
 class UserInfo(BaseModel):
-    """用户信息"""
+    """用户信息（包含组织信息，供前端缓存）"""
     id: str
     username: str
     email: Optional[str]
     display_name: Optional[str]
-    primary_organization_id: Optional[str]
-    primary_organization_name: Optional[str]
-    roles: List[str] = Field(default_factory=list)
-    permissions: List[str] = Field(default_factory=list)
+    primary_organization_id: Optional[str] = Field(None, description="主要组织ID")
+    primary_organization_name: Optional[str] = Field(None, description="主要组织名称")
+    organization_ids: List[str] = Field(default_factory=list, description="用户所属的所有组织ID列表（供前端缓存）")
+    roles: List[str] = Field(default_factory=list, description="用户角色列表")
+    permissions: List[str] = Field(default_factory=list, description="用户权限列表")
 
 
 LoginResponse.model_rebuild()

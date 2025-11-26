@@ -5,7 +5,7 @@ import time
 from typing import Optional, List
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
-from order_workflow_service.models.order_item import OrderItem
+from common.models import OrderItem
 from order_workflow_service.repositories.order_item_repository import OrderItemRepository
 from order_workflow_service.schemas.order_item import (
     OrderItemCreateRequest,

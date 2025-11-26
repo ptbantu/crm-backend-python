@@ -5,11 +5,12 @@ from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
-from order_workflow_service.models.lead import Lead
+from common.models import Lead
 from order_workflow_service.repositories.lead_repository import LeadRepository
 from order_workflow_service.repositories.lead_follow_up_repository import LeadFollowUpRepository
 from order_workflow_service.repositories.lead_note_repository import LeadNoteRepository
 from order_workflow_service.services.customer_level_service import CustomerLevelService
+from order_workflow_service.utils.organization_helper import get_user_organization_id
 from order_workflow_service.schemas.lead import (
     LeadCreateRequest,
     LeadUpdateRequest,
@@ -46,6 +47,20 @@ class LeadService:
             if not is_valid:
                 raise BusinessException(detail=f"无效的客户等级代码: {request.level}", status_code=400)
         
+        # 如果没有提供 organization_id，从创建用户的组织获取
+        if not organization_id and created_by:
+            organization_id = await get_user_organization_id(self.db, created_by)
+            if not organization_id:
+                raise BusinessException(
+                    detail=f"无法获取用户 {created_by} 的组织ID，请确保用户已关联组织",
+                    status_code=400
+                )
+        elif not organization_id:
+            raise BusinessException(
+                detail="缺少组织ID，且无法从用户获取",
+                status_code=400
+            )
+        
         try:
             # 如果没有提供 owner_user_id，则默认设置为创建人（线索与用户绑定）
             owner_user_id = request.owner_user_id or created_by
@@ -59,7 +74,7 @@ class LeadService:
                 email=request.email,
                 address=request.address,
                 customer_id=request.customer_id,
-                organization_id=organization_id,
+                organization_id=organization_id,  # 现在确保不为 None
                 owner_user_id=owner_user_id,  # 使用默认值或请求值
                 status=request.status,
                 level=request.level,
@@ -208,18 +223,46 @@ class LeadService:
     async def delete_lead(
         self,
         lead_id: str,
-        organization_id: str,
+        organization_id: Optional[str] = None,
         current_user_id: Optional[str] = None,
         current_user_roles: Optional[List[str]] = None,
     ) -> None:
-        """删除线索（仅admin）"""
-        if not current_user_roles or "ADMIN" not in current_user_roles:
-            raise BusinessException(detail="只有管理员可以删除线索", status_code=403)
+        """删除线索
         
+        权限控制：
+        1. 管理员可以删除任何线索
+        2. 非管理员可以删除：
+           - 自己负责的线索（owner_user_id == current_user_id）
+           - 自己创建的线索（created_by == current_user_id）
+        """
+        # 查询线索
         lead = await self.repository.get_by_id(lead_id, organization_id)
         if not lead:
             raise BusinessException(detail="线索不存在", status_code=404)
         
+        # 权限检查
+        is_admin = current_user_roles and "ADMIN" in current_user_roles
+        
+        if not is_admin:
+            # 非管理员：只能删除自己负责的或自己创建的线索
+            if not current_user_id:
+                raise BusinessException(detail="需要认证", status_code=401)
+            
+            can_delete = False
+            if lead.owner_user_id == current_user_id:
+                # 自己负责的线索
+                can_delete = True
+            elif lead.created_by == current_user_id:
+                # 自己创建的线索
+                can_delete = True
+            
+            if not can_delete:
+                raise BusinessException(
+                    detail="无权删除该线索，只能删除自己负责的或自己创建的线索",
+                    status_code=403
+                )
+        
+        # 执行删除
         await self.repository.delete(lead)
         await self.db.commit()
     

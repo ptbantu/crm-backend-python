@@ -3,7 +3,7 @@
 """
 from sqlalchemy import Column, String, Text, Boolean, Integer, DateTime
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 import uuid
 
 

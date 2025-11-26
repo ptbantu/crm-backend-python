@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from datetime import datetime
-from order_workflow_service.models.lead import Lead
+from common.models import Lead
 from common.utils.repository import BaseRepository
 
 
@@ -38,44 +38,68 @@ class LeadRepository(BaseRepository[Lead]):
         current_user_id: Optional[str] = None,
         current_user_roles: Optional[List[str]] = None,
     ) -> Tuple[List[Lead], int]:
-        """查询线索列表（支持数据隔离，organization_id可选）"""
+        """查询线索列表（支持数据隔离）
+        
+        查询逻辑：
+        1. 如果有组织ID：
+           - 如果是公海（is_in_public_pool=True）：查询该组织内的全部公海线索（所有用户丢入公海的线索）
+           - 如果是我的线索（is_in_public_pool=False 或 None）：
+             - 非admin用户：查询该组织内且该用户创建的线索，且不在公海（is_in_public_pool=False）
+             - Admin用户：可以查询该组织内的所有线索（根据其他筛选条件）
+        2. 如果没有组织ID：
+           - 必须根据用户ID查询（created_by == current_user_id），且不在公海
+        """
         # 构建查询条件
         conditions = []
         
         # 如果提供了组织ID，则按组织过滤
         if organization_id:
             conditions.append(Lead.organization_id == organization_id)
-        
-        # 用户级隔离：根据用户ID查询属于该用户的线索
-        # 如果没有组织ID，则必须根据用户ID查询
-        if not organization_id:
+            
+            # 判断是否是公海查询
+            is_public_pool_query = is_in_public_pool is True
+            
+            if is_public_pool_query:
+                # 公海线索：查询该组织内的全部公海线索（所有用户丢入公海的线索，不限制创建人）
+                conditions.append(Lead.is_in_public_pool == True)
+            else:
+                # 我的线索（is_in_public_pool=False 或 None）：根据角色进行数据隔离
+                is_admin = current_user_roles and "ADMIN" in current_user_roles
+                
+                if is_admin:
+                    # Admin 可以查询该组织内的所有线索（根据其他筛选条件）
+                    # 如果指定了 owner_user_id，则按负责人过滤
+                    if owner_user_id:
+                        conditions.append(Lead.owner_user_id == owner_user_id)
+                    # 如果明确指定了 is_in_public_pool=False，则只查询非公海线索
+                    if is_in_public_pool is False:
+                        conditions.append(Lead.is_in_public_pool == False)
+                    # 如果 is_in_public_pool 为 None，不添加此条件（查询所有线索，包括公海和非公海）
+                else:
+                    # 非admin用户：查询该组织内且该用户创建的线索，且不在公海
+                    if current_user_id:
+                        conditions.append(Lead.created_by == current_user_id)
+                        # 我的线索必须排除公海线索
+                        conditions.append(Lead.is_in_public_pool == False)
+                    else:
+                        # 如果没有用户ID，返回空结果
+                        return [], 0
+        else:
             # 没有组织ID时，必须根据用户ID查询
-            # 查询条件：owner_user_id == current_user_id 或 created_by == current_user_id
-            # （用户可以看到自己负责的线索，或者自己创建的线索）
+            # 查询条件：created_by == current_user_id（用户创建的线索），且不在公海
             if current_user_id:
-                conditions.append(
-                    or_(
-                        Lead.owner_user_id == current_user_id,
-                        Lead.created_by == current_user_id
-                    )
-                )
+                conditions.append(Lead.created_by == current_user_id)
+                # 我的线索必须排除公海线索
+                if is_in_public_pool is not True:  # 如果不是明确查询公海，则排除公海线索
+                    conditions.append(Lead.is_in_public_pool == False)
             else:
                 # 如果没有用户ID，返回空结果
                 return [], 0
-        else:
-            # 有组织ID时，按角色进行数据隔离
-            # 组织内部隔离：非admin用户只能看自己的
-            if current_user_roles and "ADMIN" not in current_user_roles:
-                if current_user_id:
-                    conditions.append(Lead.owner_user_id == current_user_id)
-            elif owner_user_id:
-                conditions.append(Lead.owner_user_id == owner_user_id)
         
         # 其他筛选条件
         if status:
             conditions.append(Lead.status == status)
-        if is_in_public_pool is not None:
-            conditions.append(Lead.is_in_public_pool == is_in_public_pool)
+        # 注意：is_in_public_pool 的处理已经在上面完成，这里不再重复处理
         if customer_id:
             conditions.append(Lead.customer_id == customer_id)
         if company_name:

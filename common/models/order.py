@@ -4,11 +4,10 @@
 from sqlalchemy import Column, String, Numeric, Date, Text, ForeignKey, Index, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.mysql import CHAR, DATETIME
-from datetime import datetime
+from sqlalchemy.dialects.mysql import DATETIME
 from decimal import Decimal
 
-from order_workflow_service.database import Base
+from common.database import Base
 # 从共享模型导入 User 和 Customer
 from common.models import User, Customer
 import uuid
@@ -24,11 +23,11 @@ class Order(Base):
     title = Column(String(255), nullable=False, comment="订单标题")
     
     # 关联
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True, comment="客户ID")
-    service_record_id = Column(String(36), ForeignKey("service_records.id", ondelete="SET NULL"), nullable=True, index=True, comment="服务记录ID")
+    customer_id = Column(String(36), nullable=False, index=True, comment="客户ID（跨服务引用）")
+    service_record_id = Column(String(36), nullable=True, index=True, comment="服务记录ID（跨服务引用）")
     workflow_instance_id = Column(String(36), ForeignKey("workflow_instances.id", ondelete="SET NULL"), nullable=True, index=True, comment="工作流实例ID")
-    product_id = Column(String(36), ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True, comment="产品ID（向后兼容）")
-    sales_user_id = Column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True, comment="销售用户ID")
+    product_id = Column(String(36), nullable=True, index=True, comment="产品ID（向后兼容，跨服务引用）")
+    sales_user_id = Column(String(36), nullable=False, index=True, comment="销售用户ID（跨服务引用）")
     
     # EVOA 字段
     entry_city = Column(String(255), nullable=True, comment="入境城市（来自 EVOA）")
@@ -49,7 +48,7 @@ class Order(Base):
     sales_username = Column(String(255), nullable=True, comment="销售用户名（向后兼容）")
     
     # 状态
-    status_id = Column(String(36), ForeignKey("order_statuses.id", ondelete="SET NULL"), nullable=True, index=True, comment="状态ID")
+    status_id = Column(String(36), nullable=True, index=True, comment="状态ID（跨服务引用）")
     status_code = Column(String(50), nullable=True, index=True, comment="状态代码")
     
     # 时间信息
@@ -64,8 +63,8 @@ class Order(Base):
     requirements = Column(Text, nullable=True, comment="需求和要求")
     
     # 审计字段
-    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
-    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="更新人ID")
+    created_by = Column(String(36), nullable=True, comment="创建人ID（跨服务引用）")
+    updated_by = Column(String(36), nullable=True, comment="更新人ID（跨服务引用）")
     created_at = Column(DATETIME, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     updated_at = Column(DATETIME, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     

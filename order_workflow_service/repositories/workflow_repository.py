@@ -4,10 +4,12 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from order_workflow_service.models.workflow_definition import WorkflowDefinition
-from order_workflow_service.models.workflow_instance import WorkflowInstance
-from order_workflow_service.models.workflow_task import WorkflowTask
-from order_workflow_service.models.workflow_transition import WorkflowTransition
+from common.models import (
+    WorkflowDefinition,
+    WorkflowInstance,
+    WorkflowTask,
+    WorkflowTransition,
+)
 from common.utils.repository import BaseRepository
 
 

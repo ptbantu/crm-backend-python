@@ -182,13 +182,26 @@ async def delete_lead(
     request_obj: Request,
     db: AsyncSession = Depends(get_database_session),
 ):
-    """删除线索（仅admin）"""
-    organization_id = get_current_organization_id(request_obj)
-    if not organization_id:
-        return Result.error(code=400, message="缺少组织ID")
+    """删除线索
     
-    user_id = get_current_user_id(request_obj)
-    user_roles = get_current_user_roles(request_obj)
+    权限控制：
+    1. 管理员可以删除任何线索
+    2. 非管理员可以删除自己负责的或自己创建的线索
+    """
+    # 从 JWT token 解析用户ID（必须）
+    user_id = get_user_id_from_token(request_obj, settings)
+    if not user_id:
+        logger.warning(f"Order Workflow: JWT 验证失败，路径: {request_obj.url.path}")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="需要认证，请提供有效的 JWT token"
+        )
+    
+    # 从 JWT token 解析用户角色（可选）
+    user_roles = get_user_roles_from_token(request_obj, settings)
+    
+    # 组织ID可选（用于数据隔离，但删除时会检查权限）
+    organization_id = get_current_organization_id(request_obj)
     
     service = LeadService(db)
     await service.delete_lead(lead_id, organization_id, user_id, user_roles)

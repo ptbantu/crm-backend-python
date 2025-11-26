@@ -8,7 +8,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
-from order_workflow_service.models.order import Order
+from common.models import Order
 from order_workflow_service.repositories.order_repository import OrderRepository
 from order_workflow_service.repositories.order_item_repository import OrderItemRepository
 from order_workflow_service.schemas.order import (

@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 from common.models import User
 import uuid
 
@@ -17,7 +17,7 @@ class Notification(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # 用户关联
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True, comment="用户ID")
+    user_id = Column(String(36), nullable=False, index=True, comment="用户ID（跨服务引用）")
     
     # 通知信息
     notification_type = Column(String(50), nullable=False, index=True, comment="通知类型：collection_task(催款任务), lead_assigned(线索分配), order_updated(订单更新)")

@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 import uuid
 
 
@@ -17,7 +17,7 @@ class OrderComment(Base):
     
     # 订单关联
     order_id = Column(String(36), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
-    order_stage_id = Column(String(36), ForeignKey("order_stages.id", ondelete="SET NULL"), nullable=True, index=True)
+    order_stage_id = Column(String(36), nullable=True, index=True, comment="订单阶段ID（跨服务引用）")
     
     # 评论类型
     comment_type = Column(String(50), nullable=False, default="general", index=True, comment="评论类型：general, internal, customer, system")
@@ -34,7 +34,7 @@ class OrderComment(Base):
     replied_to_comment_id = Column(String(36), ForeignKey("order_comments.id", ondelete="SET NULL"), nullable=True, index=True)
     
     # 审计字段
-    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_by = Column(String(36), nullable=True, index=True, comment="创建人ID（跨服务引用）")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     

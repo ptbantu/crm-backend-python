@@ -4,7 +4,7 @@
 from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Numeric, Date, CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from order_workflow_service.database import Base
+from common.database import Base
 import uuid
 
 
@@ -20,13 +20,13 @@ class OrderItem(Base):
     item_number = Column(Integer, nullable=False, comment="订单项序号（1, 2, 3...）")
     
     # 产品/服务关联
-    product_id = Column(String(36), ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True)
+    product_id = Column(String(36), nullable=True, index=True, comment="产品ID（跨服务引用）")
     product_name_zh = Column(String(255), nullable=True, comment="产品名称（中文）")
     product_name_id = Column(String(255), nullable=True, comment="产品名称（印尼语）")
     product_code = Column(String(100), nullable=True, comment="产品代码")
     
     # 服务类型关联
-    service_type_id = Column(String(36), ForeignKey("service_types.id", ondelete="SET NULL"), nullable=True, index=True)
+    service_type_id = Column(String(36), nullable=True, index=True, comment="服务类型ID（跨服务引用）")
     service_type_name_zh = Column(String(255), nullable=True, comment="服务类型名称（中文）")
     service_type_name_id = Column(String(255), nullable=True, comment="服务类型名称（印尼语）")
     

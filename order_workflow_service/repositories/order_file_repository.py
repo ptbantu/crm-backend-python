@@ -4,7 +4,7 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from order_workflow_service.models.order_file import OrderFile
+from common.models import OrderFile
 from common.utils.repository import BaseRepository
 
 

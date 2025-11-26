@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 import secrets
 
-from order_workflow_service.models.temporary_link import TemporaryLink
+from common.models import TemporaryLink
 from order_workflow_service.repositories.temporary_link_repository import TemporaryLinkRepository
 from common.utils.logger import get_logger
 from common.exceptions import BusinessException
