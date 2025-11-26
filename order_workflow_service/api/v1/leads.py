@@ -1,7 +1,8 @@
 """
 线索 API 路由
 """
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from fastapi import status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 
@@ -11,6 +12,12 @@ from order_workflow_service.dependencies import (
     get_current_user_roles,
     get_current_organization_id,
 )
+from common.auth import (
+    get_current_user_id_from_request as get_user_id_from_token,
+    get_current_user_roles_from_request as get_user_roles_from_token,
+    require_auth
+)
+from order_workflow_service.config import settings
 from order_workflow_service.services.lead_service import LeadService
 from order_workflow_service.services.lead_duplicate_check_service import LeadDuplicateCheckService
 from order_workflow_service.services.lead_follow_up_service import LeadFollowUpService
@@ -48,12 +55,19 @@ async def create_lead(
     request_obj: Request,
     db: AsyncSession = Depends(get_database_session),
 ):
-    """创建线索"""
-    organization_id = get_current_organization_id(request_obj)
-    if not organization_id:
-        return Result.error(code=400, message="缺少组织ID")
+    """创建线索（线索与用户绑定，不需要组织ID）"""
+    # 从 JWT token 解析用户ID（必须）
+    user_id = get_user_id_from_token(request_obj, settings)
+    if not user_id:
+        logger.warning(f"Order Workflow: JWT 验证失败，路径: {request_obj.url.path}")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="需要认证，请提供有效的 JWT token"
+        )
     
-    user_id = get_current_user_id(request_obj)
+    # 组织ID可选，如果没有则只与用户绑定
+    organization_id = get_current_organization_id(request_obj)
+    
     service = LeadService(db)
     result = await service.create_lead(request, organization_id, user_id)
     return Result.success(data=result, message="线索创建成功")
@@ -63,7 +77,7 @@ async def create_lead(
 async def get_lead_list(
     request_obj: Request,
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
+    size: int = Query(20, ge=1, le=1000),  # 允许更大的 size 用于统计功能
     owner_user_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     is_in_public_pool: Optional[bool] = Query(None),
@@ -73,13 +87,21 @@ async def get_lead_list(
     email: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_database_session),
 ):
-    """获取线索列表"""
-    organization_id = get_current_organization_id(request_obj)
-    if not organization_id:
-        return Result.error(code=400, message="缺少组织ID")
+    """获取线索列表（根据用户ID查询，从token解析）"""
+    # 从 JWT token 解析用户ID（必须）
+    user_id = get_user_id_from_token(request_obj, settings)
+    if not user_id:
+        logger.warning(f"Order Workflow: JWT 验证失败，路径: {request_obj.url.path}")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="需要认证，请提供有效的 JWT token"
+        )
     
-    user_id = get_current_user_id(request_obj)
-    user_roles = get_current_user_roles(request_obj)
+    # 从 JWT token 解析用户角色（可选）
+    user_roles = get_user_roles_from_token(request_obj, settings)
+    
+    # 组织ID可选，如果没有则只根据用户ID查询
+    organization_id = get_current_organization_id(request_obj)
     
     service = LeadService(db)
     result = await service.get_lead_list(
@@ -105,13 +127,21 @@ async def get_lead(
     request_obj: Request,
     db: AsyncSession = Depends(get_database_session),
 ):
-    """获取线索详情"""
-    organization_id = get_current_organization_id(request_obj)
-    if not organization_id:
-        return Result.error(code=400, message="缺少组织ID")
+    """获取线索详情（线索与用户绑定，不需要组织ID）"""
+    # 从 JWT token 解析用户ID（必须）
+    user_id = get_user_id_from_token(request_obj, settings)
+    if not user_id:
+        logger.warning(f"Order Workflow: JWT 验证失败，路径: {request_obj.url.path}")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="需要认证，请提供有效的 JWT token"
+        )
     
-    user_id = get_current_user_id(request_obj)
-    user_roles = get_current_user_roles(request_obj)
+    # 从 JWT token 解析用户角色（可选）
+    user_roles = get_user_roles_from_token(request_obj, settings)
+    
+    # 组织ID可选
+    organization_id = get_current_organization_id(request_obj)
     
     service = LeadService(db)
     result = await service.get_lead(lead_id, organization_id, user_id, user_roles)
@@ -125,13 +155,21 @@ async def update_lead(
     request_obj: Request,
     db: AsyncSession = Depends(get_database_session),
 ):
-    """更新线索"""
-    organization_id = get_current_organization_id(request_obj)
-    if not organization_id:
-        return Result.error(code=400, message="缺少组织ID")
+    """更新线索（线索与用户绑定，不需要组织ID）"""
+    # 从 JWT token 解析用户ID（必须）
+    user_id = get_user_id_from_token(request_obj, settings)
+    if not user_id:
+        logger.warning(f"Order Workflow: JWT 验证失败，路径: {request_obj.url.path}")
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="需要认证，请提供有效的 JWT token"
+        )
     
-    user_id = get_current_user_id(request_obj)
-    user_roles = get_current_user_roles(request_obj)
+    # 从 JWT token 解析用户角色（可选）
+    user_roles = get_user_roles_from_token(request_obj, settings)
+    
+    # 组织ID可选
+    organization_id = get_current_organization_id(request_obj)
     
     service = LeadService(db)
     result = await service.update_lead(lead_id, request, organization_id, user_id, user_id, user_roles)

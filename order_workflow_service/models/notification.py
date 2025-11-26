@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Chec
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from order_workflow_service.database import Base
+from common.models import User
 import uuid
 
 
@@ -34,8 +35,8 @@ class Notification(Base):
     # 审计字段
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     
-    # 关系（注意：User模型可能在其他服务中）
-    # user = relationship("User", foreign_keys=[user_id])
+    # 关系（users 表现在在本地定义，可以使用 relationship）
+    user = relationship(User, foreign_keys=[user_id], backref="notifications")
     
     # 检查约束
     __table_args__ = (

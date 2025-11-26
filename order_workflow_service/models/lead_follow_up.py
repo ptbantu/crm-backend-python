@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Text, DateTime, ForeignKey, CheckConstrai
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from order_workflow_service.database import Base
+from common.models import User
 import uuid
 
 
@@ -29,8 +30,8 @@ class LeadFollowUp(Base):
     
     # 关系
     lead = relationship("Lead", back_populates="follow_ups")
-    # creator关系暂时注释，因为User模型可能不在当前服务中
-    # creator = relationship("User", foreign_keys=[created_by])
+    # users 表现在在本地定义，可以使用 relationship
+    creator = relationship(User, foreign_keys=[created_by], backref="created_lead_follow_ups")
     
     # 检查约束
     __table_args__ = (

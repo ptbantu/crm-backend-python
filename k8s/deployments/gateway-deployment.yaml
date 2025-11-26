@@ -35,12 +35,12 @@ spec:
             secretKeyRef:
               name: crm-python-secret
               key: JWT_SECRET
-        # 从 ConfigMap 读取配置
+        # 从 ConfigMap 读取配置（统一使用 FOUNDATION_JWT_ALGORITHM）
         - name: JWT_ALGORITHM
           valueFrom:
             configMapKeyRef:
               name: crm-python-config
-              key: GATEWAY_JWT_ALGORITHM
+              key: FOUNDATION_JWT_ALGORITHM
         - name: FOUNDATION_SERVICE_URL
           valueFrom:
             configMapKeyRef:

@@ -15,20 +15,17 @@ class LeadRepository(BaseRepository[Lead]):
     def __init__(self, db: AsyncSession):
         super().__init__(db, Lead)
     
-    async def get_by_id(self, lead_id: str, organization_id: str) -> Optional[Lead]:
-        """根据ID查询线索（带组织隔离）"""
-        query = select(Lead).where(
-            and_(
-                Lead.id == lead_id,
-                Lead.organization_id == organization_id
-            )
-        )
+    async def get_by_id(self, lead_id: str, organization_id: Optional[str] = None) -> Optional[Lead]:
+        """根据ID查询线索（organization_id可选，如果没有则只根据lead_id查询）"""
+        query = select(Lead).where(Lead.id == lead_id)
+        if organization_id:
+            query = query.where(Lead.organization_id == organization_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
     async def get_list(
         self,
-        organization_id: str,
+        organization_id: Optional[str] = None,
         page: int = 1,
         size: int = 20,
         owner_user_id: Optional[str] = None,
@@ -41,16 +38,38 @@ class LeadRepository(BaseRepository[Lead]):
         current_user_id: Optional[str] = None,
         current_user_roles: Optional[List[str]] = None,
     ) -> Tuple[List[Lead], int]:
-        """查询线索列表（支持数据隔离）"""
+        """查询线索列表（支持数据隔离，organization_id可选）"""
         # 构建查询条件
-        conditions = [Lead.organization_id == organization_id]
+        conditions = []
         
-        # 组织内部隔离：非admin用户只能看自己的
-        if current_user_roles and "ADMIN" not in current_user_roles:
+        # 如果提供了组织ID，则按组织过滤
+        if organization_id:
+            conditions.append(Lead.organization_id == organization_id)
+        
+        # 用户级隔离：根据用户ID查询属于该用户的线索
+        # 如果没有组织ID，则必须根据用户ID查询
+        if not organization_id:
+            # 没有组织ID时，必须根据用户ID查询
+            # 查询条件：owner_user_id == current_user_id 或 created_by == current_user_id
+            # （用户可以看到自己负责的线索，或者自己创建的线索）
             if current_user_id:
-                conditions.append(Lead.owner_user_id == current_user_id)
-        elif owner_user_id:
-            conditions.append(Lead.owner_user_id == owner_user_id)
+                conditions.append(
+                    or_(
+                        Lead.owner_user_id == current_user_id,
+                        Lead.created_by == current_user_id
+                    )
+                )
+            else:
+                # 如果没有用户ID，返回空结果
+                return [], 0
+        else:
+            # 有组织ID时，按角色进行数据隔离
+            # 组织内部隔离：非admin用户只能看自己的
+            if current_user_roles and "ADMIN" not in current_user_roles:
+                if current_user_id:
+                    conditions.append(Lead.owner_user_id == current_user_id)
+            elif owner_user_id:
+                conditions.append(Lead.owner_user_id == owner_user_id)
         
         # 其他筛选条件
         if status:

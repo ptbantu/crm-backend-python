@@ -9,6 +9,9 @@ from contextlib import asynccontextmanager
 import httpx
 from gateway_service.config import settings
 from gateway_service.middleware.auth import verify_jwt_token
+from common.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -81,6 +84,7 @@ async def gateway_middleware(request: Request, call_next):
     if not is_public_path:
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
+            logger.warning(f"Gateway: 未提供认证令牌，路径: {path}")
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "未提供认证令牌"},
@@ -92,8 +96,10 @@ async def gateway_middleware(request: Request, call_next):
             )
         
         token = auth_header.replace("Bearer ", "")
+        logger.debug(f"Gateway: 开始验证 JWT token，路径: {path}, token 长度: {len(token)}")
         payload = verify_jwt_token(token)
         if not payload:
+            logger.warning(f"Gateway: JWT 验证失败，路径: {path}, token 前20字符: {token[:20] if len(token) > 20 else token}...")
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "无效的认证令牌"},
@@ -107,6 +113,7 @@ async def gateway_middleware(request: Request, call_next):
         # 将用户信息添加到请求头
         request.state.user_id = payload.get("user_id")
         request.state.roles = payload.get("roles", [])
+        logger.info(f"Gateway: JWT 验证成功，用户ID: {request.state.user_id}, 路径: {path}")
     
     # 路由转发（包括公开路径）
     for route_prefix, service_url in SERVICE_ROUTES.items():
@@ -129,6 +136,8 @@ async def gateway_middleware(request: Request, call_next):
 async def forward_request(request: Request, service_url: str) -> JSONResponse:
     """转发请求到微服务"""
     url = f"{service_url}{request.url.path}"
+    
+    logger.info(f"Gateway: 转发请求到微服务，URL: {url}, 方法: {request.method}")
     
     # 获取请求体
     body = await request.body()
@@ -155,6 +164,8 @@ async def forward_request(request: Request, service_url: str) -> JSONResponse:
                 timeout=30.0
             )
             
+            logger.info(f"Gateway: 微服务响应，状态码: {response.status_code}, URL: {url}")
+            
             # 构建响应头
             # 移除微服务可能返回的 CORS 头，手动添加 CORS 头（因为直接返回 JSONResponse 可能绕过中间件）
             response_headers = {}
@@ -174,7 +185,30 @@ async def forward_request(request: Request, service_url: str) -> JSONResponse:
                 status_code=response.status_code,
                 headers=response_headers
             )
+        except httpx.ConnectError as e:
+            logger.error(f"Gateway: 无法连接到微服务，URL: {url}, 错误: {str(e)}")
+            return JSONResponse(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                content={"detail": f"无法连接到服务: {service_url}. 请检查服务是否正在运行。"},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
+            )
+        except httpx.TimeoutException as e:
+            logger.error(f"Gateway: 请求超时，URL: {url}, 错误: {str(e)}")
+            return JSONResponse(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                content={"detail": f"服务响应超时: {service_url}"},
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
+            )
         except httpx.RequestError as e:
+            logger.error(f"Gateway: 请求错误，URL: {url}, 错误: {str(e)}")
             return JSONResponse(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 content={"detail": f"服务不可用: {str(e)}"},

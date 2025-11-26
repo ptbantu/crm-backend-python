@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Chec
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from order_workflow_service.database import Base
+from common.models import User
 import uuid
 
 
@@ -29,8 +30,8 @@ class LeadNote(Base):
     
     # 关系
     lead = relationship("Lead", back_populates="notes")
-    # creator关系暂时注释，因为User模型可能不在当前服务中
-    # creator = relationship("User", foreign_keys=[created_by])
+    # users 表现在在本地定义，可以使用 relationship
+    creator = relationship(User, foreign_keys=[created_by], backref="created_lead_notes")
     
     # 检查约束
     __table_args__ = (

@@ -47,7 +47,7 @@ class LeadResponse(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     customer_id: Optional[str] = None
-    organization_id: str
+    organization_id: Optional[str] = None  # 可选，线索与用户绑定，不需要 organization_id
     owner_user_id: Optional[str] = None
     status: str
     level: Optional[str] = None

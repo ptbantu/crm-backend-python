@@ -9,6 +9,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from order_workflow_service.database import Base
+# 从共享模型导入 User 和 Customer
+from common.models import User, Customer
 import uuid
 
 

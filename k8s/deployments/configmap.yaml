@@ -12,11 +12,14 @@ data:
   FOUNDATION_DB_HOST: "mysql.default.svc.cluster.local"
   FOUNDATION_DB_PORT: "3306"
   FOUNDATION_DB_NAME: "bantu_crm"
+  # JWT 配置（所有服务统一使用）
   FOUNDATION_JWT_ALGORITHM: "HS256"
   FOUNDATION_JWT_EXPIRATION: "86400000"
   FOUNDATION_DEBUG: "false"
   
   # Gateway Service 配置
+  # 注意：Gateway 现在使用 FOUNDATION_JWT_ALGORITHM（统一配置）
+  # GATEWAY_JWT_ALGORITHM 保留用于向后兼容，但不再使用
   GATEWAY_JWT_ALGORITHM: "HS256"
   GATEWAY_FOUNDATION_SERVICE_URL: "http://crm-foundation-service:8081"
   GATEWAY_SERVICE_MANAGEMENT_SERVICE_URL: "http://crm-service-management-service:8082"

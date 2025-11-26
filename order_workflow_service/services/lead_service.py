@@ -36,7 +36,7 @@ class LeadService:
     async def create_lead(
         self,
         request: LeadCreateRequest,
-        organization_id: str,
+        organization_id: Optional[str] = None,
         created_by: Optional[str] = None
     ) -> LeadResponse:
         """创建线索"""
@@ -47,6 +47,9 @@ class LeadService:
                 raise BusinessException(detail=f"无效的客户等级代码: {request.level}", status_code=400)
         
         try:
+            # 如果没有提供 owner_user_id，则默认设置为创建人（线索与用户绑定）
+            owner_user_id = request.owner_user_id or created_by
+            
             lead = Lead(
                 id=str(uuid.uuid4()),
                 name=request.name,
@@ -57,7 +60,7 @@ class LeadService:
                 address=request.address,
                 customer_id=request.customer_id,
                 organization_id=organization_id,
-                owner_user_id=request.owner_user_id,
+                owner_user_id=owner_user_id,  # 使用默认值或请求值
                 status=request.status,
                 level=request.level,
                 next_follow_up_at=request.next_follow_up_at,
@@ -85,11 +88,11 @@ class LeadService:
     async def get_lead(
         self,
         lead_id: str,
-        organization_id: str,
+        organization_id: Optional[str] = None,
         current_user_id: Optional[str] = None,
         current_user_roles: Optional[List[str]] = None,
     ) -> LeadResponse:
-        """获取线索详情"""
+        """获取线索详情（organization_id可选）"""
         lead = await self.repository.get_by_id(lead_id, organization_id)
         if not lead:
             raise BusinessException(detail="线索不存在", status_code=404)
@@ -111,7 +114,7 @@ class LeadService:
     
     async def get_lead_list(
         self,
-        organization_id: str,
+        organization_id: Optional[str] = None,
         page: int = 1,
         size: int = 20,
         owner_user_id: Optional[str] = None,
@@ -124,7 +127,7 @@ class LeadService:
         current_user_id: Optional[str] = None,
         current_user_roles: Optional[List[str]] = None,
     ) -> LeadListResponse:
-        """获取线索列表"""
+        """获取线索列表（organization_id可选，如果没有则只根据用户ID查询）"""
         leads, total = await self.repository.get_list(
             organization_id=organization_id,
             page=page,
@@ -162,12 +165,12 @@ class LeadService:
         self,
         lead_id: str,
         request: LeadUpdateRequest,
-        organization_id: str,
+        organization_id: Optional[str] = None,
         updated_by: Optional[str] = None,
         current_user_id: Optional[str] = None,
         current_user_roles: Optional[List[str]] = None,
     ) -> LeadResponse:
-        """更新线索"""
+        """更新线索（organization_id可选）"""
         lead = await self.repository.get_by_id(lead_id, organization_id)
         if not lead:
             raise BusinessException(detail="线索不存在", status_code=404)

@@ -143,26 +143,52 @@ def extract_token_from_request(request: Request) -> Optional[str]:
     return None
 
 
-def get_token_payload(
+def get_token_payload_from_request(
     request: Request,
-    settings: BaseServiceSettings,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    settings: BaseServiceSettings
 ) -> Optional[Dict[str, Any]]:
     """
-    从请求中获取并验证 JWT 令牌的 payload
+    从请求中获取并验证 JWT 令牌的 payload（不依赖依赖注入）
     
     Args:
         request: FastAPI Request 对象
         settings: 服务配置对象
-        credentials: HTTP Bearer 凭证（可选）
         
     Returns:
         JWT payload 字典，如果验证失败返回 None
     """
     jwt_auth = get_jwt_auth(settings)
     
-    # 优先从 HTTPBearer 获取（标准方式）
-    if credentials and credentials.credentials:
+    # 从 Authorization 头获取
+    token = extract_token_from_request(request)
+    if token:
+        payload = jwt_auth.verify_token(token)
+        if payload:
+            return payload
+    
+    return None
+
+
+def get_token_payload(
+    request: Request,
+    settings: BaseServiceSettings,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Optional[Dict[str, Any]]:
+    """
+    从请求中获取并验证 JWT 令牌的 payload（支持依赖注入）
+    
+    Args:
+        request: FastAPI Request 对象
+        settings: 服务配置对象
+        credentials: HTTP Bearer 凭证（可选，通过依赖注入）
+        
+    Returns:
+        JWT payload 字典，如果验证失败返回 None
+    """
+    jwt_auth = get_jwt_auth(settings)
+    
+    # 优先从 HTTPBearer 获取（标准方式，通过依赖注入）
+    if credentials and hasattr(credentials, 'credentials') and credentials.credentials:
         token = credentials.credentials
         payload = jwt_auth.verify_token(token)
         if payload:
@@ -178,13 +204,12 @@ def get_token_payload(
     return None
 
 
-def get_current_user_id(
+def get_current_user_id_from_request(
     request: Request,
-    settings: BaseServiceSettings,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    settings: BaseServiceSettings
 ) -> Optional[str]:
     """
-    从请求中获取当前用户ID（可选认证）
+    从请求中获取当前用户ID（不依赖依赖注入）
     
     支持以下方式（按优先级）：
     1. JWT token 中的 user_id
@@ -194,7 +219,47 @@ def get_current_user_id(
     Args:
         request: FastAPI Request 对象
         settings: 服务配置对象
-        credentials: HTTP Bearer 凭证（可选）
+        
+    Returns:
+        用户ID，如果未认证返回 None
+    """
+    # 方式1: 从 JWT token 获取
+    payload = get_token_payload_from_request(request, settings)
+    if payload:
+        user_id = payload.get("user_id") or payload.get("sub")
+        if user_id:
+            return str(user_id)
+    
+    # 方式2: 从 Gateway 传递的 HTTP 头获取（兼容模式）
+    user_id = request.headers.get("X-User-Id")
+    if user_id:
+        return user_id
+    
+    # 方式3: 从 request.state 获取（兼容模式）
+    user_id = getattr(request.state, "user_id", None)
+    if user_id:
+        return user_id
+    
+    return None
+
+
+def get_current_user_id(
+    request: Request,
+    settings: BaseServiceSettings,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Optional[str]:
+    """
+    从请求中获取当前用户ID（支持依赖注入）
+    
+    支持以下方式（按优先级）：
+    1. JWT token 中的 user_id
+    2. Gateway 传递的 X-User-Id 头（兼容模式）
+    3. request.state.user_id（兼容模式）
+    
+    Args:
+        request: FastAPI Request 对象
+        settings: 服务配置对象
+        credentials: HTTP Bearer 凭证（可选，通过依赖注入）
         
     Returns:
         用户ID，如果未认证返回 None
@@ -219,13 +284,12 @@ def get_current_user_id(
     return None
 
 
-def get_current_user_roles(
+def get_current_user_roles_from_request(
     request: Request,
-    settings: BaseServiceSettings,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    settings: BaseServiceSettings
 ) -> List[str]:
     """
-    从请求中获取当前用户角色列表（可选认证）
+    从请求中获取当前用户角色列表（不依赖依赖注入）
     
     支持以下方式（按优先级）：
     1. JWT token 中的 roles
@@ -235,7 +299,53 @@ def get_current_user_roles(
     Args:
         request: FastAPI Request 对象
         settings: 服务配置对象
-        credentials: HTTP Bearer 凭证（可选）
+        
+    Returns:
+        角色列表，如果未认证返回空列表
+    """
+    # 方式1: 从 JWT token 获取
+    payload = get_token_payload_from_request(request, settings)
+    if payload:
+        roles = payload.get("roles", [])
+        if roles:
+            if isinstance(roles, str):
+                return [role.strip() for role in roles.split(",") if role.strip()]
+            elif isinstance(roles, list):
+                return [str(role) for role in roles]
+    
+    # 方式2: 从 Gateway 传递的 HTTP 头获取（兼容模式）
+    roles_header = request.headers.get("X-User-Roles")
+    if roles_header:
+        return [role.strip() for role in roles_header.split(",") if role.strip()]
+    
+    # 方式3: 从 request.state 获取（兼容模式）
+    roles = getattr(request.state, "roles", [])
+    if roles:
+        if isinstance(roles, list):
+            return [str(role) for role in roles]
+        elif isinstance(roles, str):
+            return [role.strip() for role in roles.split(",") if role.strip()]
+    
+    return []
+
+
+def get_current_user_roles(
+    request: Request,
+    settings: BaseServiceSettings,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> List[str]:
+    """
+    从请求中获取当前用户角色列表（支持依赖注入）
+    
+    支持以下方式（按优先级）：
+    1. JWT token 中的 roles
+    2. Gateway 传递的 X-User-Roles 头（兼容模式）
+    3. request.state.roles（兼容模式）
+    
+    Args:
+        request: FastAPI Request 对象
+        settings: 服务配置对象
+        credentials: HTTP Bearer 凭证（可选，通过依赖注入）
         
     Returns:
         角色列表，如果未认证返回空列表

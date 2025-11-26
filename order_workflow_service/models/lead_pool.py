@@ -17,7 +17,8 @@ class LeadPool(Base):
     
     # 基本信息
     name = Column(String(255), nullable=False, comment="线索池名称")
-    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True, comment="组织ID")
+    # 注意：organizations 表在其他服务的数据库中，不能使用外键约束，只保留索引
+    organization_id = Column(String(36), nullable=False, index=True, comment="组织ID（跨服务引用，通过 API 验证）")
     description = Column(Text, nullable=True, comment="描述")
     is_active = Column(Boolean, default=True, nullable=False, index=True, comment="是否激活")
     

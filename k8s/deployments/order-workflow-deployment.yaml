@@ -58,6 +58,17 @@ spec:
             secretKeyRef:
               name: mysql-secret
               key: MYSQL_PASSWORD
+        # JWT 配置（必须与 foundation 服务一致）
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
         # 从 ConfigMap 读取 Redis 配置
         - name: REDIS_HOST
           valueFrom:

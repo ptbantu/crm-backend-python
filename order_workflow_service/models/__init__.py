@@ -18,6 +18,8 @@ from order_workflow_service.models.temporary_link import TemporaryLink
 from order_workflow_service.models.notification import Notification
 from order_workflow_service.models.customer_level import CustomerLevel
 from order_workflow_service.models.follow_up_status import FollowUpStatus
+# 从共享模型导入 User 和 Customer（避免重复定义）
+from common.models import User, Customer
 
 __all__ = [
     "WorkflowDefinition",
@@ -37,4 +39,6 @@ __all__ = [
     "Notification",
     "CustomerLevel",
     "FollowUpStatus",
+    "User",  # 从 common.models 导入
+    "Customer",  # 从 common.models 导入
 ]

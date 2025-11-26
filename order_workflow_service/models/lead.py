@@ -5,6 +5,8 @@ from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from order_workflow_service.database import Base
+# 从共享模型导入 User 和 Customer
+from common.models import User, Customer
 import uuid
 
 
@@ -24,13 +26,17 @@ class Lead(Base):
     address = Column(Text, nullable=True, comment="地址")
     
     # 关联信息
+    # 注意：customers 表现在在本地定义，可以使用外键约束
     customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True, comment="关联客户ID（可选）")
-    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True, comment="组织ID")
+    # 注意：organizations 表在 foundation_service 的数据库中，不能使用外键约束，只保留索引
+    organization_id = Column(String(36), nullable=True, index=True, comment="组织ID（可选，线索与用户绑定，跨服务引用）")
+    # 注意：users 表现在在本地定义，可以使用外键约束
     owner_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="销售负责人ID")
     
     # 状态管理
     status = Column(String(50), default="new", nullable=False, index=True, comment="状态：new(新建), contacted(已联系), qualified(已确认), converted(已转化), lost(已丢失)")
-    level = Column(String(50), nullable=True, comment="客户分级")
+    # 客户分级（通过外键关联到 customer_levels.code）
+    level = Column(String(50), ForeignKey("customer_levels.code", ondelete="SET NULL"), nullable=True, index=True, comment="客户分级代码（外键关联到 customer_levels.code）")
     
     # 公海池
     is_in_public_pool = Column(Boolean, default=False, nullable=False, index=True, comment="是否在公海池")
@@ -46,15 +52,25 @@ class Lead(Base):
     next_follow_up_at = Column(DateTime, nullable=True, comment="下次跟进时间")
     
     # 审计字段
-    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
-    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="更新人ID")
+    # 注意：users 表现在在本地定义，可以使用外键约束
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="创建人ID")
+    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="更新人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
-    # 关系（注意：Customer和Organization模型可能在其他服务中，这里使用字符串引用）
-    # customer = relationship("Customer", foreign_keys=[customer_id], backref="leads")
-    # organization = relationship("Organization", foreign_keys=[organization_id])
-    # owner = relationship("User", foreign_keys=[owner_user_id])
+    # 关系（从共享模型导入，支持 relationship）
+    customer = relationship(Customer, foreign_keys=[customer_id], backref="leads")
+    # organization = relationship("Organization", foreign_keys=[organization_id])  # 跨服务引用，不使用 relationship
+    owner = relationship(User, foreign_keys=[owner_user_id], backref="owned_leads")
+    creator = relationship(User, foreign_keys=[created_by], backref="created_leads")
+    updater = relationship(User, foreign_keys=[updated_by], backref="updated_leads")
+    # 客户分级关系（通过 code 关联）
+    customer_level = relationship(
+        "CustomerLevel",
+        foreign_keys=[level],
+        primaryjoin="Lead.level == CustomerLevel.code",
+        backref="leads"
+    )
     pool = relationship("LeadPool", foreign_keys=[pool_id], backref="pool_leads")
     follow_ups = relationship("LeadFollowUp", back_populates="lead", cascade="all, delete-orphan")
     notes = relationship("LeadNote", back_populates="lead", cascade="all, delete-orphan")

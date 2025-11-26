@@ -99,6 +99,17 @@ spec:
             configMapKeyRef:
               name: crm-python-config
               key: ANALYTICS_ALERT_EMAIL_RECIPIENTS
+        # JWT 配置（必须与 foundation 服务一致）
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
         - name: CORS_ALLOWED_ORIGINS
           valueFrom:
             configMapKeyRef:
