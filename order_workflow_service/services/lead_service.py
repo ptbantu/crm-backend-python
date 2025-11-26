@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
-from common.models import Lead
+from order_workflow_service.models.lead import Lead
 from order_workflow_service.repositories.lead_repository import LeadRepository
 from order_workflow_service.repositories.lead_follow_up_repository import LeadFollowUpRepository
 from order_workflow_service.repositories.lead_note_repository import LeadNoteRepository
