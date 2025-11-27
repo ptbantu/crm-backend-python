@@ -351,19 +351,75 @@ Authorization: Bearer <token>
 }
 ```
 
-### 2.8 重置密码（待实现）
+### 2.8 重置密码
 
-**接口地址**: `POST /api/foundation/users/{id}/reset-password`
+**接口地址**: `POST /api/foundation/users/{user_id}/reset-password`
 
 **完整地址**:
-- 生产环境: `https://www.bantu.sbs/api/foundation/users/{id}/reset-password`
+- 生产环境: `https://www.bantu.sbs/api/foundation/users/{user_id}/reset-password`
 
 **请求头**:
 ```
+Content-Type: application/json
 Authorization: Bearer <token>
 ```
 
-**注意**: 只有 ADMIN 可以重置密码
+**路径参数**:
+- `user_id`: 用户 ID
+
+**请求体**:
+```json
+{
+  "new_password": "newpassword123"
+}
+```
+
+**请求体参数说明**:
+- `new_password` (string, 必填): 新密码，至少8位，必须包含字母和数字
+
+**权限要求**:
+- 当前用户必须拥有 **ADMIN** 角色
+- 当前用户必须是目标用户所属组织的 admin，或者是 BANTU 内部组织的 admin
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "密码重置成功",
+  "data": {
+    "id": "org12301",
+    "username": "testuser",
+    "email": "test@example.com",
+    "display_name": "测试用户",
+    "is_active": true,
+    "is_locked": false,
+    "primary_organization_id": "org123",
+    "primary_organization_name": "测试组织",
+    "roles": [
+      {
+        "id": "role123",
+        "code": "SALES",
+        "name": "销售"
+      }
+    ],
+    "created_at": "2024-01-01T00:00:00",
+    "updated_at": "2024-01-01T00:00:00"
+  }
+}
+```
+
+**错误响应**:
+- `401 Unauthorized`: 未认证
+- `403 Forbidden`: 权限不足（非 ADMIN 角色或不属于同一组织）
+- `404 Not Found`: 用户不存在
+- `400 Bad Request`: 用户未关联到任何组织，或密码不符合要求（长度不足、强度不够、与旧密码相同）
+
+**注意**: 
+- 只有 ADMIN 角色可以重置密码
+- 密码必须至少8位，包含字母和数字
+- 新密码不能与旧密码相同
+- BANTU admin 可以重置任何用户的密码
+- 组织 admin 只能重置同组织用户的密码
 
 ---
 

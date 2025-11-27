@@ -43,6 +43,7 @@ class LeadDuplicateCheckService:
             phone=request.phone,
             email=request.email,
             exclude_lead_id=request.exclude_lead_id,
+            exact_match=request.exact_match or False,
         )
         
         if not duplicates:

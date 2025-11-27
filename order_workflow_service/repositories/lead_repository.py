@@ -4,6 +4,7 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
+from sqlalchemy.orm import joinedload
 from datetime import datetime
 from order_workflow_service.models.lead import Lead
 from common.utils.repository import BaseRepository
@@ -17,11 +18,11 @@ class LeadRepository(BaseRepository[Lead]):
     
     async def get_by_id(self, lead_id: str, organization_id: Optional[str] = None) -> Optional[Lead]:
         """根据ID查询线索（organization_id可选，如果没有则只根据lead_id查询）"""
-        query = select(Lead).where(Lead.id == lead_id)
+        query = select(Lead).options(joinedload(Lead.owner)).where(Lead.id == lead_id)
         if organization_id:
             query = query.where(Lead.organization_id == organization_id)
         result = await self.db.execute(query)
-        return result.scalar_one_or_none()
+        return result.unique().scalar_one_or_none()
     
     async def get_list(
         self,
@@ -76,9 +77,9 @@ class LeadRepository(BaseRepository[Lead]):
                         conditions.append(Lead.is_in_public_pool == False)
                     # 如果 is_in_public_pool 为 None，不添加此条件（查询所有线索，包括公海和非公海）
                 else:
-                    # 非admin用户：查询该组织内且该用户创建的线索，且不在公海
+                    # 非admin用户：查询该组织内且该用户负责的线索（owner_user_id），且不在公海
                     if current_user_id:
-                        conditions.append(Lead.created_by == current_user_id)
+                        conditions.append(Lead.owner_user_id == current_user_id)
                         # 我的线索必须排除公海线索
                         conditions.append(Lead.is_in_public_pool == False)
                     else:
@@ -86,9 +87,9 @@ class LeadRepository(BaseRepository[Lead]):
                         return [], 0
         else:
             # 没有组织ID时，必须根据用户ID查询
-            # 查询条件：created_by == current_user_id（用户创建的线索），且不在公海
+            # 查询条件：owner_user_id == current_user_id（用户负责的线索），且不在公海
             if current_user_id:
-                conditions.append(Lead.created_by == current_user_id)
+                conditions.append(Lead.owner_user_id == current_user_id)
                 # 我的线索必须排除公海线索
                 if is_in_public_pool is not True:  # 如果不是明确查询公海，则排除公海线索
                     conditions.append(Lead.is_in_public_pool == False)
@@ -114,11 +115,11 @@ class LeadRepository(BaseRepository[Lead]):
         count_result = await self.db.execute(count_query)
         total = count_result.scalar() or 0
         
-        # 查询数据
-        query = select(Lead).where(and_(*conditions)).order_by(Lead.created_at.desc())
+        # 查询数据（使用 joinedload 预加载 owner 关系，避免 N+1 查询）
+        query = select(Lead).options(joinedload(Lead.owner)).where(and_(*conditions)).order_by(Lead.created_at.desc())
         query = query.offset((page - 1) * size).limit(size)
         result = await self.db.execute(query)
-        leads = result.scalars().all()
+        leads = result.unique().scalars().all()
         
         return list(leads), total
     
@@ -129,14 +130,29 @@ class LeadRepository(BaseRepository[Lead]):
         phone: Optional[str] = None,
         email: Optional[str] = None,
         exclude_lead_id: Optional[str] = None,
+        exact_match: bool = False,
     ) -> List[Lead]:
-        """查重：根据公司名、电话、邮箱查找重复线索"""
+        """查重：根据公司名、电话、邮箱查找重复线索
+        
+        Args:
+            organization_id: 组织ID
+            company_name: 公司名称
+            phone: 电话
+            email: 邮箱
+            exclude_lead_id: 排除的线索ID（用于编辑时排除自己）
+            exact_match: 是否完全匹配公司名（True=精确匹配，False=模糊匹配）
+        """
         conditions = [Lead.organization_id == organization_id]
         
         # 构建查重条件（OR关系）
         duplicate_conditions = []
         if company_name:
-            duplicate_conditions.append(Lead.company_name.like(f"%{company_name}%"))
+            if exact_match:
+                # 完全匹配：精确相等
+                duplicate_conditions.append(Lead.company_name == company_name)
+            else:
+                # 模糊匹配：使用 LIKE
+                duplicate_conditions.append(Lead.company_name.like(f"%{company_name}%"))
         if phone:
             duplicate_conditions.append(Lead.phone == phone)
         if email:

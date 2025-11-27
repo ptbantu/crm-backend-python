@@ -6,12 +6,15 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.response import Result
+from common.utils.logger import get_logger
 from foundation_service.schemas.user import (
     UserResponse, UserCreateRequest, UserUpdateRequest,
     UserListResponse, UserResetPasswordRequest
 )
 from foundation_service.services.user_service import UserService
 from foundation_service.dependencies import get_db, require_organization_admin
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -98,26 +101,44 @@ async def reset_password(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    重置用户密码（仅组织 admin 可以重置）
+    重置用户密码（仅 ADMIN 角色可以重置）
     
     权限要求：
-    - 当前用户必须是目标用户所属组织的 admin
-    - 或者当前用户是 BANTU 内部组织的 admin（可以重置任何用户的密码）
+    - 当前用户必须拥有 ADMIN 角色
+    - 当前用户必须是目标用户所属组织的 admin，或者是 BANTU 内部组织的 admin
     """
-    from foundation_service.dependencies import get_current_user_id
+    from foundation_service.dependencies import get_current_user_id, get_current_user_roles
     from foundation_service.repositories.organization_employee_repository import OrganizationEmployeeRepository
     from foundation_service.repositories.organization_repository import OrganizationRepository
     from foundation_service.repositories.user_repository import UserRepository
     from fastapi import HTTPException, status
     
+    # 1. 验证当前用户身份
     current_user_id = get_current_user_id(request_obj)
     if not current_user_id:
+        # 记录详细的错误信息，便于调试
+        logger.warning(f"[reset_password] 未获取到用户ID，请求头: {dict(request_obj.headers)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="需要认证"
+            detail="需要认证，请重新登录"
         )
     
-    # 获取目标用户
+    # 2. 验证 ADMIN 角色
+    # 优先从请求头获取（Gateway 传递）
+    current_user_roles = get_current_user_roles(request_obj)
+    # 如果请求头中没有角色信息，从数据库查询（兼容直接访问 Foundation Service 的情况）
+    if not current_user_roles:
+        user_repo = UserRepository(db)
+        user_roles = await user_repo.get_user_roles(current_user_id)
+        current_user_roles = [role.code for role in user_roles]
+    
+    if "ADMIN" not in current_user_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有 ADMIN 角色可以重置用户密码"
+        )
+    
+    # 3. 验证目标用户存在
     user_repo = UserRepository(db)
     target_user = await user_repo.get_by_id(user_id)
     if not target_user:
@@ -126,7 +147,7 @@ async def reset_password(
             detail="用户不存在"
         )
     
-    # 获取目标用户所属的组织
+    # 4. 获取目标用户所属的组织
     employee_repo = OrganizationEmployeeRepository(db)
     target_employee = await employee_repo.get_primary_by_user_id(user_id)
     if not target_employee:
@@ -135,10 +156,7 @@ async def reset_password(
             detail="用户未关联到任何组织"
         )
     
-    # 检查权限：
-    # 1. 如果当前用户是 BANTU 内部组织的 admin，可以重置任何用户的密码
-    # 2. 如果当前用户是目标用户所属组织的 admin，可以重置该用户的密码
-    
+    # 5. 验证组织权限
     org_repo = OrganizationRepository(db)
     bantu_org = await org_repo.get_bantu_organization()
     
@@ -150,20 +168,15 @@ async def reset_password(
             detail="当前用户未关联到任何组织"
         )
     
-    # 获取当前用户的角色
-    current_user_roles = await user_repo.get_user_roles(current_user_id)
-    role_codes = [role.code for role in current_user_roles]
-    is_admin = "ADMIN" in role_codes
-    
-    # 权限检查
+    # 权限检查：
+    # - BANTU admin 可以重置任何用户的密码
+    # - 组织 admin 只能重置同组织用户的密码
     has_permission = False
-    
-    # 情况1：当前用户是 BANTU 内部组织的 admin
-    if bantu_org and current_employee.organization_id == bantu_org.id and is_admin:
+    if bantu_org and current_employee.organization_id == bantu_org.id:
+        # BANTU admin 可以重置任何用户的密码
         has_permission = True
-    
-    # 情况2：当前用户是目标用户所属组织的 admin
-    elif current_employee.organization_id == target_employee.organization_id and is_admin:
+    elif current_employee.organization_id == target_employee.organization_id:
+        # 同组织的 admin 可以重置该组织用户的密码
         has_permission = True
     
     if not has_permission:
@@ -172,7 +185,7 @@ async def reset_password(
             detail="只有组织 admin 或 BANTU admin 可以重置用户密码"
         )
     
-    # 执行重置密码
+    # 6. 执行重置密码
     service = UserService(db)
     user = await service.reset_password(user_id, request.new_password)
     return Result.success(data=user, message="密码重置成功")

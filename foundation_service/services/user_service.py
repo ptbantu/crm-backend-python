@@ -318,6 +318,12 @@ class UserService:
             logger.warning(f"密码长度不足: user_id={user_id}")
             raise BusinessException(detail="密码长度至少8位")
         
+        # bcrypt 限制密码不能超过 72 字节
+        password_bytes = new_password.encode('utf-8')
+        if len(password_bytes) > 72:
+            logger.warning(f"密码长度超过 72 字节限制: user_id={user_id}")
+            raise BusinessException(detail="密码长度不能超过 72 字节")
+        
         has_letter = any(c.isalpha() for c in new_password)
         has_digit = any(c.isdigit() for c in new_password)
         if not (has_letter and has_digit):
@@ -325,9 +331,8 @@ class UserService:
             raise BusinessException(detail="密码必须包含字母和数字")
         
         # 3. 检查新密码是否与旧密码相同
-        from passlib.context import CryptContext
-        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        if pwd_context.verify(new_password, user.password_hash):
+        from foundation_service.utils.password import verify_password
+        if user.password_hash and verify_password(new_password, user.password_hash):
             logger.warning(f"新密码与旧密码相同: user_id={user_id}")
             raise BusinessException(detail="新密码不能与旧密码相同")
         

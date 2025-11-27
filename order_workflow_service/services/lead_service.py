@@ -117,13 +117,17 @@ class LeadService:
             if lead.owner_user_id != current_user_id:
                 raise BusinessException(detail="无权访问该线索", status_code=403)
         
-        # 填充客户等级双语名称
+        # 填充客户等级双语名称和负责人用户名
         response = LeadResponse.model_validate(lead)
         if lead.level:
             level_info = await self.customer_level_service.get_by_code(lead.level)
             if level_info:
                 response.level_name_zh = level_info["name_zh"]
                 response.level_name_id = level_info["name_id"]
+        # 填充负责人用户名
+        if lead.owner_user_id and lead.owner:
+            # 优先使用 display_name，如果没有则使用 username
+            response.owner_username = lead.owner.display_name or lead.owner.username
         
         return response
     
@@ -158,7 +162,7 @@ class LeadService:
             current_user_roles=current_user_roles,
         )
         
-        # 填充客户等级双语名称
+        # 填充客户等级双语名称和负责人用户名
         items = []
         for lead in leads:
             response = LeadResponse.model_validate(lead)
@@ -167,6 +171,10 @@ class LeadService:
                 if level_info:
                     response.level_name_zh = level_info["name_zh"]
                     response.level_name_id = level_info["name_id"]
+            # 填充负责人用户名
+            if lead.owner_user_id and lead.owner:
+                # 优先使用 display_name，如果没有则使用 username
+                response.owner_username = lead.owner.display_name or lead.owner.username
             items.append(response)
         
         return LeadListResponse(
@@ -311,9 +319,14 @@ class LeadService:
         if not lead:
             raise BusinessException(detail="线索不存在", status_code=404)
         
-        # 权限检查：只有admin可以分配线索
-        if not current_user_roles or "ADMIN" not in current_user_roles:
-            raise BusinessException(detail="只有管理员可以分配线索", status_code=403)
+        # 权限检查：
+        # 1. ADMIN 可以分配线索给任何人
+        # 2. 普通用户可以将线索分配给自己（从公海转化线索）
+        is_admin = current_user_roles and "ADMIN" in current_user_roles
+        is_self_assignment = current_user_id and owner_user_id == current_user_id
+        
+        if not is_admin and not is_self_assignment:
+            raise BusinessException(detail="只有管理员可以分配线索给他人，或可以将线索分配给自己", status_code=403)
         
         updated_lead = await self.repository.assign(lead_id, organization_id, owner_user_id)
         if not updated_lead:

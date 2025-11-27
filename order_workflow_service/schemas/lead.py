@@ -49,6 +49,7 @@ class LeadResponse(BaseModel):
     customer_id: Optional[str] = None
     organization_id: Optional[str] = None  # 可选，线索与用户绑定，不需要 organization_id
     owner_user_id: Optional[str] = None
+    owner_username: Optional[str] = None  # 负责人用户名（从 User 表关联获取）
     status: str
     level: Optional[str] = None
     is_in_public_pool: bool
@@ -85,6 +86,7 @@ class LeadDuplicateCheckRequest(BaseModel):
     phone: Optional[str] = Field(None, description="电话")
     email: Optional[EmailStr] = Field(None, description="邮箱")
     exclude_lead_id: Optional[str] = Field(None, description="排除的线索ID")
+    exact_match: Optional[bool] = Field(False, description="是否完全匹配公司名（True=精确匹配，False=模糊匹配）")
 
 
 class LeadDuplicateCheckResponse(BaseModel):
