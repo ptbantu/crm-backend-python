@@ -21,6 +21,7 @@ class LeadFollowUpResponse(BaseModel):
     content: Optional[str] = None
     follow_up_date: datetime
     created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
 
     class Config:

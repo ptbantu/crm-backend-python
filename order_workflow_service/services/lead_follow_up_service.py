@@ -63,6 +63,11 @@ class LeadFollowUpService:
     
     async def get_follow_ups_by_lead_id(self, lead_id: str) -> List[LeadFollowUpResponse]:
         """根据线索ID获取所有跟进记录"""
-        follow_ups = await self.repository.get_by_lead_id(lead_id)
-        return [LeadFollowUpResponse.model_validate(fu) for fu in follow_ups]
+        follow_ups_with_names = await self.repository.get_by_lead_id(lead_id)
+        responses = []
+        for follow_up, created_by_name in follow_ups_with_names:
+            response_dict = LeadFollowUpResponse.model_validate(follow_up).model_dump()
+            response_dict['created_by_name'] = created_by_name
+            responses.append(LeadFollowUpResponse(**response_dict))
+        return responses
 

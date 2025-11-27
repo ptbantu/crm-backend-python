@@ -21,6 +21,7 @@ class LeadNoteResponse(BaseModel):
     content: str
     is_important: bool
     created_by: Optional[str] = None
+    created_by_name: Optional[str] = None
     created_at: datetime
 
     class Config:

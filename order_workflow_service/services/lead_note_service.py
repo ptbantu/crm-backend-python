@@ -58,6 +58,11 @@ class LeadNoteService:
     
     async def get_notes_by_lead_id(self, lead_id: str) -> List[LeadNoteResponse]:
         """根据线索ID获取所有备注"""
-        notes = await self.repository.get_by_lead_id(lead_id)
-        return [LeadNoteResponse.model_validate(note) for note in notes]
+        notes_with_names = await self.repository.get_by_lead_id(lead_id)
+        responses = []
+        for note, created_by_name in notes_with_names:
+            response_dict = LeadNoteResponse.model_validate(note).model_dump()
+            response_dict['created_by_name'] = created_by_name
+            responses.append(LeadNoteResponse(**response_dict))
+        return responses
 
