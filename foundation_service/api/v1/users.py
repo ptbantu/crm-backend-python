@@ -9,7 +9,7 @@ from common.schemas.response import Result
 from common.utils.logger import get_logger
 from foundation_service.schemas.user import (
     UserResponse, UserCreateRequest, UserUpdateRequest,
-    UserListResponse, UserResetPasswordRequest
+    UserListResponse, UserResetPasswordRequest, UserChangePasswordRequest
 )
 from foundation_service.services.user_service import UserService
 from foundation_service.dependencies import get_db, require_organization_admin
@@ -189,4 +189,42 @@ async def reset_password(
     service = UserService(db)
     user = await service.reset_password(user_id, request.new_password)
     return Result.success(data=user, message="密码重置成功")
+
+
+@router.put("/{user_id}/password", response_model=Result[UserResponse])
+async def change_password(
+    user_id: str,
+    request: UserChangePasswordRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    修改密码（用户自己修改，需要验证旧密码）
+    
+    权限要求：
+    - 只能修改自己的密码
+    - 需要提供正确的旧密码
+    """
+    from foundation_service.dependencies import get_current_user_id
+    from fastapi import HTTPException, status
+    
+    # 1. 验证当前用户身份
+    current_user_id = get_current_user_id(request_obj)
+    if not current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="需要认证"
+        )
+    
+    # 2. 验证只能修改自己的密码
+    if current_user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只能修改自己的密码"
+        )
+    
+    # 3. 执行修改密码
+    service = UserService(db)
+    user = await service.change_password(user_id, request.old_password, request.new_password)
+    return Result.success(data=user, message="密码修改成功")
 

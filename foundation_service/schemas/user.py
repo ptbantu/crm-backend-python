@@ -31,6 +31,12 @@ class UserUpdateRequest(BaseModel):
     is_active: Optional[bool] = None
 
 
+class UserChangePasswordRequest(BaseModel):
+    """修改密码请求（用户自己修改）"""
+    old_password: str = Field(..., description="旧密码")
+    new_password: str = Field(..., min_length=8, description="新密码（至少8位，包含字母和数字）")
+
+
 class UserResetPasswordRequest(BaseModel):
     """重置密码请求"""
     new_password: str = Field(..., min_length=8, description="新密码（至少8位，包含字母和数字）")

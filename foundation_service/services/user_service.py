@@ -14,7 +14,7 @@ from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.models.user import User
 from foundation_service.models.organization_employee import OrganizationEmployee
 from foundation_service.models.user_role import UserRole
-from foundation_service.utils.password import hash_password
+from foundation_service.utils.password import hash_password, verify_password
 from common.exceptions import (
     UserNotFoundError, OrganizationNotFoundError, OrganizationInactiveError, 
     BusinessException
@@ -341,6 +341,60 @@ class UserService:
         await self.user_repo.update(user)
         
         logger.info(f"用户密码重置成功: id={user.id}, username={user.username}")
+        return await self._to_response(user)
+    
+    async def change_password(self, user_id: str, old_password: str, new_password: str) -> UserResponse:
+        """
+        修改用户密码（用户自己修改，需要验证旧密码）
+        
+        Args:
+            user_id: 用户ID
+            old_password: 旧密码
+            new_password: 新密码
+        
+        Returns:
+            UserResponse: 用户响应对象
+        """
+        logger.info(f"开始修改用户密码: user_id={user_id}")
+        
+        # 1. 验证用户是否存在
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            logger.warning(f"用户不存在: user_id={user_id}")
+            raise UserNotFoundError()
+        
+        # 2. 验证旧密码
+        if not user.password_hash or not verify_password(old_password, user.password_hash):
+            logger.warning(f"旧密码不正确: user_id={user_id}")
+            raise BusinessException(detail="旧密码不正确")
+        
+        # 3. 验证新密码强度（至少8位，包含字母和数字）
+        if len(new_password) < 8:
+            logger.warning(f"密码长度不足: user_id={user_id}")
+            raise BusinessException(detail="密码长度至少8位")
+        
+        # bcrypt 限制密码不能超过 72 字节
+        password_bytes = new_password.encode('utf-8')
+        if len(password_bytes) > 72:
+            logger.warning(f"密码长度超过 72 字节限制: user_id={user_id}")
+            raise BusinessException(detail="密码长度不能超过 72 字节")
+        
+        has_letter = any(c.isalpha() for c in new_password)
+        has_digit = any(c.isdigit() for c in new_password)
+        if not (has_letter and has_digit):
+            logger.warning(f"密码强度不足: user_id={user_id}")
+            raise BusinessException(detail="密码必须包含字母和数字")
+        
+        # 4. 检查新密码是否与旧密码相同
+        if verify_password(new_password, user.password_hash):
+            logger.warning(f"新密码与旧密码相同: user_id={user_id}")
+            raise BusinessException(detail="新密码不能与旧密码相同")
+        
+        # 5. 更新密码
+        user.password_hash = hash_password(new_password)
+        await self.user_repo.update(user)
+        
+        logger.info(f"用户密码修改成功: id={user.id}, username={user.username}")
         return await self._to_response(user)
     
     async def _to_response(self, user: User) -> UserResponse:
