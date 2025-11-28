@@ -24,6 +24,8 @@ from common.models.temporary_link import TemporaryLink
 from common.models.customer_level import CustomerLevel
 from common.models.follow_up_status import FollowUpStatus
 from common.models.lead_pool import LeadPool
+from common.models.product_dependency import ProductDependency
+from common.models.product import Product
 # 注意：不导入 LeadFollowUp 和 LeadNote，因为 order_workflow_service 有自己的版本（带外键约束）
 # 如果其他服务需要，可以直接从 common.models.lead_follow_up 或 common.models.lead_note 导入
 
@@ -45,5 +47,7 @@ __all__ = [
     "CustomerLevel",
     "FollowUpStatus",
     "LeadPool",
+    "ProductDependency",
+    "Product",
 ]
 

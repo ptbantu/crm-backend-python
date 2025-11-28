@@ -9,6 +9,7 @@ from order_workflow_service.models.lead import Lead
 from order_workflow_service.models.notification import Notification
 from order_workflow_service.models.lead_follow_up import LeadFollowUp
 from order_workflow_service.models.lead_note import LeadNote
+from order_workflow_service.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
 
 # 从共享模型导入所有需要的模型（确保它们被注册到 SQLAlchemy metadata 中）
 # 注意：不要从 common.models 导入 Order、Lead、Notification、LeadFollowUp 和 LeadNote，因为它们会与本地定义的模型冲突
@@ -27,6 +28,7 @@ from common.models import (
     CustomerLevel,
     FollowUpStatus,
     LeadPool,
+    ProductDependency,
 )
 from common.models.customer_source import CustomerSource
 from common.models.customer_channel import CustomerChannel
@@ -53,4 +55,8 @@ __all__ = [
     "Customer",
     "CustomerSource",
     "CustomerChannel",
+    "Opportunity",
+    "OpportunityProduct",
+    "OpportunityPaymentStage",
+    "ProductDependency",
 ]

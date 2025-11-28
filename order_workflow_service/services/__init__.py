@@ -15,6 +15,8 @@ from order_workflow_service.services.temporary_link_service import TemporaryLink
 from order_workflow_service.services.notification_service import NotificationService
 from order_workflow_service.services.customer_level_service import CustomerLevelService
 from order_workflow_service.services.follow_up_status_service import FollowUpStatusService
+from order_workflow_service.services.opportunity_service import OpportunityService
+from order_workflow_service.services.product_dependency_service import ProductDependencyService
 
 __all__ = [
     "OrderService",
@@ -31,4 +33,6 @@ __all__ = [
     "NotificationService",
     "CustomerLevelService",
     "FollowUpStatusService",
+    "OpportunityService",
+    "ProductDependencyService",
 ]

@@ -20,6 +20,12 @@ from order_workflow_service.repositories.temporary_link_repository import Tempor
 from order_workflow_service.repositories.notification_repository import NotificationRepository
 from order_workflow_service.repositories.customer_level_repository import CustomerLevelRepository
 from order_workflow_service.repositories.follow_up_status_repository import FollowUpStatusRepository
+from order_workflow_service.repositories.opportunity_repository import (
+    OpportunityRepository,
+    OpportunityProductRepository,
+    OpportunityPaymentStageRepository,
+)
+from order_workflow_service.repositories.product_dependency_repository import ProductDependencyRepository
 
 __all__ = [
     "OrderRepository",
@@ -39,4 +45,8 @@ __all__ = [
     "NotificationRepository",
     "CustomerLevelRepository",
     "FollowUpStatusRepository",
+    "OpportunityRepository",
+    "OpportunityProductRepository",
+    "OpportunityPaymentStageRepository",
+    "ProductDependencyRepository",
 ]

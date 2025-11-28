@@ -140,6 +140,10 @@ from order_workflow_service.models import (
     CustomerLevel,
     FollowUpStatus,
     LeadPool,
+    Opportunity,  # 商机模型
+    OpportunityProduct,  # 商机产品关联模型
+    OpportunityPaymentStage,  # 商机付款阶段模型
+    ProductDependency,  # 产品依赖关系模型
 )
 
 # 注册路由
@@ -153,6 +157,8 @@ from order_workflow_service.api.v1 import (
     temporary_links,
     notifications,
     customer_levels,
+    opportunities,
+    product_dependencies,
 )
 
 app.include_router(
@@ -207,6 +213,18 @@ app.include_router(
     customer_levels.router,
     prefix="/api/order-workflow",
     tags=["选项配置"]
+)
+
+app.include_router(
+    opportunities.router,
+    prefix="/api/order-workflow/opportunities",
+    tags=["商机管理"]
+)
+
+app.include_router(
+    product_dependencies.router,
+    prefix="/api/order-workflow/product-dependencies",
+    tags=["产品依赖关系"]
 )
 
 
