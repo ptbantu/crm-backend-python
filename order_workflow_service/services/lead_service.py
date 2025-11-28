@@ -41,6 +41,13 @@ class LeadService:
         created_by: Optional[str] = None
     ) -> LeadResponse:
         """创建线索"""
+        # 验证：线索不能关联客户，customer_id 必须为 NULL
+        if request.customer_id:
+            raise BusinessException(
+                detail="线索不能关联客户，线索默认是未知的客户。只有转换时才会创建客户并关联。",
+                status_code=400
+            )
+        
         # 验证客户等级代码
         if request.level:
             is_valid = await self.customer_level_service.validate_code(request.level)
@@ -73,7 +80,7 @@ class LeadService:
                 phone=request.phone,
                 email=request.email,
                 address=request.address,
-                customer_id=request.customer_id,
+                customer_id=None,  # 线索不能关联客户，必须为 NULL
                 organization_id=organization_id,  # 现在确保不为 None
                 owner_user_id=owner_user_id,  # 使用默认值或请求值
                 status=request.status,
@@ -203,14 +210,21 @@ class LeadService:
             if lead.owner_user_id != current_user_id:
                 raise BusinessException(detail="无权更新该线索", status_code=403)
         
+        # 验证：更新线索时不允许设置 customer_id（除非通过转换API）
+        if request.customer_id is not None:
+            raise BusinessException(
+                detail="更新线索时不允许设置 customer_id。线索不能关联客户，只有通过转换API才能设置 customer_id。",
+                status_code=400
+            )
+        
         # 验证客户等级代码（如果更新了level字段）
         if request.level is not None:
             is_valid = await self.customer_level_service.validate_code(request.level)
             if not is_valid:
                 raise BusinessException(detail=f"无效的客户等级代码: {request.level}", status_code=400)
         
-        # 更新字段
-        update_data = request.model_dump(exclude_unset=True)
+        # 更新字段（排除 customer_id）
+        update_data = request.model_dump(exclude_unset=True, exclude={'customer_id'})
         for key, value in update_data.items():
             setattr(lead, key, value)
         

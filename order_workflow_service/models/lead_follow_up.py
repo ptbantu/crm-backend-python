@@ -24,6 +24,10 @@ class LeadFollowUp(Base):
     content = Column(Text, nullable=True, comment="跟进内容")
     follow_up_date = Column(DateTime, nullable=False, index=True, comment="跟进日期")
     
+    # 状态关联字段
+    status_before = Column(String(50), nullable=True, index=True, comment="跟进前线索状态")
+    status_after = Column(String(50), nullable=True, index=True, comment="跟进后线索状态")
+    
     # 审计字段
     created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
@@ -42,6 +46,14 @@ class LeadFollowUp(Base):
         CheckConstraint(
             "follow_up_type IN ('call', 'meeting', 'email', 'note')",
             name="chk_lead_follow_ups_type"
+        ),
+        CheckConstraint(
+            "status_before IN ('new', 'contacted', 'qualified', 'converted', 'lost') OR status_before IS NULL",
+            name="chk_lead_follow_ups_status_before"
+        ),
+        CheckConstraint(
+            "status_after IN ('new', 'contacted', 'qualified', 'converted', 'lost') OR status_after IS NULL",
+            name="chk_lead_follow_ups_status_after"
         ),
     )
 

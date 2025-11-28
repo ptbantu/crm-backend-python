@@ -16,10 +16,12 @@ class Contact(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    # 姓名
-    first_name = Column(String(255), nullable=False)
-    last_name = Column(String(255), nullable=False)
-    full_name = Column(String(510), nullable=True)  # 计算字段（GENERATED ALWAYS AS）
+    # 数据隔离字段
+    owner_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="负责人ID（数据隔离）")
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="RESTRICT"), nullable=False, index=True, comment="组织ID（数据隔离）")
+    
+    # 姓名（简化：只保留 name 字段）
+    name = Column(String(255), nullable=False, comment="联系人姓名")
     
     # 联系方式
     email = Column(String(255), nullable=True, index=True)

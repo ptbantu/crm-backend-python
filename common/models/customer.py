@@ -31,6 +31,9 @@ class Customer(Base):
     source_id = Column(String(36), ForeignKey("customer_sources.id", ondelete="SET NULL"), nullable=True, index=True)  # 客户来源
     channel_id = Column(String(36), ForeignKey("customer_channels.id", ondelete="SET NULL"), nullable=True, index=True)  # 客户渠道
     
+    # 数据隔离字段
+    organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="RESTRICT"), nullable=False, index=True, comment="组织ID（数据隔离）")
+    
     # 业务字段
     level = Column(String(50), nullable=True)  # 客户等级
     industry = Column(String(255), nullable=True)  # 行业
