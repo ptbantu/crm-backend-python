@@ -12,7 +12,7 @@
 -- - 优化索引（特别是组织ID和状态字段）
 -- - 统一审计字段（created_at, updated_at, created_by, updated_by）
 -- 
--- 生成时间: $(date +"%Y-%m-%d %H:%M:%S")
+-- 导出时间: 2025-11-28 06:10:20
 -- ============================================================
 
 SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
@@ -20,7 +20,30 @@ SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 -- 禁用外键检查（创建表时）
 SET FOREIGN_KEY_CHECKS = 0;
 
-CREATE TABLE IF NOT EXISTS `agent_extensions` (
+-- MySQL dump 10.13  Distrib 8.0.44, for Linux (x86_64)
+--
+-- Host: localhost    Database: bantu_crm
+-- ------------------------------------------------------
+-- Server version	8.0.44
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `agent_extensions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `agent_extensions` (
   `organization_id` char(36) NOT NULL,
   `account_group` varchar(255) DEFAULT NULL,
   `category_name` varchar(255) DEFAULT NULL,
@@ -29,7 +52,15 @@ CREATE TABLE IF NOT EXISTS `agent_extensions` (
   PRIMARY KEY (`organization_id`),
   CONSTRAINT `agent_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `collection_tasks` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `collection_tasks`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `collection_tasks` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
   `payment_stage_id` char(36) DEFAULT NULL COMMENT '付款阶段ID',
@@ -58,7 +89,15 @@ CREATE TABLE IF NOT EXISTS `collection_tasks` (
   CONSTRAINT `chk_collection_tasks_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'in_progress',_utf8mb4'completed',_utf8mb4'cancelled'))),
   CONSTRAINT `chk_collection_tasks_type` CHECK ((`task_type` in (_utf8mb4'auto',_utf8mb4'manual')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='催款任务表';
-CREATE TABLE IF NOT EXISTS `contacts` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `contacts`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `contacts` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `customer_id` char(36) NOT NULL,
   `first_name` varchar(255) NOT NULL,
@@ -97,7 +136,15 @@ CREATE TABLE IF NOT EXISTS `contacts` (
   CONSTRAINT `contacts_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `contacts_ibfk_3` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `customer_channels` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `customer_channels`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customer_channels` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
@@ -111,7 +158,15 @@ CREATE TABLE IF NOT EXISTS `customer_channels` (
   KEY `ix_customer_channels_active` (`is_active`),
   KEY `ix_customer_channels_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `customer_documents` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `customer_documents`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customer_documents` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `customer_id` char(36) NOT NULL COMMENT '客户ID',
   `customer_name` varchar(255) DEFAULT NULL COMMENT '客户名称（冗余字段）',
@@ -172,7 +227,15 @@ CREATE TABLE IF NOT EXISTS `customer_documents` (
   CONSTRAINT `chk_customer_documents_status` CHECK ((`status` in (_utf8mb4'active',_utf8mb4'expired',_utf8mb4'cancelled'))),
   CONSTRAINT `chk_customer_documents_type` CHECK ((`document_type` in (_utf8mb4'passport',_utf8mb4'id_card',_utf8mb4'business_license',_utf8mb4'visa',_utf8mb4'other')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户文档表 - 保存客户的护照、身份证等文档信息';
-CREATE TABLE IF NOT EXISTS `customer_levels` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `customer_levels`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customer_levels` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL COMMENT '等级代码（如：2, 3, 4, 5, 6）',
   `name_zh` varchar(255) NOT NULL COMMENT '等级名称（中文）',
@@ -189,7 +252,41 @@ CREATE TABLE IF NOT EXISTS `customer_levels` (
   KEY `idx_customer_levels_active` (`is_active`),
   KEY `idx_customer_levels_sort` (`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户等级配置表';
-CREATE TABLE IF NOT EXISTS `customer_sources` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Temporary view structure for view `customer_ownership_view`
+--
+
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `customer_ownership_view` AS SELECT 
+ 1 AS `id`,
+ 1 AS `name`,
+ 1 AS `code`,
+ 1 AS `customer_source_type`,
+ 1 AS `customer_type`,
+ 1 AS `owner_user_id`,
+ 1 AS `owner_name`,
+ 1 AS `owner_username`,
+ 1 AS `agent_user_id`,
+ 1 AS `agent_name`,
+ 1 AS `agent_username`,
+ 1 AS `agent_id`,
+ 1 AS `agent_organization_name`,
+ 1 AS `agent_organization_code`,
+ 1 AS `parent_customer_id`,
+ 1 AS `parent_customer_name`,
+ 1 AS `created_at`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `customer_sources`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customer_sources` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) DEFAULT NULL,
   `name` varchar(255) NOT NULL,
@@ -203,7 +300,15 @@ CREATE TABLE IF NOT EXISTS `customer_sources` (
   KEY `ix_customer_sources_active` (`is_active`),
   KEY `ix_customer_sources_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `customers` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `customers`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customers` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
   `owner_id_external` varchar(255) DEFAULT NULL,
@@ -263,7 +368,15 @@ CREATE TABLE IF NOT EXISTS `customers` (
   CONSTRAINT `chk_customer_source_type` CHECK ((`customer_source_type` in (_utf8mb4'own',_utf8mb4'agent'))),
   CONSTRAINT `chk_customer_type` CHECK ((`customer_type` in (_utf8mb4'individual',_utf8mb4'organization')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `deliverables` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `deliverables`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `deliverables` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) DEFAULT NULL,
   `order_stage_id` char(36) DEFAULT NULL,
@@ -291,7 +404,15 @@ CREATE TABLE IF NOT EXISTS `deliverables` (
   CONSTRAINT `deliverables_ibfk_4` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_deliverables_file_size_nonneg` CHECK ((coalesce(`file_size`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `follow_up_statuses` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `follow_up_statuses`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `follow_up_statuses` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL COMMENT '状态代码（如：1, 2, 3, 4, 5）',
   `name_zh` varchar(255) NOT NULL COMMENT '状态名称（中文）',
@@ -308,7 +429,15 @@ CREATE TABLE IF NOT EXISTS `follow_up_statuses` (
   KEY `idx_follow_up_statuses_active` (`is_active`),
   KEY `idx_follow_up_statuses_sort` (`sort_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='跟进状态配置表';
-CREATE TABLE IF NOT EXISTS `lead_follow_ups` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `lead_follow_ups`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lead_follow_ups` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `lead_id` char(36) NOT NULL COMMENT '线索ID',
   `follow_up_type` varchar(50) NOT NULL COMMENT '跟进类型：call(电话), meeting(会议), email(邮件), note(备注)',
@@ -325,7 +454,15 @@ CREATE TABLE IF NOT EXISTS `lead_follow_ups` (
   CONSTRAINT `lead_follow_ups_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_lead_follow_ups_type` CHECK ((`follow_up_type` in (_utf8mb4'call',_utf8mb4'meeting',_utf8mb4'email',_utf8mb4'note')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='线索跟进记录表';
-CREATE TABLE IF NOT EXISTS `lead_notes` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `lead_notes`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lead_notes` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `lead_id` char(36) NOT NULL COMMENT '线索ID',
   `note_type` varchar(50) NOT NULL COMMENT '备注类型：comment(评论), reminder(提醒), task(任务)',
@@ -343,7 +480,15 @@ CREATE TABLE IF NOT EXISTS `lead_notes` (
   CONSTRAINT `lead_notes_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_lead_notes_type` CHECK ((`note_type` in (_utf8mb4'comment',_utf8mb4'reminder',_utf8mb4'task')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='线索备注表';
-CREATE TABLE IF NOT EXISTS `lead_pools` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `lead_pools`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `lead_pools` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `name` varchar(255) NOT NULL COMMENT '线索池名称',
   `organization_id` char(36) NOT NULL COMMENT '组织ID',
@@ -353,10 +498,17 @@ CREATE TABLE IF NOT EXISTS `lead_pools` (
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `ix_lead_pools_organization` (`organization_id`),
-  KEY `ix_lead_pools_active` (`is_active`),
-  CONSTRAINT `lead_pools_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
+  KEY `ix_lead_pools_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='线索池表';
-CREATE TABLE IF NOT EXISTS `leads` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `leads`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `leads` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `name` varchar(255) NOT NULL COMMENT '线索名称',
   `company_name` varchar(255) DEFAULT NULL COMMENT '公司名称',
@@ -365,7 +517,7 @@ CREATE TABLE IF NOT EXISTS `leads` (
   `email` varchar(255) DEFAULT NULL COMMENT '邮箱',
   `address` text COMMENT '地址',
   `customer_id` char(36) DEFAULT NULL COMMENT '关联客户ID（可选）',
-  `organization_id` char(36) NOT NULL COMMENT '组织ID（必填，从创建用户的组织自动获取，用于数据隔离）',
+  `organization_id` varchar(36) DEFAULT NULL,
   `owner_user_id` char(36) DEFAULT NULL COMMENT '销售负责人ID',
   `status` varchar(50) DEFAULT 'new' COMMENT '状态：new(新建), contacted(已联系), qualified(已确认), converted(已转化), lost(已丢失)',
   `level` varchar(50) DEFAULT NULL COMMENT '客户分级',
@@ -393,15 +545,22 @@ CREATE TABLE IF NOT EXISTS `leads` (
   KEY `ix_leads_phone` (`phone`),
   KEY `ix_leads_email` (`email`),
   KEY `ix_leads_created_at` (`created_at` DESC),
+  KEY `fk_leads_customer_level` (`level`),
+  KEY `owner_user_id` (`owner_user_id`),
+  CONSTRAINT `fk_leads_customer_level` FOREIGN KEY (`level`) REFERENCES `customer_levels` (`code`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `leads_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `leads_ibfk_2` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `leads_ibfk_3` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `leads_ibfk_4` FOREIGN KEY (`pool_id`) REFERENCES `lead_pools` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `leads_ibfk_5` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `leads_ibfk_6` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_leads_status` CHECK ((`status` in (_utf8mb4'new',_utf8mb4'contacted',_utf8mb4'qualified',_utf8mb4'converted',_utf8mb4'lost')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='线索表';
-CREATE TABLE IF NOT EXISTS `menu_permissions` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `menu_permissions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `menu_permissions` (
   `menu_id` char(36) NOT NULL,
   `permission_id` char(36) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -411,7 +570,15 @@ CREATE TABLE IF NOT EXISTS `menu_permissions` (
   CONSTRAINT `menu_permissions_ibfk_1` FOREIGN KEY (`menu_id`) REFERENCES `menus` (`id`) ON DELETE CASCADE,
   CONSTRAINT `menu_permissions_ibfk_2` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `menus` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `menus`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `menus` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) NOT NULL COMMENT 'èœå•ç¼–ç ï¼ˆå”¯ä¸€ï¼‰',
   `name_zh` varchar(255) NOT NULL COMMENT 'èœå•åç§°ï¼ˆä¸­æ–‡ï¼‰',
@@ -436,7 +603,15 @@ CREATE TABLE IF NOT EXISTS `menus` (
   KEY `ix_menus_order` (`display_order`),
   CONSTRAINT `menus_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `menus` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `notifications` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `notifications`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notifications` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `user_id` char(36) NOT NULL COMMENT '用户ID',
   `notification_type` varchar(50) NOT NULL COMMENT '通知类型：collection_task(催款任务), lead_assigned(线索分配), order_updated(订单更新)',
@@ -457,7 +632,125 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_notifications_type` CHECK ((`notification_type` in (_utf8mb4'collection_task',_utf8mb4'lead_assigned',_utf8mb4'order_updated',_utf8mb4'lead_created',_utf8mb4'lead_updated')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='通知表';
-CREATE TABLE IF NOT EXISTS `order_assignments` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `opportunities`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `opportunities` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `customer_id` char(36) NOT NULL COMMENT '客户ID',
+  `lead_id` char(36) DEFAULT NULL COMMENT '来源线索ID（可选，用于追溯）',
+  `name` varchar(255) NOT NULL COMMENT '商机名称',
+  `amount` decimal(18,2) DEFAULT NULL COMMENT '商机金额',
+  `probability` int DEFAULT NULL COMMENT '成交概率（0-100）',
+  `stage` varchar(50) NOT NULL DEFAULT 'initial_contact' COMMENT '商机阶段（initial_contact, needs_analysis, proposal, negotiation, closed_won, closed_lost）',
+  `status` varchar(50) NOT NULL DEFAULT 'active' COMMENT '状态（active, won, lost, cancelled）',
+  `owner_user_id` char(36) DEFAULT NULL COMMENT '负责人（外键 → users.id）',
+  `expected_close_date` date DEFAULT NULL COMMENT '预期成交日期',
+  `actual_close_date` date DEFAULT NULL COMMENT '实际成交日期',
+  `description` text COMMENT '描述',
+  `organization_id` char(36) NOT NULL COMMENT '组织ID（数据隔离）',
+  `created_by` char(36) DEFAULT NULL COMMENT '创建人ID',
+  `updated_by` char(36) DEFAULT NULL COMMENT '更新人ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `ix_opportunities_customer` (`customer_id`),
+  KEY `ix_opportunities_lead` (`lead_id`),
+  KEY `ix_opportunities_owner` (`owner_user_id`),
+  KEY `ix_opportunities_organization` (`organization_id`),
+  KEY `ix_opportunities_stage` (`stage`),
+  KEY `ix_opportunities_status` (`status`),
+  KEY `ix_opportunities_created` (`created_at` DESC),
+  KEY `created_by` (`created_by`),
+  KEY `updated_by` (`updated_by`),
+  CONSTRAINT `opportunities_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `opportunities_ibfk_2` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `opportunities_ibfk_3` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `opportunities_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `opportunities_ibfk_5` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_opportunities_probability` CHECK (((`probability` >= 0) and (`probability` <= 100))),
+  CONSTRAINT `chk_opportunities_stage` CHECK ((`stage` in (_utf8mb4'initial_contact',_utf8mb4'needs_analysis',_utf8mb4'proposal',_utf8mb4'negotiation',_utf8mb4'closed_won',_utf8mb4'closed_lost'))),
+  CONSTRAINT `chk_opportunities_status` CHECK ((`status` in (_utf8mb4'active',_utf8mb4'won',_utf8mb4'lost',_utf8mb4'cancelled')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商机表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `opportunity_payment_stages`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `opportunity_payment_stages` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `opportunity_id` char(36) NOT NULL COMMENT '商机ID（外键 → opportunities.id）',
+  `stage_number` int NOT NULL COMMENT '阶段序号（1, 2, 3...）',
+  `stage_name` varchar(255) NOT NULL COMMENT '阶段名称（如：首付款、中期款、尾款）',
+  `amount` decimal(18,2) NOT NULL COMMENT '应付金额',
+  `due_date` date DEFAULT NULL COMMENT '到期日期',
+  `payment_trigger` varchar(50) DEFAULT 'manual' COMMENT '付款触发条件（manual, milestone, date, completion）',
+  `status` varchar(50) NOT NULL DEFAULT 'pending' COMMENT '状态（pending, paid, overdue, cancelled）',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `ix_opportunity_payment_stages_opportunity` (`opportunity_id`),
+  KEY `ix_opportunity_payment_stages_stage_number` (`opportunity_id`,`stage_number`),
+  KEY `ix_opportunity_payment_stages_status` (`status`),
+  KEY `ix_opportunity_payment_stages_due_date` (`due_date`),
+  CONSTRAINT `opportunity_payment_stages_ibfk_1` FOREIGN KEY (`opportunity_id`) REFERENCES `opportunities` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_opportunity_payment_stages_amount` CHECK ((`amount` >= 0)),
+  CONSTRAINT `chk_opportunity_payment_stages_stage_number` CHECK ((`stage_number` > 0)),
+  CONSTRAINT `chk_opportunity_payment_stages_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'paid',_utf8mb4'overdue',_utf8mb4'cancelled'))),
+  CONSTRAINT `chk_opportunity_payment_stages_trigger` CHECK ((`payment_trigger` in (_utf8mb4'manual',_utf8mb4'milestone',_utf8mb4'date',_utf8mb4'completion')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商机付款阶段表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `opportunity_products`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `opportunity_products` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `opportunity_id` char(36) NOT NULL COMMENT '商机ID（外键 → opportunities.id）',
+  `product_id` char(36) NOT NULL COMMENT '产品ID（外键 → products.id）',
+  `quantity` int NOT NULL DEFAULT '1' COMMENT '数量',
+  `unit_price` decimal(18,2) DEFAULT NULL COMMENT '单价',
+  `total_amount` decimal(18,2) DEFAULT NULL COMMENT '总金额',
+  `execution_order` int NOT NULL DEFAULT '1' COMMENT '执行顺序（1, 2, 3...）',
+  `status` varchar(50) NOT NULL DEFAULT 'pending' COMMENT '状态（pending: 待执行, in_progress: 进行中, completed: 已完成, cancelled: 已取消）',
+  `start_date` date DEFAULT NULL COMMENT '开始日期',
+  `expected_completion_date` date DEFAULT NULL COMMENT '预期完成日期',
+  `actual_completion_date` date DEFAULT NULL COMMENT '实际完成日期',
+  `notes` text COMMENT '备注',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ux_opportunity_product` (`opportunity_id`,`product_id`),
+  KEY `ix_opportunity_products_opportunity` (`opportunity_id`),
+  KEY `ix_opportunity_products_product` (`product_id`),
+  KEY `ix_opportunity_products_execution_order` (`opportunity_id`,`execution_order`),
+  KEY `ix_opportunity_products_status` (`status`),
+  CONSTRAINT `opportunity_products_ibfk_1` FOREIGN KEY (`opportunity_id`) REFERENCES `opportunities` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `opportunity_products_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_opportunity_products_execution_order` CHECK ((`execution_order` > 0)),
+  CONSTRAINT `chk_opportunity_products_quantity` CHECK ((`quantity` > 0)),
+  CONSTRAINT `chk_opportunity_products_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'in_progress',_utf8mb4'completed',_utf8mb4'cancelled')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商机产品关联表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `order_assignments`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_assignments` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL,
   `assigned_to_user_id` char(36) NOT NULL,
@@ -486,7 +779,15 @@ CREATE TABLE IF NOT EXISTS `order_assignments` (
   CONSTRAINT `order_assignments_ibfk_5` FOREIGN KEY (`organization_employee_id`) REFERENCES `organization_employees` (`id`) ON DELETE SET NULL,
   CONSTRAINT `order_assignments_ibfk_6` FOREIGN KEY (`vendor_employee_id`) REFERENCES `organization_employees` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `order_comments` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `order_comments`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_comments` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
   `order_stage_id` char(36) DEFAULT NULL COMMENT '关联的订单阶段ID（可选）',
@@ -511,7 +812,15 @@ CREATE TABLE IF NOT EXISTS `order_comments` (
   CONSTRAINT `order_comments_ibfk_4` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_order_comments_type` CHECK ((`comment_type` in (_utf8mb4'general',_utf8mb4'internal',_utf8mb4'customer',_utf8mb4'system')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单评论表 - 订单评论和沟通记录';
-CREATE TABLE IF NOT EXISTS `order_files` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `order_files`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_files` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
   `order_item_id` char(36) DEFAULT NULL COMMENT '关联的订单项ID（可选，文件可关联到具体订单项）',
@@ -548,7 +857,15 @@ CREATE TABLE IF NOT EXISTS `order_files` (
   CONSTRAINT `order_files_ibfk_5` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_order_files_file_size_nonneg` CHECK ((coalesce(`file_size`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单文件表 - 订单相关文件（护照、签证、文档等）';
-CREATE TABLE IF NOT EXISTS `order_items` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `order_items`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_items` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
   `item_number` int NOT NULL COMMENT '订单项序号（1, 2, 3...）',
@@ -586,7 +903,15 @@ CREATE TABLE IF NOT EXISTS `order_items` (
   CONSTRAINT `chk_order_items_amounts_nonneg` CHECK (((coalesce(`quantity`,0) >= 0) and (coalesce(`unit_price`,0) >= 0) and (coalesce(`discount_amount`,0) >= 0) and (coalesce(`item_amount`,0) >= 0))),
   CONSTRAINT `chk_order_items_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'in_progress',_utf8mb4'completed',_utf8mb4'cancelled')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='订单项表 - 一个订单可以包含多个订单项';
-CREATE TABLE IF NOT EXISTS `order_stages` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `order_stages`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_stages` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL,
   `stage_name` varchar(255) NOT NULL,
@@ -614,7 +939,15 @@ CREATE TABLE IF NOT EXISTS `order_stages` (
   CONSTRAINT `order_stages_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_order_stages_progress_range` CHECK (((`progress_percent` >= 0) and (`progress_percent` <= 100)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `order_statuses` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `order_statuses`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `order_statuses` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL,
   `name` varchar(255) NOT NULL,
@@ -626,7 +959,15 @@ CREATE TABLE IF NOT EXISTS `order_statuses` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `orders` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `orders`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `orders` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_number` varchar(100) NOT NULL,
   `title` varchar(255) NOT NULL,
@@ -655,6 +996,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `service_record_id` char(36) DEFAULT NULL COMMENT '服务记录ID',
+  `opportunity_id` char(36) DEFAULT NULL COMMENT '商机ID（可选，用于追溯）',
   `workflow_instance_id` char(36) DEFAULT NULL COMMENT '关联的工作流实例ID',
   `entry_city` varchar(255) DEFAULT NULL COMMENT 'Entry city (来自 EVOA)',
   `passport_id` varchar(100) DEFAULT NULL COMMENT 'Passport ID (来自 EVOA)',
@@ -672,6 +1014,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   KEY `ix_orders_created` (`created_at` DESC),
   KEY `ix_orders_service_record` (`service_record_id`),
   KEY `ix_orders_workflow_instance` (`workflow_instance_id`),
+  KEY `ix_orders_opportunity` (`opportunity_id`),
   CONSTRAINT `fk_orders_service_record` FOREIGN KEY (`service_record_id`) REFERENCES `service_records` (`id`) ON DELETE SET NULL,
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE SET NULL,
@@ -679,9 +1022,35 @@ CREATE TABLE IF NOT EXISTS `orders` (
   CONSTRAINT `orders_ibfk_4` FOREIGN KEY (`status_id`) REFERENCES `order_statuses` (`id`) ON DELETE SET NULL,
   CONSTRAINT `orders_ibfk_5` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `orders_ibfk_6` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `orders_ibfk_opportunity` FOREIGN KEY (`opportunity_id`) REFERENCES `opportunities` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_orders_amounts_nonneg` CHECK (((coalesce(`quantity`,0) >= 0) and (coalesce(`unit_price`,0) >= 0) and (coalesce(`total_amount`,0) >= 0) and (coalesce(`discount_amount`,0) >= 0) and (coalesce(`final_amount`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `organization_domain_relations` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Temporary view structure for view `organization_contacts_view`
+--
+
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `organization_contacts_view` AS SELECT 
+ 1 AS `customer_id`,
+ 1 AS `organization_name`,
+ 1 AS `customer_source_type`,
+ 1 AS `owner_user_id`,
+ 1 AS `agent_user_id`,
+ 1 AS `agent_id`,
+ 1 AS `contacts_count`,
+ 1 AS `primary_contacts_count`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `organization_domain_relations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `organization_domain_relations` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `organization_id` char(36) NOT NULL COMMENT 'ç»„ç»‡ID',
   `domain_id` char(36) NOT NULL COMMENT 'é¢†åŸŸID',
@@ -696,7 +1065,15 @@ CREATE TABLE IF NOT EXISTS `organization_domain_relations` (
   CONSTRAINT `organization_domain_relations_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `organization_domain_relations_ibfk_2` FOREIGN KEY (`domain_id`) REFERENCES `organization_domains` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç»„ç»‡é¢†åŸŸå…³è”è¡¨';
-CREATE TABLE IF NOT EXISTS `organization_domains` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `organization_domains`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `organization_domains` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) NOT NULL COMMENT 'é¢†åŸŸä»£ç ï¼ˆå”¯ä¸€ï¼‰',
   `name_zh` varchar(255) NOT NULL COMMENT 'é¢†åŸŸåç§°ï¼ˆä¸­æ–‡ï¼‰',
@@ -712,7 +1089,15 @@ CREATE TABLE IF NOT EXISTS `organization_domains` (
   KEY `ix_organization_domains_code` (`code`),
   KEY `ix_organization_domains_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç»„ç»‡é¢†åŸŸè¡¨';
-CREATE TABLE IF NOT EXISTS `organization_employees` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `organization_employees`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `organization_employees` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `user_id` char(36) NOT NULL,
   `organization_id` char(36) NOT NULL,
@@ -752,7 +1137,15 @@ CREATE TABLE IF NOT EXISTS `organization_employees` (
   CONSTRAINT `organization_employees_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `organization_employees_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `organizations` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `organizations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `organizations` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `name` text NOT NULL,
   `code` varchar(255) DEFAULT NULL,
@@ -845,7 +1238,15 @@ CREATE TABLE IF NOT EXISTS `organizations` (
   CONSTRAINT `chk_organizations_status` CHECK (((`company_status` is null) or (`company_status` in (_utf8mb4'normal',_utf8mb4'cancelled',_utf8mb4'revoked',_utf8mb4'liquidated',_utf8mb4'other')))),
   CONSTRAINT `chk_organizations_type` CHECK ((`organization_type` in (_utf8mb4'internal',_utf8mb4'vendor',_utf8mb4'agent')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `payment_stages` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `payment_stages`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_stages` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL COMMENT '订单ID',
   `order_number` varchar(100) DEFAULT NULL COMMENT '订单号（冗余字段）',
@@ -901,7 +1302,15 @@ CREATE TABLE IF NOT EXISTS `payment_stages` (
   CONSTRAINT `chk_payment_stages_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'partial',_utf8mb4'paid',_utf8mb4'overdue',_utf8mb4'cancelled'))),
   CONSTRAINT `chk_payment_stages_trigger` CHECK (((`payment_trigger` in (_utf8mb4'manual',_utf8mb4'milestone',_utf8mb4'date',_utf8mb4'completion')) or (`payment_trigger` is null)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='分阶段付款表 - 管理订单的分阶段付款计划';
-CREATE TABLE IF NOT EXISTS `payments` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `payments`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payments` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `order_id` char(36) NOT NULL,
   `payment_type` varchar(50) NOT NULL,
@@ -934,7 +1343,15 @@ CREATE TABLE IF NOT EXISTS `payments` (
   CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`confirmed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `payments_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `permissions` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `permissions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `permissions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) NOT NULL COMMENT 'æƒé™ç¼–ç ï¼ˆå”¯ä¸€ï¼Œå¦‚ï¼šuser.createï¼‰',
   `name_zh` varchar(255) NOT NULL COMMENT 'æƒé™åç§°ï¼ˆä¸­æ–‡ï¼‰',
@@ -954,7 +1371,15 @@ CREATE TABLE IF NOT EXISTS `permissions` (
   KEY `ix_permissions_action` (`action`),
   KEY `ix_permissions_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `product_categories` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `product_categories`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `product_categories` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(100) NOT NULL,
   `name` varchar(255) DEFAULT NULL,
@@ -967,7 +1392,40 @@ CREATE TABLE IF NOT EXISTS `product_categories` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `products` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `product_dependencies`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `product_dependencies` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `product_id` char(36) NOT NULL COMMENT '产品ID（外键 → products.id）',
+  `depends_on_product_id` char(36) NOT NULL COMMENT '依赖的产品ID（外键 → products.id）',
+  `dependency_type` varchar(50) NOT NULL DEFAULT 'required' COMMENT '依赖类型（required: 必须, recommended: 推荐, optional: 可选）',
+  `description` text COMMENT '依赖说明',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ux_product_dependency` (`product_id`,`depends_on_product_id`),
+  KEY `ix_product_dependencies_product` (`product_id`),
+  KEY `ix_product_dependencies_depends_on` (`depends_on_product_id`),
+  KEY `ix_product_dependencies_type` (`dependency_type`),
+  CONSTRAINT `product_dependencies_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `product_dependencies_ibfk_2` FOREIGN KEY (`depends_on_product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_product_dependencies_type` CHECK ((`dependency_type` in (_utf8mb4'required',_utf8mb4'recommended',_utf8mb4'optional')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品依赖关系表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `products`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `products` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
   `owner_id_external` varchar(255) DEFAULT NULL,
@@ -1047,7 +1505,15 @@ CREATE TABLE IF NOT EXISTS `products` (
   KEY `ix_products_active` (`is_active`),
   CONSTRAINT `chk_products_prices_nonneg` CHECK (((coalesce(`price_list`,0) >= 0) and (coalesce(`price_channel`,0) >= 0) and (coalesce(`price_cost`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `role_permissions` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `role_permissions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `role_permissions` (
   `role_id` char(36) NOT NULL,
   `permission_id` char(36) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1057,7 +1523,15 @@ CREATE TABLE IF NOT EXISTS `role_permissions` (
   CONSTRAINT `role_permissions_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
   CONSTRAINT `role_permissions_ibfk_2` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `roles` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `roles`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `roles` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL,
   `name` varchar(255) NOT NULL,
@@ -1071,7 +1545,15 @@ CREATE TABLE IF NOT EXISTS `roles` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `service_records` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `service_records`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `service_records` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL COMMENT '外部系统ID',
   `owner_id_external` varchar(255) DEFAULT NULL COMMENT '所有者外部ID',
@@ -1180,7 +1662,15 @@ CREATE TABLE IF NOT EXISTS `service_records` (
   CONSTRAINT `chk_service_records_quantity_nonneg` CHECK ((coalesce(`quantity`,0) >= 0)),
   CONSTRAINT `chk_service_records_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'in_progress',_utf8mb4'completed',_utf8mb4'cancelled',_utf8mb4'on_hold')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='服务记录表 - 记录客户的服务需求/意向';
-CREATE TABLE IF NOT EXISTS `service_types` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `service_types`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `service_types` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -1196,7 +1686,15 @@ CREATE TABLE IF NOT EXISTS `service_types` (
   KEY `idx_service_types_active` (`is_active`),
   KEY `idx_service_types_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='服务类型表';
-CREATE TABLE IF NOT EXISTS `temporary_links` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `temporary_links`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `temporary_links` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `link_token` varchar(255) NOT NULL COMMENT '链接令牌（唯一）',
   `resource_type` varchar(50) NOT NULL COMMENT '资源类型：service_account(服务账号), order(订单), customer(客户)',
@@ -1219,7 +1717,15 @@ CREATE TABLE IF NOT EXISTS `temporary_links` (
   CONSTRAINT `chk_temporary_links_max_access` CHECK ((`max_access_count` > 0)),
   CONSTRAINT `chk_temporary_links_resource_type` CHECK ((`resource_type` in (_utf8mb4'service_account',_utf8mb4'order',_utf8mb4'customer')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='临时链接表';
-CREATE TABLE IF NOT EXISTS `user_roles` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_roles`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_roles` (
   `user_id` char(36) NOT NULL,
   `role_id` char(36) NOT NULL,
   PRIMARY KEY (`user_id`,`role_id`),
@@ -1227,7 +1733,15 @@ CREATE TABLE IF NOT EXISTS `user_roles` (
   CONSTRAINT `user_roles_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `user_roles_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `users` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `users`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
@@ -1255,7 +1769,15 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `ix_users_wechat` (`wechat`),
   KEY `ix_users_locked` (`is_locked`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `vendor_extensions` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `vendor_extensions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `vendor_extensions` (
   `organization_id` char(36) NOT NULL,
   `account_group` varchar(255) DEFAULT NULL,
   `category_name` varchar(255) DEFAULT NULL,
@@ -1264,7 +1786,15 @@ CREATE TABLE IF NOT EXISTS `vendor_extensions` (
   PRIMARY KEY (`organization_id`),
   CONSTRAINT `vendor_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `visa_records` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `visa_records`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `visa_records` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
   `owner_id_external` varchar(255) DEFAULT NULL,
@@ -1299,7 +1829,15 @@ CREATE TABLE IF NOT EXISTS `visa_records` (
   CONSTRAINT `chk_visa_fx_rate_nonneg` CHECK ((coalesce(`fx_rate`,0) >= 0)),
   CONSTRAINT `chk_visa_payment_nonneg` CHECK ((coalesce(`payment_amount`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-CREATE TABLE IF NOT EXISTS `workflow_definitions` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `workflow_definitions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `workflow_definitions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `name_zh` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆä¸­æ–‡ï¼‰',
   `name_id` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆå°å°¼è¯­ï¼‰',
@@ -1325,7 +1863,15 @@ CREATE TABLE IF NOT EXISTS `workflow_definitions` (
   CONSTRAINT `workflow_definitions_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `workflow_definitions_ibfk_2` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='å·¥ä½œæµå®šä¹‰è¡¨ - å­˜å‚¨å·¥ä½œæµçš„é…ç½®ä¿¡æ¯';
-CREATE TABLE IF NOT EXISTS `workflow_instances` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `workflow_instances`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `workflow_instances` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `workflow_definition_id` char(36) DEFAULT NULL COMMENT '工作流定义ID',
   `business_type` varchar(50) DEFAULT NULL COMMENT '业务类型：order(订单), service_record(服务记录)',
@@ -1348,7 +1894,15 @@ CREATE TABLE IF NOT EXISTS `workflow_instances` (
   CONSTRAINT `workflow_instances_ibfk_2` FOREIGN KEY (`started_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_workflow_instances_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'completed',_utf8mb4'cancelled',_utf8mb4'suspended')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流实例表 - 记录工作流的执行情况';
-CREATE TABLE IF NOT EXISTS `workflow_tasks` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `workflow_tasks`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `workflow_tasks` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `workflow_instance_id` char(36) NOT NULL COMMENT '工作流实例ID',
   `task_name_zh` varchar(255) DEFAULT NULL COMMENT '任务名称（中文）',
@@ -1379,7 +1933,15 @@ CREATE TABLE IF NOT EXISTS `workflow_tasks` (
   CONSTRAINT `chk_workflow_tasks_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'in_progress',_utf8mb4'completed',_utf8mb4'cancelled'))),
   CONSTRAINT `chk_workflow_tasks_type` CHECK (((`task_type` in (_utf8mb4'user_task',_utf8mb4'service_task',_utf8mb4'script_task')) or (`task_type` is null)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流任务表 - 记录需要处理的任务';
-CREATE TABLE IF NOT EXISTS `workflow_transitions` (
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `workflow_transitions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `workflow_transitions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `workflow_instance_id` char(36) NOT NULL COMMENT '工作流实例ID',
   `from_stage` varchar(100) DEFAULT NULL COMMENT '源阶段',
@@ -1396,6 +1958,54 @@ CREATE TABLE IF NOT EXISTS `workflow_transitions` (
   CONSTRAINT `workflow_transitions_ibfk_1` FOREIGN KEY (`workflow_instance_id`) REFERENCES `workflow_instances` (`id`) ON DELETE CASCADE,
   CONSTRAINT `workflow_transitions_ibfk_2` FOREIGN KEY (`triggered_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流流转记录表 - 记录工作流的流转历史';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Final view structure for view `customer_ownership_view`
+--
+
+/*!50001 DROP VIEW IF EXISTS `customer_ownership_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `customer_ownership_view` AS select `c`.`id` AS `id`,`c`.`name` AS `name`,`c`.`code` AS `code`,`c`.`customer_source_type` AS `customer_source_type`,`c`.`customer_type` AS `customer_type`,`c`.`owner_user_id` AS `owner_user_id`,`owner`.`display_name` AS `owner_name`,`owner`.`username` AS `owner_username`,`c`.`agent_user_id` AS `agent_user_id`,`agent`.`display_name` AS `agent_name`,`agent`.`username` AS `agent_username`,`c`.`agent_id` AS `agent_id`,`agent_org`.`name` AS `agent_organization_name`,`agent_org`.`code` AS `agent_organization_code`,`c`.`parent_customer_id` AS `parent_customer_id`,`parent`.`name` AS `parent_customer_name`,`c`.`created_at` AS `created_at` from ((((`customers` `c` left join `users` `owner` on((`owner`.`id` = `c`.`owner_user_id`))) left join `users` `agent` on((`agent`.`id` = `c`.`agent_user_id`))) left join `organizations` `agent_org` on((`agent_org`.`id` = `c`.`agent_id`))) left join `customers` `parent` on((`parent`.`id` = `c`.`parent_customer_id`))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `organization_contacts_view`
+--
+
+/*!50001 DROP VIEW IF EXISTS `organization_contacts_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `organization_contacts_view` AS select `c`.`id` AS `customer_id`,`c`.`name` AS `organization_name`,`c`.`customer_source_type` AS `customer_source_type`,`c`.`owner_user_id` AS `owner_user_id`,`c`.`agent_user_id` AS `agent_user_id`,`c`.`agent_id` AS `agent_id`,count(`ct`.`id`) AS `contacts_count`,sum((case when (`ct`.`is_primary` = true) then 1 else 0 end)) AS `primary_contacts_count` from (`customers` `c` left join `contacts` `ct` on(((`ct`.`customer_id` = `c`.`id`) and (`ct`.`is_active` = true)))) where (`c`.`customer_type` = 'organization') group by `c`.`id`,`c`.`name`,`c`.`customer_source_type`,`c`.`owner_user_id`,`c`.`agent_user_id`,`c`.`agent_id` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2025-11-28 11:09:53
 
 -- 重新启用外键检查
 SET FOREIGN_KEY_CHECKS = 1;
