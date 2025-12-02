@@ -124,7 +124,7 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 
 
 # 注册路由
-from service_management.api.v1 import product_categories, products, service_types, customers, contacts, service_records
+from service_management.api.v1 import product_categories, products, service_types, customers, contacts, service_records, industries
 
 app.include_router(
     product_categories.router,
@@ -155,6 +155,11 @@ app.include_router(
     service_records.router,
     prefix="/api/service-management/service-records",
     tags=["服务记录"]
+)
+app.include_router(
+    industries.router,
+    prefix="/api/service-management/industries",
+    tags=["行业管理"]
 )
 
 
