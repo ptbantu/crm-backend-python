@@ -15,6 +15,9 @@ from common.models.customer_channel import CustomerChannel
 from common.models.contact import Contact
 from common.models.service_record import ServiceRecord
 from common.models.service_type import ServiceType
+# 导入 Order 和 OrderItem 以确保 SQLAlchemy 关系正确初始化
+from common.models.order import Order
+from common.models.order_item import OrderItem
 
 __all__ = [
     "ProductCategory",

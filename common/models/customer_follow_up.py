@@ -27,12 +27,11 @@ class CustomerFollowUp(Base):
     status_after = Column(String(50), nullable=True, index=True, comment="跟进后状态（可选）")
     
     # 审计字段
-    created_by = Column(String(36), nullable=True, comment="创建人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     
     # 关系
     customer = relationship("Customer", back_populates="follow_ups")
-    # users 表现在在本地定义，可以使用 relationship
     creator = relationship(User, foreign_keys=[created_by], backref="created_customer_follow_ups")
     
     # 检查约束

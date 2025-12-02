@@ -15,6 +15,15 @@ from common.exceptions import BusinessException
 from common.utils.logger import Logger, get_logger
 from service_management.config import settings
 
+# 导入所有模型以确保 SQLAlchemy 关系正确初始化
+# 必须在导入路由之前导入，以确保模型在 SQLAlchemy 注册表中
+from service_management.models import (
+    ProductCategory, Product, VendorProduct, ProductPrice,
+    ProductPriceHistory, VendorProductFinancial, Customer,
+    CustomerSource, CustomerChannel, Contact, ServiceRecord,
+    ServiceType, Order, OrderItem
+)
+
 # 初始化日志
 Logger.initialize(
     service_name="service-management-service",

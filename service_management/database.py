@@ -12,6 +12,15 @@ from common.database import (
     init_db as common_init_db,
 )
 
+# 导入所有模型以确保 SQLAlchemy 关系正确初始化
+# 必须在 init_database 之前导入，以确保模型在 SQLAlchemy 注册表中
+from service_management.models import (
+    ProductCategory, Product, VendorProduct, ProductPrice,
+    ProductPriceHistory, VendorProductFinancial, Customer,
+    CustomerSource, CustomerChannel, Contact, ServiceRecord,
+    ServiceType, Order, OrderItem
+)
+
 # 初始化数据库连接
 init_database(settings.DATABASE_URL, settings.DEBUG)
 

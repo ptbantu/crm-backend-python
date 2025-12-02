@@ -778,18 +778,18 @@ DROP TABLE IF EXISTS `menus`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `menus` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
-  `code` varchar(100) NOT NULL COMMENT 'èœå•ç¼–ç ï¼ˆå”¯ä¸€ï¼‰',
-  `name_zh` varchar(255) NOT NULL COMMENT 'èœå•åç§°ï¼ˆä¸­æ–‡ï¼‰',
-  `name_id` varchar(255) NOT NULL COMMENT 'èœå•åç§°ï¼ˆå°å°¼è¯­ï¼‰',
-  `description_zh` text COMMENT 'èœå•æè¿°ï¼ˆä¸­æ–‡ï¼‰',
-  `description_id` text COMMENT 'èœå•æè¿°ï¼ˆå°å°¼è¯­ï¼‰',
-  `parent_id` char(36) DEFAULT NULL COMMENT 'çˆ¶èœå•IDï¼ˆæ”¯æŒæ ‘å½¢ç»“æž„ï¼‰',
-  `path` varchar(255) DEFAULT NULL COMMENT 'è·¯ç”±è·¯å¾„ï¼ˆå¦‚ï¼š/usersï¼‰',
-  `component` varchar(255) DEFAULT NULL COMMENT 'å‰ç«¯ç»„ä»¶è·¯å¾„',
-  `icon` varchar(100) DEFAULT NULL COMMENT 'å›¾æ ‡åç§°',
-  `display_order` int DEFAULT '0' COMMENT 'æ˜¾ç¤ºé¡ºåº',
-  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
-  `is_visible` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'æ˜¯å¦å¯è§ï¼ˆæŽ§åˆ¶èœå•æ˜¾ç¤ºï¼‰',
+  `code` varchar(100) NOT NULL COMMENT '菜单编码（唯一）',
+  `name_zh` varchar(255) NOT NULL COMMENT '菜单名称（中文）',
+  `name_id` varchar(255) NOT NULL COMMENT '菜单名称（印尼语）',
+  `description_zh` text COMMENT '菜单描述（中文）',
+  `description_id` text COMMENT '菜单描述（印尼语）',
+  `parent_id` char(36) DEFAULT NULL COMMENT '父菜单ID（支持树形结构）',
+  `path` varchar(255) DEFAULT NULL COMMENT '路由路径（如：/users）',
+  `component` varchar(255) DEFAULT NULL COMMENT '前端组件路径',
+  `icon` varchar(100) DEFAULT NULL COMMENT '图标名称',
+  `display_order` int DEFAULT '0' COMMENT '显示顺序',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否激活',
+  `is_visible` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否可见（控制菜单显示）',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -1315,9 +1315,9 @@ DROP TABLE IF EXISTS `organization_domain_relations`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organization_domain_relations` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
-  `organization_id` char(36) NOT NULL COMMENT 'ç»„ç»‡ID',
-  `domain_id` char(36) NOT NULL COMMENT 'é¢†åŸŸID',
-  `is_primary` tinyint(1) DEFAULT '0' COMMENT 'æ˜¯å¦ä¸»è¦é¢†åŸŸ',
+  `organization_id` char(36) NOT NULL COMMENT '组织ID',
+  `domain_id` char(36) NOT NULL COMMENT '领域ID',
+  `is_primary` tinyint(1) DEFAULT '0' COMMENT '是否主要领域',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -1327,7 +1327,7 @@ CREATE TABLE `organization_domain_relations` (
   KEY `ix_org_domain_relations_primary` (`organization_id`,`is_primary`),
   CONSTRAINT `organization_domain_relations_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `organization_domain_relations_ibfk_2` FOREIGN KEY (`domain_id`) REFERENCES `organization_domains` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç»„ç»‡é¢†åŸŸå…³è”è¡¨';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='组织领域关联表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1339,11 +1339,11 @@ DROP TABLE IF EXISTS `organization_domains`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organization_domains` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
-  `code` varchar(100) NOT NULL COMMENT 'é¢†åŸŸä»£ç ï¼ˆå”¯ä¸€ï¼‰',
-  `name_zh` varchar(255) NOT NULL COMMENT 'é¢†åŸŸåç§°ï¼ˆä¸­æ–‡ï¼‰',
-  `name_id` varchar(255) NOT NULL COMMENT 'é¢†åŸŸåç§°ï¼ˆå°å°¼è¯­ï¼‰',
-  `description_zh` text COMMENT 'é¢†åŸŸæè¿°ï¼ˆä¸­æ–‡ï¼‰',
-  `description_id` text COMMENT 'é¢†åŸŸæè¿°ï¼ˆå°å°¼è¯­ï¼‰',
+  `code` varchar(100) NOT NULL COMMENT '领域代码（唯一）',
+  `name_zh` varchar(255) NOT NULL COMMENT '领域名称（中文）',
+  `name_id` varchar(255) NOT NULL COMMENT '领域名称（印尼语）',
+  `description_zh` text COMMENT '领域描述（中文）',
+  `description_id` text COMMENT '领域描述（印尼语）',
   `display_order` int DEFAULT '0' COMMENT 'æ˜¾ç¤ºé¡ºåº',
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1352,7 +1352,7 @@ CREATE TABLE `organization_domains` (
   UNIQUE KEY `code` (`code`),
   KEY `ix_organization_domains_code` (`code`),
   KEY `ix_organization_domains_active` (`is_active`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç»„ç»‡é¢†åŸŸè¡¨';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='组织领域表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1673,15 +1673,15 @@ DROP TABLE IF EXISTS `permissions`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `permissions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
-  `code` varchar(100) NOT NULL COMMENT 'æƒé™ç¼–ç ï¼ˆå”¯ä¸€ï¼Œå¦‚ï¼šuser.createï¼‰',
-  `name_zh` varchar(255) NOT NULL COMMENT 'æƒé™åç§°ï¼ˆä¸­æ–‡ï¼‰',
-  `name_id` varchar(255) NOT NULL COMMENT 'æƒé™åç§°ï¼ˆå°å°¼è¯­ï¼‰',
-  `description_zh` text COMMENT 'æƒé™æè¿°ï¼ˆä¸­æ–‡ï¼‰',
-  `description_id` text COMMENT 'æƒé™æè¿°ï¼ˆå°å°¼è¯­ï¼‰',
-  `resource_type` varchar(50) NOT NULL COMMENT 'èµ„æºç±»åž‹ï¼ˆå¦‚ï¼šuser, organization, orderç­‰ï¼‰',
-  `action` varchar(50) NOT NULL COMMENT 'æ“ä½œç±»åž‹ï¼ˆå¦‚ï¼šcreate, view, update, delete, listç­‰ï¼‰',
-  `display_order` int DEFAULT '0' COMMENT 'æ˜¾ç¤ºé¡ºåº',
-  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
+  `code` varchar(100) NOT NULL COMMENT '权限编码（唯一，如：user.create）',
+  `name_zh` varchar(255) NOT NULL COMMENT '权限名称（中文）',
+  `name_id` varchar(255) NOT NULL COMMENT '权限名称（印尼语）',
+  `description_zh` text COMMENT '权限描述（中文）',
+  `description_id` text COMMENT '权限描述（印尼语）',
+  `resource_type` varchar(50) NOT NULL COMMENT '资源类型（如：user, organization, order等）',
+  `action` varchar(50) NOT NULL COMMENT '操作类型（如：create, view, update, delete, list等）',
+  `display_order` int DEFAULT '0' COMMENT '显示顺序',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否激活',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
