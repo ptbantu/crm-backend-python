@@ -10,7 +10,7 @@ from service_management.schemas.product_category import (
     ProductCategoryListResponse,
 )
 from service_management.repositories.product_category_repository import ProductCategoryRepository
-from service_management.models.product_category import ProductCategory
+from common.models.product_category import ProductCategory
 from common.exceptions import BusinessException
 
 

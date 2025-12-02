@@ -22,10 +22,23 @@ from common.models.temporary_link import TemporaryLink
 # 注意：不导入 Notification，因为 order_workflow_service 有自己的版本（带外键约束）
 # 如果其他服务需要，可以直接从 common.models.notification 导入
 from common.models.customer_level import CustomerLevel
+from common.models.industry import Industry
 from common.models.follow_up_status import FollowUpStatus
 from common.models.lead_pool import LeadPool
 from common.models.product_dependency import ProductDependency
 from common.models.product import Product
+from common.models.product_category import ProductCategory
+from common.models.service_type import ServiceType
+from common.models.customer_follow_up import CustomerFollowUp
+from common.models.customer_note import CustomerNote
+from common.models.customer_source import CustomerSource
+from common.models.customer_channel import CustomerChannel
+from common.models.contact import Contact
+from common.models.service_record import ServiceRecord
+from common.models.vendor_product import VendorProduct
+from common.models.product_price import ProductPrice
+from common.models.product_price_history import ProductPriceHistory
+from common.models.vendor_product_financial import VendorProductFinancial
 # 注意：不导入 LeadFollowUp 和 LeadNote，因为 order_workflow_service 有自己的版本（带外键约束）
 # 如果其他服务需要，可以直接从 common.models.lead_follow_up 或 common.models.lead_note 导入
 
@@ -35,6 +48,8 @@ __all__ = [
     "User",
     "Organization",
     "Customer",
+    "CustomerSource",
+    "CustomerChannel",
     "OrderItem",
     "OrderComment",
     "OrderFile",
@@ -45,9 +60,20 @@ __all__ = [
     "CollectionTask",
     "TemporaryLink",
     "CustomerLevel",
+    "Industry",
     "FollowUpStatus",
     "LeadPool",
     "ProductDependency",
     "Product",
+    "ProductCategory",
+    "ServiceType",
+    "Contact",
+    "ServiceRecord",
+    "VendorProduct",
+    "ProductPrice",
+    "ProductPriceHistory",
+    "VendorProductFinancial",
+    "CustomerFollowUp",
+    "CustomerNote",
 ]
 

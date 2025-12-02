@@ -210,7 +210,8 @@ class SQLParser:
                     'organization_domains', 'organization_domain_relations'],
             'Permission': ['permissions', 'role_permissions', 'menus', 'menu_permissions'],
             'Product': ['product_categories', 'products'],
-            'Customer': ['customers', 'contacts', 'customer_sources', 'customer_channels', 'visa_records'],
+            'Customer': ['customers', 'contacts', 'customer_sources', 'customer_channels', 'visa_records', 
+                        'customer_follow_ups', 'customer_notes'],
             'Order': ['orders', 'order_statuses', 'order_assignments', 'order_stages', 
                      'deliverables', 'payments'],
             'Workflow': ['workflows', 'workflow_stages', 'workflow_transitions'],
@@ -327,6 +328,7 @@ def main():
         '08_service_records.sql',          # 服务记录表
         '09_customer_documents_and_payment_stages.sql',  # 客户文档和支付阶段表
         '10_enhance_customer_tables.sql',   # 客户表增强
+        'migrations/add_customer_follow_ups_and_notes.sql',  # 客户跟进记录和备注表
     ]
     
     # 转换为完整路径

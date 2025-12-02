@@ -11,7 +11,7 @@ from service_management.schemas.contact import (
 )
 from service_management.repositories.contact_repository import ContactRepository
 from service_management.repositories.customer_repository import CustomerRepository
-from service_management.models.contact import Contact
+from common.models.contact import Contact
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
 

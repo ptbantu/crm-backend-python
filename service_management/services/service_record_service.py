@@ -12,7 +12,7 @@ from service_management.schemas.service_record import (
 from service_management.repositories.service_record_repository import ServiceRecordRepository
 from service_management.repositories.customer_repository import CustomerRepository
 from service_management.repositories.contact_repository import ContactRepository
-from service_management.models.service_record import ServiceRecord
+from common.models.service_record import ServiceRecord
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
 

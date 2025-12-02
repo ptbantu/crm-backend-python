@@ -13,7 +13,7 @@ from service_management.repositories.product_repository import ProductRepository
 from service_management.repositories.product_category_repository import ProductCategoryRepository
 from service_management.repositories.vendor_product_repository import VendorProductRepository
 from service_management.repositories.service_type_repository import ServiceTypeRepository
-from service_management.models.product import Product
+from common.models.product import Product
 from common.exceptions import BusinessException
 
 

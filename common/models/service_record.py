@@ -123,5 +123,6 @@ class ServiceRecord(Base):
         CheckConstraint("quantity >= 0", name="chk_service_records_quantity_nonneg"),
         CheckConstraint("estimated_price >= 0 OR estimated_price IS NULL", name="chk_service_records_estimated_price"),
         CheckConstraint("final_price >= 0 OR final_price IS NULL", name="chk_service_records_final_price"),
+        {'extend_existing': True},
     )
 

@@ -46,5 +46,6 @@ class ProductPrice(Base):
         CheckConstraint("amount >= 0", name="chk_product_prices_amount_nonneg"),
         CheckConstraint("price_type IN ('cost', 'channel', 'direct', 'list')", name="chk_product_prices_price_type"),
         CheckConstraint("currency IN ('IDR', 'CNY', 'USD', 'EUR')", name="chk_product_prices_currency"),
+        {'extend_existing': True},
     )
 

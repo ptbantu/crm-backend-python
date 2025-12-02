@@ -136,8 +136,8 @@ class AnalyticsService:
         logger.info(f"[Service] {method_name} - 缓存未命中，开始查询数据库")
         try:
             # 导入模型（延迟导入避免循环依赖）
-            from service_management.models.customer import Customer
-            from service_management.models.service_record import ServiceRecord
+            from common.models.customer import Customer
+            from common.models.service_record import ServiceRecord
             
             # 客户总数
             total_query = select(func.count(Customer.id))
@@ -213,7 +213,7 @@ class AnalyticsService:
         
         try:
             try:
-                from service_management.models.customer import Customer
+                from common.models.customer import Customer
             except ImportError:
                 logger.warning("无法导入 service_management 模型，返回空数据")
                 return CustomerTrendResponse(period=period, data=[])
@@ -303,8 +303,8 @@ class AnalyticsService:
                 return cached_result
         
         try:
-            from service_management.models.service_record import ServiceRecord
-            from service_management.models.service_type import ServiceType
+            from common.models.service_record import ServiceRecord
+            from common.models.service_type import ServiceType
             
             # 构建查询条件
             conditions = []
@@ -425,7 +425,7 @@ class AnalyticsService:
             return cached_result
         
         try:
-            from service_management.models.service_record import ServiceRecord
+            from common.models.service_record import ServiceRecord
             
             # 总数
             total_query = select(func.count(ServiceRecord.id))

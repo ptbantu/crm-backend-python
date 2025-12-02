@@ -1,20 +1,40 @@
 """
 客户管理 API
 """
-from typing import Optional
-from fastapi import APIRouter, Depends, Query
+from typing import Optional, List
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.response import Result
 from common.utils.logger import get_logger
+from common.auth import (
+    get_current_user_id_from_request as get_user_id_from_token,
+    require_auth
+)
+from service_management.config import settings
 from service_management.schemas.customer import (
     CustomerResponse,
     CustomerCreateRequest,
     CustomerUpdateRequest,
     CustomerListResponse,
 )
+from service_management.schemas.customer_follow_up import (
+    CustomerFollowUpCreateRequest,
+    CustomerFollowUpResponse,
+)
+from service_management.schemas.customer_note import (
+    CustomerNoteCreateRequest,
+    CustomerNoteResponse,
+)
 from service_management.services.customer_service import CustomerService
-from service_management.dependencies import get_db
+from service_management.services.customer_follow_up_service import CustomerFollowUpService
+from service_management.services.customer_note_service import CustomerNoteService
+from service_management.dependencies import (
+    get_db,
+    get_current_user_id,
+    get_current_organization_id,
+    get_current_user_roles
+)
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -23,13 +43,27 @@ router = APIRouter()
 @router.post("", response_model=Result[CustomerResponse])
 async def create_customer(
     request: CustomerCreateRequest,
+    request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """创建客户"""
     logger.info(f"API: 创建客户请求: name={request.name}, code={request.code}, type={request.customer_type}")
     try:
+        # 获取用户和组织信息
+        organization_id = get_current_organization_id(request_obj)
+        if not organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无法获取组织信息"
+            )
+        current_user_id = get_current_user_id(request_obj)
+        
         service = CustomerService(db)
-        customer = await service.create_customer(request)
+        customer = await service.create_customer(
+            request=request,
+            organization_id=organization_id,
+            current_user_id=current_user_id
+        )
         logger.info(f"API: 客户创建成功: id={customer.id}, name={customer.name}")
         return Result.success(data=customer, message="客户创建成功")
     except Exception as e:
@@ -91,6 +125,7 @@ async def delete_customer(
 
 @router.get("", response_model=Result[CustomerListResponse])
 async def get_customer_list(
+    request_obj: Request,
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     name: Optional[str] = None,
@@ -105,11 +140,24 @@ async def get_customer_list(
     is_locked: Optional[bool] = None,
     db: AsyncSession = Depends(get_db)
 ):
-    """分页查询客户列表"""
+    """分页查询客户列表（带权限过滤）"""
     logger.debug(f"API: 查询客户列表: page={page}, size={size}, name={name}, code={code}, type={customer_type}")
     try:
+        # 获取用户和组织信息
+        organization_id = get_current_organization_id(request_obj)
+        if not organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无法获取组织信息"
+            )
+        current_user_id = get_current_user_id(request_obj)
+        current_user_roles = get_current_user_roles(request_obj)
+        
         service = CustomerService(db)
         result = await service.get_customer_list(
+            organization_id=organization_id,
+            current_user_id=current_user_id,
+            current_user_roles=current_user_roles,
             page=page,
             size=size,
             name=name,
@@ -127,5 +175,97 @@ async def get_customer_list(
         return Result.success(data=result)
     except Exception as e:
         logger.error(f"API: 查询客户列表失败: error={str(e)}", exc_info=True)
+        raise
+
+
+@router.get("/{customer_id}/follow-ups", response_model=Result[List[CustomerFollowUpResponse]])
+async def get_customer_follow_ups(
+    customer_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """获取客户跟进记录列表"""
+    logger.debug(f"API: 查询客户跟进记录: customer_id={customer_id}")
+    try:
+        service = CustomerFollowUpService(db)
+        result = await service.get_follow_ups_by_customer_id(customer_id)
+        logger.debug(f"API: 客户跟进记录查询成功: customer_id={customer_id}, count={len(result)}")
+        return Result.success(data=result)
+    except Exception as e:
+        logger.error(f"API: 查询客户跟进记录失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        raise
+
+
+@router.post("/{customer_id}/follow-ups", response_model=Result[CustomerFollowUpResponse], status_code=201)
+async def create_customer_follow_up(
+    customer_id: str,
+    request: CustomerFollowUpCreateRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """创建客户跟进记录"""
+    logger.info(f"API: 创建客户跟进记录: customer_id={customer_id}")
+    try:
+        # 从 JWT token 解析用户ID
+        user_id = get_user_id_from_token(request_obj, settings)
+        if not user_id:
+            logger.warning(f"Service Management: JWT 验证失败，路径: {request_obj.url.path}")
+            from fastapi import HTTPException, status as http_status
+            raise HTTPException(
+                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                detail="需要认证，请提供有效的 JWT token"
+            )
+        
+        service = CustomerFollowUpService(db)
+        result = await service.create_follow_up(customer_id, request, user_id)
+        logger.info(f"API: 客户跟进记录创建成功: customer_id={customer_id}, follow_up_id={result.id}")
+        return Result.success(data=result, message="跟进记录创建成功")
+    except Exception as e:
+        logger.error(f"API: 创建客户跟进记录失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        raise
+
+
+@router.get("/{customer_id}/notes", response_model=Result[List[CustomerNoteResponse]])
+async def get_customer_notes(
+    customer_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """获取客户备注列表"""
+    logger.debug(f"API: 查询客户备注: customer_id={customer_id}")
+    try:
+        service = CustomerNoteService(db)
+        result = await service.get_notes_by_customer_id(customer_id)
+        logger.debug(f"API: 客户备注查询成功: customer_id={customer_id}, count={len(result)}")
+        return Result.success(data=result)
+    except Exception as e:
+        logger.error(f"API: 查询客户备注失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        raise
+
+
+@router.post("/{customer_id}/notes", response_model=Result[CustomerNoteResponse], status_code=201)
+async def create_customer_note(
+    customer_id: str,
+    request: CustomerNoteCreateRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """创建客户备注"""
+    logger.info(f"API: 创建客户备注: customer_id={customer_id}")
+    try:
+        # 从 JWT token 解析用户ID
+        user_id = get_user_id_from_token(request_obj, settings)
+        if not user_id:
+            logger.warning(f"Service Management: JWT 验证失败，路径: {request_obj.url.path}")
+            from fastapi import HTTPException, status as http_status
+            raise HTTPException(
+                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                detail="需要认证，请提供有效的 JWT token"
+            )
+        
+        service = CustomerNoteService(db)
+        result = await service.create_note(customer_id, request, user_id)
+        logger.info(f"API: 客户备注创建成功: customer_id={customer_id}, note_id={result.id}")
+        return Result.success(data=result, message="备注创建成功")
+    except Exception as e:
+        logger.error(f"API: 创建客户备注失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
         raise
 

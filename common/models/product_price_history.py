@@ -31,4 +31,9 @@ class ProductPriceHistory(Base):
     
     # 时间戳
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    
+    # 检查约束
+    __table_args__ = (
+        {'extend_existing': True},
+    )
 

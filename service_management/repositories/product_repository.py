@@ -5,9 +5,9 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from sqlalchemy.orm import selectinload
-from service_management.models.product import Product
-from service_management.models.service_type import ServiceType
-from service_management.models.product_category import ProductCategory
+from common.models.product import Product
+from common.models.service_type import ServiceType
+from common.models.product_category import ProductCategory
 from common.utils.repository import BaseRepository
 
 

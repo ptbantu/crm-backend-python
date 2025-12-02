@@ -49,4 +49,9 @@ class VendorProduct(Base):
     updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    # 检查约束
+    __table_args__ = (
+        {'extend_existing': True},
+    )
 

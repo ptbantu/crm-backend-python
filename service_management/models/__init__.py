@@ -1,15 +1,20 @@
 """
 Service Management Models
+所有模型都从 common.models 导入，避免重复定义
 """
-from .product_category import ProductCategory
-from .product import Product
-from .vendor_product import VendorProduct
-from .product_price import ProductPrice
-from .product_price_history import ProductPriceHistory
-from .vendor_product_financial import VendorProductFinancial
-from .customer import Customer, CustomerSource, CustomerChannel
-from .contact import Contact
-from .service_record import ServiceRecord
+# 从 common.models 导入所有模型
+from common.models.product_category import ProductCategory
+from common.models.product import Product
+from common.models.vendor_product import VendorProduct
+from common.models.product_price import ProductPrice
+from common.models.product_price_history import ProductPriceHistory
+from common.models.vendor_product_financial import VendorProductFinancial
+from common.models.customer import Customer
+from common.models.customer_source import CustomerSource
+from common.models.customer_channel import CustomerChannel
+from common.models.contact import Contact
+from common.models.service_record import ServiceRecord
+from common.models.service_type import ServiceType
 
 __all__ = [
     "ProductCategory",
@@ -23,5 +28,6 @@ __all__ = [
     "CustomerChannel",
     "Contact",
     "ServiceRecord",
+    "ServiceType",
 ]
 

@@ -1,8 +1,9 @@
 """
 客户服务
 """
-from typing import List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from service_management.schemas.customer import (
     CustomerCreateRequest,
     CustomerUpdateRequest,
@@ -10,9 +11,12 @@ from service_management.schemas.customer import (
     CustomerListResponse,
 )
 from service_management.repositories.customer_repository import CustomerRepository
-from service_management.models.customer import Customer
+from common.models.customer import Customer
+from common.models.customer_level import CustomerLevel
+from common.models.industry import Industry
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
+from service_management.utils.customer_code_generator import generate_customer_code
 
 logger = get_logger(__name__)
 
@@ -24,16 +28,31 @@ class CustomerService:
         self.db = db
         self.customer_repo = CustomerRepository(db)
     
-    async def create_customer(self, request: CustomerCreateRequest) -> CustomerResponse:
+    async def create_customer(
+        self, 
+        request: CustomerCreateRequest,
+        organization_id: str,
+        current_user_id: Optional[str] = None
+    ) -> CustomerResponse:
         """创建客户"""
         logger.info(f"开始创建客户: name={request.name}, code={request.code}, type={request.customer_type}")
         
+        # 如果没有提供编码，自动生成
+        code = request.code
+        if not code:
+            code = await generate_customer_code(
+                db=self.db,
+                customer_type=request.customer_type,
+                organization_id=organization_id
+            )
+            logger.info(f"自动生成客户编码: code={code}")
+        
         # 检查编码是否已存在
-        if request.code:
-            existing = await self.customer_repo.get_by_code(request.code)
+        if code:
+            existing = await self.customer_repo.get_by_code(code)
             if existing:
-                logger.warning(f"客户编码已存在: code={request.code}")
-                raise BusinessException(detail=f"客户编码 {request.code} 已存在")
+                logger.warning(f"客户编码已存在: code={code}")
+                raise BusinessException(detail=f"客户编码 {code} 已存在")
         
         # 如果指定了父客户，验证父客户是否存在
         if request.parent_customer_id:
@@ -46,22 +65,23 @@ class CustomerService:
         # 创建客户
         customer = Customer(
             name=request.name,
-            code=request.code,
+            code=code,
             customer_type=request.customer_type,
             customer_source_type=request.customer_source_type,
             parent_customer_id=request.parent_customer_id,
-            owner_user_id=request.owner_user_id,
+            owner_user_id=request.owner_user_id or current_user_id,  # 如果没有指定owner，使用当前用户
             agent_user_id=request.agent_user_id,
             agent_id=request.agent_id,
             source_id=request.source_id,
             channel_id=request.channel_id,
             level=request.level,
-            industry=request.industry,
+            industry_id=request.industry_id,
             description=request.description,
             tags=request.tags or [],
             is_locked=request.is_locked,
             id_external=request.id_external,
             customer_requirements=request.customer_requirements,
+            organization_id=organization_id,  # 设置组织ID
         )
         customer = await self.customer_repo.create(customer)
         logger.info(f"客户创建成功: id={customer.id}, name={customer.name}, code={customer.code}")
@@ -130,8 +150,8 @@ class CustomerService:
             customer.channel_id = request.channel_id
         if request.level is not None:
             customer.level = request.level
-        if request.industry is not None:
-            customer.industry = request.industry
+        if request.industry_id is not None:
+            customer.industry_id = request.industry_id
         if request.description is not None:
             customer.description = request.description
         if request.tags is not None:
@@ -162,6 +182,9 @@ class CustomerService:
     
     async def get_customer_list(
         self,
+        organization_id: str,
+        current_user_id: Optional[str] = None,
+        current_user_roles: Optional[List[str]] = None,
         page: int = 1,
         size: int = 10,
         name: str = None,
@@ -175,12 +198,34 @@ class CustomerService:
         channel_id: str = None,
         is_locked: bool = None,
     ) -> CustomerListResponse:
-        """分页查询客户列表"""
+        """分页查询客户列表（带权限过滤）"""
         logger.debug(
             f"查询客户列表: page={page}, size={size}, name={name}, code={code}, "
-            f"customer_type={customer_type}, customer_source_type={customer_source_type}"
+            f"customer_type={customer_type}, customer_source_type={customer_source_type}, "
+            f"organization_id={organization_id}, current_user_id={current_user_id}, roles={current_user_roles}"
         )
+        
+        # 权限过滤逻辑
+        # SALES角色：只能看到自己负责的客户
+        # ADMIN角色：可以看到组织内所有客户
+        # 如果前端传递了owner_user_id，则进一步过滤
+        effective_owner_user_id = owner_user_id
+        if current_user_roles and 'ADMIN' not in current_user_roles:
+            # 非ADMIN角色，只能看自己的客户
+            if current_user_id:
+                effective_owner_user_id = current_user_id
+            else:
+                # 如果没有用户ID，返回空列表
+                logger.warning(f"非ADMIN用户但缺少current_user_id，返回空列表")
+                return CustomerListResponse(
+                    items=[],
+                    total=0,
+                    page=page,
+                    size=size,
+                )
+        
         items, total = await self.customer_repo.get_list(
+            organization_id=organization_id,  # 必须包含组织ID过滤
             page=page,
             size=size,
             name=name,
@@ -188,7 +233,7 @@ class CustomerService:
             customer_type=customer_type,
             customer_source_type=customer_source_type,
             parent_customer_id=parent_customer_id,
-            owner_user_id=owner_user_id,
+            owner_user_id=effective_owner_user_id,  # 使用有效的owner_user_id
             agent_id=agent_id,
             source_id=source_id,
             channel_id=channel_id,
@@ -217,6 +262,28 @@ class CustomerService:
             if parent:
                 parent_customer_name = parent.name
         
+        # 获取客户等级双语名称
+        level_name_zh = None
+        level_name_id = None
+        if customer.level:
+            stmt = select(CustomerLevel).where(CustomerLevel.code == customer.level)
+            result = await self.db.execute(stmt)
+            level = result.scalar_one_or_none()
+            if level:
+                level_name_zh = level.name_zh
+                level_name_id = level.name_id
+        
+        # 获取行业双语名称
+        industry_name_zh = None
+        industry_name_id = None
+        if customer.industry_id:
+            stmt = select(Industry).where(Industry.id == customer.industry_id)
+            result = await self.db.execute(stmt)
+            industry = result.scalar_one_or_none()
+            if industry:
+                industry_name_zh = industry.name_zh
+                industry_name_id = industry.name_id
+        
         # TODO: 获取 owner_user_name, agent_name, source_name, channel_name
         # 这些需要从其他表查询，暂时设为 None
         
@@ -238,12 +305,18 @@ class CustomerService:
             channel_id=customer.channel_id,
             channel_name=customer.channel_name,
             level=customer.level,
-            industry=customer.industry,
+            level_name_zh=level_name_zh,
+            level_name_id=level_name_id,
+            industry_id=customer.industry_id,
+            industry_name_zh=industry_name_zh,
+            industry_name_id=industry_name_id,
             description=customer.description,
             tags=customer.tags or [],
             is_locked=customer.is_locked,
             customer_requirements=customer.customer_requirements,
             created_at=customer.created_at,
             updated_at=customer.updated_at,
+            last_follow_up_at=customer.last_follow_up_at if hasattr(customer, 'last_follow_up_at') else None,
+            next_follow_up_at=customer.next_follow_up_at if hasattr(customer, 'next_follow_up_at') else None,
         )
 

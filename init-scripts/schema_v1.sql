@@ -1,25 +1,4 @@
--- ============================================================
--- BANTU CRM 数据库 Schema v1
--- ============================================================
--- 优化版本，重点关注三个核心模块：
--- 1. 用户登录管理模块
--- 2. 销售-线索管理模块
--- 3. 服务管理模块
--- 
--- 主要优化：
--- - leads.organization_id 必须为 NOT NULL（数据隔离）
--- - 创建线索时自动从用户的 organization_employees 表获取组织ID
--- - 优化索引（特别是组织ID和状态字段）
--- - 统一审计字段（created_at, updated_at, created_by, updated_by）
--- 
--- 导出时间: 2025-11-28 06:10:20
--- ============================================================
-
-SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-
--- 禁用外键检查（创建表时）
-SET FOREIGN_KEY_CHECKS = 0;
-
+mysqldump: [Warning] Using a password on the command line interface can be insecure.
 -- MySQL dump 10.13  Distrib 8.0.44, for Linux (x86_64)
 --
 -- Host: localhost    Database: bantu_crm
@@ -41,6 +20,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- Table structure for table `agent_extensions`
 --
 
+DROP TABLE IF EXISTS `agent_extensions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `agent_extensions` (
@@ -53,11 +33,29 @@ CREATE TABLE `agent_extensions` (
   CONSTRAINT `agent_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `agent_extensions_updated_at` BEFORE UPDATE ON `agent_extensions` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `collection_tasks`
 --
 
+DROP TABLE IF EXISTS `collection_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `collection_tasks` (
@@ -95,14 +93,15 @@ CREATE TABLE `collection_tasks` (
 -- Table structure for table `contacts`
 --
 
+DROP TABLE IF EXISTS `contacts`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `contacts` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `customer_id` char(36) NOT NULL,
-  `first_name` varchar(255) NOT NULL,
-  `last_name` varchar(255) NOT NULL,
-  `full_name` varchar(510) GENERATED ALWAYS AS (concat(`first_name`,_utf8mb4' ',`last_name`)) STORED,
+  `organization_id` char(36) NOT NULL COMMENT 'ç»„ç»‡IDï¼ˆæ•°æ®éš”ç¦»ï¼‰',
+  `owner_user_id` char(36) DEFAULT NULL COMMENT 'è´Ÿè´£äººIDï¼ˆæ•°æ®éš”ç¦»ï¼‰',
+  `name` varchar(255) NOT NULL COMMENT 'è”ç³»äººå§“å',
   `email` varchar(255) DEFAULT NULL,
   `phone` varchar(50) DEFAULT NULL,
   `mobile` varchar(50) DEFAULT NULL,
@@ -132,16 +131,38 @@ CREATE TABLE `contacts` (
   KEY `ix_contacts_email` (`email`),
   KEY `ix_contacts_phone` (`phone`),
   KEY `ix_contacts_primary` (`customer_id`,`is_primary`),
+  KEY `ix_contacts_owner` (`owner_user_id`),
+  KEY `ix_contacts_organization` (`organization_id`),
   CONSTRAINT `contacts_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
   CONSTRAINT `contacts_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `contacts_ibfk_3` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+  CONSTRAINT `contacts_ibfk_3` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `contacts_ibfk_4` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `contacts_ibfk_5` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `contacts_updated_at` BEFORE UPDATE ON `contacts` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `customer_channels`
 --
 
+DROP TABLE IF EXISTS `customer_channels`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `customer_channels` (
@@ -159,11 +180,29 @@ CREATE TABLE `customer_channels` (
   KEY `ix_customer_channels_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `customer_channels_updated_at` BEFORE UPDATE ON `customer_channels` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `customer_documents`
 --
 
+DROP TABLE IF EXISTS `customer_documents`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `customer_documents` (
@@ -230,9 +269,39 @@ CREATE TABLE `customer_documents` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `customer_follow_ups`
+--
+
+DROP TABLE IF EXISTS `customer_follow_ups`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customer_follow_ups` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `customer_id` char(36) NOT NULL COMMENT '客户ID',
+  `follow_up_type` varchar(50) NOT NULL COMMENT '跟进类型：call(电话), meeting(会议), email(邮件), note(备注), visit(拜访), wechat(微信), whatsapp(WhatsApp)',
+  `content` text COMMENT '跟进内容',
+  `follow_up_date` datetime NOT NULL COMMENT '跟进日期',
+  `status_before` varchar(50) DEFAULT NULL COMMENT '跟进前状态（可选）',
+  `status_after` varchar(50) DEFAULT NULL COMMENT '跟进后状态（可选）',
+  `created_by` char(36) DEFAULT NULL COMMENT '创建人ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `created_by` (`created_by`),
+  KEY `ix_customer_follow_ups_customer` (`customer_id`),
+  KEY `ix_customer_follow_ups_date` (`follow_up_date` DESC),
+  KEY `ix_customer_follow_ups_type` (`follow_up_type`),
+  KEY `ix_customer_follow_ups_created_at` (`created_at` DESC),
+  CONSTRAINT `customer_follow_ups_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `customer_follow_ups_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_customer_follow_ups_type` CHECK ((`follow_up_type` in (_utf8mb4'call',_utf8mb4'meeting',_utf8mb4'email',_utf8mb4'note',_utf8mb4'visit',_utf8mb4'wechat',_utf8mb4'whatsapp')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户跟进记录表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `customer_levels`
 --
 
+DROP TABLE IF EXISTS `customer_levels`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `customer_levels` (
@@ -255,9 +324,38 @@ CREATE TABLE `customer_levels` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `customer_notes`
+--
+
+DROP TABLE IF EXISTS `customer_notes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `customer_notes` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `customer_id` char(36) NOT NULL COMMENT '客户ID',
+  `note_type` varchar(50) NOT NULL COMMENT '备注类型：comment(评论), reminder(提醒), task(任务), internal(内部), customer_feedback(客户反馈)',
+  `content` text NOT NULL COMMENT '备注内容',
+  `is_important` tinyint(1) DEFAULT '0' COMMENT '是否重要',
+  `created_by` char(36) DEFAULT NULL COMMENT '创建人ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `created_by` (`created_by`),
+  KEY `ix_customer_notes_customer` (`customer_id`),
+  KEY `ix_customer_notes_type` (`note_type`),
+  KEY `ix_customer_notes_important` (`is_important`),
+  KEY `ix_customer_notes_created_at` (`created_at` DESC),
+  CONSTRAINT `customer_notes_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `customer_notes_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_customer_notes_type` CHECK ((`note_type` in (_utf8mb4'comment',_utf8mb4'reminder',_utf8mb4'task',_utf8mb4'internal',_utf8mb4'customer_feedback')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户备注表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Temporary view structure for view `customer_ownership_view`
 --
 
+DROP TABLE IF EXISTS `customer_ownership_view`;
+/*!50001 DROP VIEW IF EXISTS `customer_ownership_view`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
 /*!50001 CREATE VIEW `customer_ownership_view` AS SELECT 
@@ -284,6 +382,7 @@ SET character_set_client = @saved_cs_client;
 -- Table structure for table `customer_sources`
 --
 
+DROP TABLE IF EXISTS `customer_sources`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `customer_sources` (
@@ -301,11 +400,29 @@ CREATE TABLE `customer_sources` (
   KEY `ix_customer_sources_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `customer_sources_updated_at` BEFORE UPDATE ON `customer_sources` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `customers`
 --
 
+DROP TABLE IF EXISTS `customers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `customers` (
@@ -345,8 +462,11 @@ CREATE TABLE `customers` (
   `owner_user_id` char(36) DEFAULT NULL,
   `agent_user_id` char(36) DEFAULT NULL,
   `agent_id` char(36) DEFAULT NULL,
+  `organization_id` char(36) NOT NULL COMMENT 'ç»„ç»‡IDï¼ˆæ•°æ®éš”ç¦»ï¼‰',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `last_follow_up_at` datetime DEFAULT NULL COMMENT '最后跟进时间',
+  `next_follow_up_at` datetime DEFAULT NULL COMMENT '下次跟进时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_external` (`id_external`),
   UNIQUE KEY `ux_customers_code` (`code`),
@@ -359,21 +479,43 @@ CREATE TABLE `customers` (
   KEY `ix_customers_agent_id` (`agent_id`),
   KEY `ix_customers_parent` (`parent_customer_id`),
   KEY `ix_customers_source` (`customer_source_type`),
+  KEY `ix_customers_organization` (`organization_id`),
+  KEY `ix_customers_last_follow_up` (`last_follow_up_at`),
+  KEY `ix_customers_next_follow_up` (`next_follow_up_at`),
   CONSTRAINT `customers_ibfk_1` FOREIGN KEY (`parent_customer_id`) REFERENCES `customers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_2` FOREIGN KEY (`source_id`) REFERENCES `customer_sources` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_3` FOREIGN KEY (`channel_id`) REFERENCES `customer_channels` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_4` FOREIGN KEY (`owner_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_5` FOREIGN KEY (`agent_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_6` FOREIGN KEY (`agent_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `customers_ibfk_7` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `chk_customer_source_type` CHECK ((`customer_source_type` in (_utf8mb4'own',_utf8mb4'agent'))),
   CONSTRAINT `chk_customer_type` CHECK ((`customer_type` in (_utf8mb4'individual',_utf8mb4'organization')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `customers_updated_at` BEFORE UPDATE ON `customers` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `deliverables`
 --
 
+DROP TABLE IF EXISTS `deliverables`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `deliverables` (
@@ -405,11 +547,29 @@ CREATE TABLE `deliverables` (
   CONSTRAINT `chk_deliverables_file_size_nonneg` CHECK ((coalesce(`file_size`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `deliverables_updated_at` BEFORE UPDATE ON `deliverables` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `follow_up_statuses`
 --
 
+DROP TABLE IF EXISTS `follow_up_statuses`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `follow_up_statuses` (
@@ -432,9 +592,36 @@ CREATE TABLE `follow_up_statuses` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `industries`
+--
+
+DROP TABLE IF EXISTS `industries`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `industries` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `code` varchar(100) NOT NULL COMMENT 'è¡Œä¸šä»£ç ',
+  `name_zh` varchar(255) NOT NULL COMMENT 'è¡Œä¸šåç§°ï¼ˆä¸­æ–‡ï¼‰',
+  `name_id` varchar(255) NOT NULL COMMENT 'è¡Œä¸šåç§°ï¼ˆå°å°¼è¯­ï¼‰',
+  `sort_order` int NOT NULL DEFAULT '0' COMMENT 'æŽ’åºé¡ºåº',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
+  `description_zh` text COMMENT 'æè¿°ï¼ˆä¸­æ–‡ï¼‰',
+  `description_id` text COMMENT 'æè¿°ï¼ˆå°å°¼è¯­ï¼‰',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'åˆ›å»ºæ—¶é—´',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'æ›´æ–°æ—¶é—´',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`),
+  KEY `idx_industries_code` (`code`),
+  KEY `idx_industries_active` (`is_active`),
+  KEY `idx_industries_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='è¡Œä¸šé…ç½®è¡¨';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `lead_follow_ups`
 --
 
+DROP TABLE IF EXISTS `lead_follow_ups`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lead_follow_ups` (
@@ -443,6 +630,8 @@ CREATE TABLE `lead_follow_ups` (
   `follow_up_type` varchar(50) NOT NULL COMMENT '跟进类型：call(电话), meeting(会议), email(邮件), note(备注)',
   `content` text COMMENT '跟进内容',
   `follow_up_date` datetime NOT NULL COMMENT '跟进日期',
+  `status_before` varchar(50) DEFAULT NULL COMMENT 'è·Ÿè¿›å‰çº¿ç´¢çŠ¶æ€',
+  `status_after` varchar(50) DEFAULT NULL COMMENT 'è·Ÿè¿›åŽçº¿ç´¢çŠ¶æ€',
   `created_by` char(36) DEFAULT NULL COMMENT '创建人ID',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`),
@@ -450,8 +639,12 @@ CREATE TABLE `lead_follow_ups` (
   KEY `ix_lead_follow_ups_lead` (`lead_id`),
   KEY `ix_lead_follow_ups_date` (`follow_up_date` DESC),
   KEY `ix_lead_follow_ups_type` (`follow_up_type`),
+  KEY `ix_lead_follow_ups_status_before` (`status_before`),
+  KEY `ix_lead_follow_ups_status_after` (`status_after`),
   CONSTRAINT `lead_follow_ups_ibfk_1` FOREIGN KEY (`lead_id`) REFERENCES `leads` (`id`) ON DELETE CASCADE,
   CONSTRAINT `lead_follow_ups_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_lead_follow_ups_status_after` CHECK ((`status_after` in (_latin1'new',_latin1'contacted',_latin1'qualified',_latin1'converted',_latin1'lost'))),
+  CONSTRAINT `chk_lead_follow_ups_status_before` CHECK ((`status_before` in (_latin1'new',_latin1'contacted',_latin1'qualified',_latin1'converted',_latin1'lost'))),
   CONSTRAINT `chk_lead_follow_ups_type` CHECK ((`follow_up_type` in (_utf8mb4'call',_utf8mb4'meeting',_utf8mb4'email',_utf8mb4'note')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='线索跟进记录表';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -460,6 +653,7 @@ CREATE TABLE `lead_follow_ups` (
 -- Table structure for table `lead_notes`
 --
 
+DROP TABLE IF EXISTS `lead_notes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lead_notes` (
@@ -486,6 +680,7 @@ CREATE TABLE `lead_notes` (
 -- Table structure for table `lead_pools`
 --
 
+DROP TABLE IF EXISTS `lead_pools`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `lead_pools` (
@@ -506,6 +701,7 @@ CREATE TABLE `lead_pools` (
 -- Table structure for table `leads`
 --
 
+DROP TABLE IF EXISTS `leads`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `leads` (
@@ -558,6 +754,7 @@ CREATE TABLE `leads` (
 -- Table structure for table `menu_permissions`
 --
 
+DROP TABLE IF EXISTS `menu_permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `menu_permissions` (
@@ -576,6 +773,7 @@ CREATE TABLE `menu_permissions` (
 -- Table structure for table `menus`
 --
 
+DROP TABLE IF EXISTS `menus`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `menus` (
@@ -609,6 +807,7 @@ CREATE TABLE `menus` (
 -- Table structure for table `notifications`
 --
 
+DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `notifications` (
@@ -638,6 +837,7 @@ CREATE TABLE `notifications` (
 -- Table structure for table `opportunities`
 --
 
+DROP TABLE IF EXISTS `opportunities`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `opportunities` (
@@ -683,6 +883,7 @@ CREATE TABLE `opportunities` (
 -- Table structure for table `opportunity_payment_stages`
 --
 
+DROP TABLE IF EXISTS `opportunity_payment_stages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `opportunity_payment_stages` (
@@ -713,6 +914,7 @@ CREATE TABLE `opportunity_payment_stages` (
 -- Table structure for table `opportunity_products`
 --
 
+DROP TABLE IF EXISTS `opportunity_products`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `opportunity_products` (
@@ -748,6 +950,7 @@ CREATE TABLE `opportunity_products` (
 -- Table structure for table `order_assignments`
 --
 
+DROP TABLE IF EXISTS `order_assignments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_assignments` (
@@ -785,6 +988,7 @@ CREATE TABLE `order_assignments` (
 -- Table structure for table `order_comments`
 --
 
+DROP TABLE IF EXISTS `order_comments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_comments` (
@@ -818,6 +1022,7 @@ CREATE TABLE `order_comments` (
 -- Table structure for table `order_files`
 --
 
+DROP TABLE IF EXISTS `order_files`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_files` (
@@ -863,6 +1068,7 @@ CREATE TABLE `order_files` (
 -- Table structure for table `order_items`
 --
 
+DROP TABLE IF EXISTS `order_items`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_items` (
@@ -909,6 +1115,7 @@ CREATE TABLE `order_items` (
 -- Table structure for table `order_stages`
 --
 
+DROP TABLE IF EXISTS `order_stages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_stages` (
@@ -940,11 +1147,29 @@ CREATE TABLE `order_stages` (
   CONSTRAINT `chk_order_stages_progress_range` CHECK (((`progress_percent` >= 0) and (`progress_percent` <= 100)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `order_stages_updated_at` BEFORE UPDATE ON `order_stages` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `order_statuses`
 --
 
+DROP TABLE IF EXISTS `order_statuses`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `order_statuses` (
@@ -960,11 +1185,29 @@ CREATE TABLE `order_statuses` (
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `order_statuses_updated_at` BEFORE UPDATE ON `order_statuses` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `orders`
 --
 
+DROP TABLE IF EXISTS `orders`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `orders` (
@@ -1026,11 +1269,30 @@ CREATE TABLE `orders` (
   CONSTRAINT `chk_orders_amounts_nonneg` CHECK (((coalesce(`quantity`,0) >= 0) and (coalesce(`unit_price`,0) >= 0) and (coalesce(`total_amount`,0) >= 0) and (coalesce(`discount_amount`,0) >= 0) and (coalesce(`final_amount`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `orders_updated_at` BEFORE UPDATE ON `orders` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Temporary view structure for view `organization_contacts_view`
 --
 
+DROP TABLE IF EXISTS `organization_contacts_view`;
+/*!50001 DROP VIEW IF EXISTS `organization_contacts_view`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
 /*!50001 CREATE VIEW `organization_contacts_view` AS SELECT 
@@ -1048,6 +1310,7 @@ SET character_set_client = @saved_cs_client;
 -- Table structure for table `organization_domain_relations`
 --
 
+DROP TABLE IF EXISTS `organization_domain_relations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organization_domain_relations` (
@@ -1071,6 +1334,7 @@ CREATE TABLE `organization_domain_relations` (
 -- Table structure for table `organization_domains`
 --
 
+DROP TABLE IF EXISTS `organization_domains`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organization_domains` (
@@ -1095,6 +1359,7 @@ CREATE TABLE `organization_domains` (
 -- Table structure for table `organization_employees`
 --
 
+DROP TABLE IF EXISTS `organization_employees`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organization_employees` (
@@ -1138,11 +1403,29 @@ CREATE TABLE `organization_employees` (
   CONSTRAINT `organization_employees_ibfk_4` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `organization_employees_updated_at` BEFORE UPDATE ON `organization_employees` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `organizations`
 --
 
+DROP TABLE IF EXISTS `organizations`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organizations` (
@@ -1239,11 +1522,29 @@ CREATE TABLE `organizations` (
   CONSTRAINT `chk_organizations_type` CHECK ((`organization_type` in (_utf8mb4'internal',_utf8mb4'vendor',_utf8mb4'agent')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `organizations_updated_at` BEFORE UPDATE ON `organizations` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `payment_stages`
 --
 
+DROP TABLE IF EXISTS `payment_stages`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `payment_stages` (
@@ -1308,6 +1609,7 @@ CREATE TABLE `payment_stages` (
 -- Table structure for table `payments`
 --
 
+DROP TABLE IF EXISTS `payments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `payments` (
@@ -1344,11 +1646,29 @@ CREATE TABLE `payments` (
   CONSTRAINT `payments_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `payments_updated_at` BEFORE UPDATE ON `payments` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `permissions`
 --
 
+DROP TABLE IF EXISTS `permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `permissions` (
@@ -1377,6 +1697,7 @@ CREATE TABLE `permissions` (
 -- Table structure for table `product_categories`
 --
 
+DROP TABLE IF EXISTS `product_categories`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `product_categories` (
@@ -1393,11 +1714,29 @@ CREATE TABLE `product_categories` (
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `product_categories_updated_at` BEFORE UPDATE ON `product_categories` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `product_dependencies`
 --
 
+DROP TABLE IF EXISTS `product_dependencies`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `product_dependencies` (
@@ -1423,6 +1762,7 @@ CREATE TABLE `product_dependencies` (
 -- Table structure for table `products`
 --
 
+DROP TABLE IF EXISTS `products`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `products` (
@@ -1506,11 +1846,29 @@ CREATE TABLE `products` (
   CONSTRAINT `chk_products_prices_nonneg` CHECK (((coalesce(`price_list`,0) >= 0) and (coalesce(`price_channel`,0) >= 0) and (coalesce(`price_cost`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `products_updated_at` BEFORE UPDATE ON `products` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `role_permissions`
 --
 
+DROP TABLE IF EXISTS `role_permissions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `role_permissions` (
@@ -1529,6 +1887,7 @@ CREATE TABLE `role_permissions` (
 -- Table structure for table `roles`
 --
 
+DROP TABLE IF EXISTS `roles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `roles` (
@@ -1546,11 +1905,29 @@ CREATE TABLE `roles` (
   UNIQUE KEY `code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `roles_updated_at` BEFORE UPDATE ON `roles` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `service_records`
 --
 
+DROP TABLE IF EXISTS `service_records`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `service_records` (
@@ -1668,6 +2045,7 @@ CREATE TABLE `service_records` (
 -- Table structure for table `service_types`
 --
 
+DROP TABLE IF EXISTS `service_types`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `service_types` (
@@ -1692,6 +2070,7 @@ CREATE TABLE `service_types` (
 -- Table structure for table `temporary_links`
 --
 
+DROP TABLE IF EXISTS `temporary_links`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `temporary_links` (
@@ -1723,6 +2102,7 @@ CREATE TABLE `temporary_links` (
 -- Table structure for table `user_roles`
 --
 
+DROP TABLE IF EXISTS `user_roles`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `user_roles` (
@@ -1739,6 +2119,7 @@ CREATE TABLE `user_roles` (
 -- Table structure for table `users`
 --
 
+DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users` (
@@ -1770,11 +2151,29 @@ CREATE TABLE `users` (
   KEY `ix_users_locked` (`is_locked`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `users_updated_at` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `vendor_extensions`
 --
 
+DROP TABLE IF EXISTS `vendor_extensions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `vendor_extensions` (
@@ -1787,11 +2186,29 @@ CREATE TABLE `vendor_extensions` (
   CONSTRAINT `vendor_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `vendor_extensions_updated_at` BEFORE UPDATE ON `vendor_extensions` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `visa_records`
 --
 
+DROP TABLE IF EXISTS `visa_records`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `visa_records` (
@@ -1830,11 +2247,29 @@ CREATE TABLE `visa_records` (
   CONSTRAINT `chk_visa_payment_nonneg` CHECK ((coalesce(`payment_amount`,0) >= 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = latin1 */ ;
+/*!50003 SET character_set_results = latin1 */ ;
+/*!50003 SET collation_connection  = latin1_swedish_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `visa_records_updated_at` BEFORE UPDATE ON `visa_records` FOR EACH ROW BEGIN
+  SET NEW.updated_at = NOW();
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `workflow_definitions`
 --
 
+DROP TABLE IF EXISTS `workflow_definitions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `workflow_definitions` (
@@ -1869,6 +2304,7 @@ CREATE TABLE `workflow_definitions` (
 -- Table structure for table `workflow_instances`
 --
 
+DROP TABLE IF EXISTS `workflow_instances`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `workflow_instances` (
@@ -1900,6 +2336,7 @@ CREATE TABLE `workflow_instances` (
 -- Table structure for table `workflow_tasks`
 --
 
+DROP TABLE IF EXISTS `workflow_tasks`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `workflow_tasks` (
@@ -1939,6 +2376,7 @@ CREATE TABLE `workflow_tasks` (
 -- Table structure for table `workflow_transitions`
 --
 
+DROP TABLE IF EXISTS `workflow_transitions`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `workflow_transitions` (
@@ -1959,6 +2397,10 @@ CREATE TABLE `workflow_transitions` (
   CONSTRAINT `workflow_transitions_ibfk_2` FOREIGN KEY (`triggered_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流流转记录表 - 记录工作流的流转历史';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping routines for database 'bantu_crm'
+--
 
 --
 -- Final view structure for view `customer_ownership_view`
@@ -2005,7 +2447,4 @@ CREATE TABLE `workflow_transitions` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-28 11:09:53
-
--- 重新启用外键检查
-SET FOREIGN_KEY_CHECKS = 1;
+-- Dump completed on 2025-12-02 16:17:58

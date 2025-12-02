@@ -4,8 +4,8 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, join, distinct
-from service_management.models.vendor_product import VendorProduct
-from service_management.models.product import Product
+from common.models.vendor_product import VendorProduct
+from common.models.product import Product
 from common.utils.repository import BaseRepository
 
 

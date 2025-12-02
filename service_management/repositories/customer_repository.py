@@ -4,7 +4,7 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
-from service_management.models.customer import Customer
+from common.models.customer import Customer
 from common.utils.repository import BaseRepository
 
 
@@ -22,6 +22,7 @@ class CustomerRepository(BaseRepository[Customer]):
     
     async def get_list(
         self,
+        organization_id: str,  # 必须参数，用于数据隔离
         page: int = 1,
         size: int = 10,
         name: Optional[str] = None,
@@ -35,9 +36,12 @@ class CustomerRepository(BaseRepository[Customer]):
         channel_id: Optional[str] = None,
         is_locked: Optional[bool] = None,
     ) -> Tuple[List[Customer], int]:
-        """分页查询客户列表"""
+        """分页查询客户列表（必须包含organization_id过滤）"""
         query = select(Customer)
         conditions = []
+        
+        # 必须包含组织ID过滤（数据隔离）
+        conditions.append(Customer.organization_id == organization_id)
         
         if name:
             conditions.append(Customer.name.ilike(f"%{name}%"))
@@ -61,7 +65,8 @@ class CustomerRepository(BaseRepository[Customer]):
             conditions.append(Customer.is_locked == is_locked)
         
         if conditions:
-            query = query.where(or_(*conditions))
+            from sqlalchemy import and_
+            query = query.where(and_(*conditions))
         
         # 排序
         query = query.order_by(Customer.created_at.desc())
@@ -69,7 +74,8 @@ class CustomerRepository(BaseRepository[Customer]):
         # 计算总数
         count_query = select(func.count()).select_from(Customer)
         if conditions:
-            count_query = count_query.where(or_(*conditions))
+            from sqlalchemy import and_
+            count_query = count_query.where(and_(*conditions))
         total_result = await self.db.execute(count_query)
         total = total_result.scalar() or 0
         

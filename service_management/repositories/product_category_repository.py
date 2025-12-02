@@ -4,7 +4,7 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
-from service_management.models.product_category import ProductCategory
+from common.models.product_category import ProductCategory
 from common.utils.repository import BaseRepository
 
 

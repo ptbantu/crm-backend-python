@@ -10,7 +10,7 @@ from service_management.schemas.service_type import (
     ServiceTypeListResponse,
 )
 from service_management.repositories.service_type_repository import ServiceTypeRepository
-from service_management.models.service_type import ServiceType
+from common.models.service_type import ServiceType
 from common.exceptions import BusinessException
 from common.utils.service import BaseService
 

@@ -4,7 +4,7 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
-from service_management.models.service_record import ServiceRecord
+from common.models.service_record import ServiceRecord
 from common.utils.repository import BaseRepository
 
 

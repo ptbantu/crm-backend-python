@@ -58,5 +58,6 @@ class VendorProductFinancial(Base):
             "payment_status IN ('pending', 'paid', 'cancelled', 'refunded')",
             name="chk_vendor_product_financials_payment_status"
         ),
+        {'extend_existing': True},
     )
 
