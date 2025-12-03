@@ -2,7 +2,7 @@
 客户管理 API
 """
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.response import Result
@@ -209,9 +209,8 @@ async def create_customer_follow_up(
         user_id = get_user_id_from_token(request_obj, settings)
         if not user_id:
             logger.warning(f"Service Management: JWT 验证失败，路径: {request_obj.url.path}")
-            from fastapi import HTTPException, status as http_status
             raise HTTPException(
-                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="需要认证，请提供有效的 JWT token"
             )
         
@@ -255,9 +254,8 @@ async def create_customer_note(
         user_id = get_user_id_from_token(request_obj, settings)
         if not user_id:
             logger.warning(f"Service Management: JWT 验证失败，路径: {request_obj.url.path}")
-            from fastapi import HTTPException, status as http_status
             raise HTTPException(
-                status_code=http_status.HTTP_401_UNAUTHORIZED,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="需要认证，请提供有效的 JWT token"
             )
         

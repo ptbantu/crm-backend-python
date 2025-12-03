@@ -39,6 +39,13 @@ async def get_industries(
         result = await db.execute(query)
         industries = result.scalars().all()
         
+        # 打印查询结果用于调试
+        from common.utils.logger import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"查询到 {len(industries)} 条行业记录")
+        for industry in industries:
+            logger.info(f"行业数据: code={industry.code}, name_zh={industry.name_zh}, name_id={industry.name_id}, sort_order={industry.sort_order}")
+        
         # 转换为响应格式
         industry_list = []
         for industry in industries:
@@ -54,6 +61,9 @@ async def get_industries(
                 "is_active": industry.is_active,
             }
             industry_list.append(industry_dict)
+        
+        # 打印最终返回的数据
+        logger.info(f"返回的行业列表数据: {industry_list}")
         
         return Result.success(data=industry_list)
     except Exception as e:

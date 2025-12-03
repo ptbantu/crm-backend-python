@@ -123,7 +123,7 @@ async def get_db() -> AsyncSession:
             await session.execute(text("SET character_set_client = utf8mb4"))
             await session.execute(text("SET character_set_connection = utf8mb4"))
             await session.execute(text("SET character_set_results = utf8mb4"))
-            await session.commit()  # 提交字符集设置
+            # 注意：SET 语句不需要 commit，直接 yield
             yield session
             await session.commit()
         except Exception:

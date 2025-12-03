@@ -134,7 +134,17 @@ UNLOCK TABLES;
 
 LOCK TABLES `industries` WRITE;
 /*!40000 ALTER TABLE `industries` DISABLE KEYS */;
-INSERT INTO `industries` VALUES ('5a6741a3-ced3-11f0-8cb1-cad6171ac9f8','tech','ç§‘æŠ€/äº’è”ç½‘','Teknologi/Internet',1,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a6768a6-ced3-11f0-8cb1-cad6171ac9f8','finance','é‡‘èž/ä¿é™©','Keuangan/Asuransi',2,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a6777da-ced3-11f0-8cb1-cad6171ac9f8','manufacturing','åˆ¶é€ ä¸š','Manufaktur',3,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a67794f-ced3-11f0-8cb1-cad6171ac9f8','retail','é›¶å”®/è´¸æ˜“','Ritel/Perdagangan',4,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a677a12-ced3-11f0-8cb1-cad6171ac9f8','service','æœåŠ¡ä¸š','Layanan',5,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a6780f0-ced3-11f0-8cb1-cad6171ac9f8','education','æ•™è‚²','Pendidikan',6,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a6781f8-ced3-11f0-8cb1-cad6171ac9f8','healthcare','åŒ»ç–—/å¥åº·','Kesehatan',7,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a678298-ced3-11f0-8cb1-cad6171ac9f8','real_estate','æˆ¿åœ°äº§','Real Estate',8,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a678338-ced3-11f0-8cb1-cad6171ac9f8','logistics','ç‰©æµ/è¿è¾“','Logistik/Transportasi',9,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),('5a6783d1-ced3-11f0-8cb1-cad6171ac9f8','other','å…¶ä»–','Lainnya',99,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39');
+INSERT INTO `industries` VALUES
+('5a6741a3-ced3-11f0-8cb1-cad6171ac9f8','tech','科技/互联网','Teknologi/Internet',1,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a6768a6-ced3-11f0-8cb1-cad6171ac9f8','finance','金融/保险','Keuangan/Asuransi',2,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a6777da-ced3-11f0-8cb1-cad6171ac9f8','manufacturing','制造业','Manufaktur',3,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a67794f-ced3-11f0-8cb1-cad6171ac9f8','retail','零售/贸易','Ritel/Perdagangan',4,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a677a12-ced3-11f0-8cb1-cad6171ac9f8','service','服务业','Layanan',5,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a6780f0-ced3-11f0-8cb1-cad6171ac9f8','education','教育','Pendidikan',6,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a6781f8-ced3-11f0-8cb1-cad6171ac9f8','healthcare','医疗/健康','Kesehatan',7,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a678298-ced3-11f0-8cb1-cad6171ac9f8','real_estate','房地产','Real Estate',8,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a678338-ced3-11f0-8cb1-cad6171ac9f8','logistics','物流/运输','Logistik/Transportasi',9,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39'),
+('5a6783d1-ced3-11f0-8cb1-cad6171ac9f8','other','其他','Lainnya',99,1,NULL,NULL,'2025-12-01 16:32:39','2025-12-01 16:32:39');
 /*!40000 ALTER TABLE `industries` ENABLE KEYS */;
 UNLOCK TABLES;
 
