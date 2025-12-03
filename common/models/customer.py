@@ -19,7 +19,7 @@ class Customer(Base):
     code = Column(String(100), nullable=True, unique=True, index=True)
     
     # 客户类型和来源
-    customer_type = Column(String(50), nullable=False, default="C", index=True)  # B (B端), C (C端)
+    customer_type = Column(String(50), nullable=False, default="individual", index=True)  # individual (个人), organization (组织)
     customer_source_type = Column(String(50), nullable=False, default="own", index=True)  # own, agent
     
     # 层级关系
@@ -80,7 +80,7 @@ class Customer(Base):
     # 检查约束
     # 注意：extend_existing 必须作为字典放在最后，用于处理表重复定义的情况
     __table_args__ = (
-        CheckConstraint("customer_type IN ('B', 'C')", name="chk_customer_type"),
+        CheckConstraint("customer_type IN ('individual', 'organization')", name="chk_customer_type"),
         CheckConstraint("customer_source_type IN ('own', 'agent')", name="chk_customer_source_type"),
         {'extend_existing': True},
     )

@@ -14,6 +14,7 @@ from service_management.repositories.customer_repository import CustomerReposito
 from common.models.customer import Customer
 from common.models.customer_level import CustomerLevel
 from common.models.industry import Industry
+from common.models import User
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
 from service_management.utils.customer_code_generator import generate_customer_code
@@ -206,23 +207,30 @@ class CustomerService:
         )
         
         # 权限过滤逻辑
-        # SALES角色：只能看到自己负责的客户
-        # ADMIN角色：可以看到组织内所有客户
-        # 如果前端传递了owner_user_id，则进一步过滤
+        # 如果前端明确传递了 owner_user_id（包括 view_type='my' 的情况），使用该值
+        # 否则根据角色决定：
+        #   - SALES角色：只能看到自己负责的客户
+        #   - ADMIN角色：可以看到组织内所有客户（owner_user_id=None 表示不过滤）
         effective_owner_user_id = owner_user_id
-        if current_user_roles and 'ADMIN' not in current_user_roles:
-            # 非ADMIN角色，只能看自己的客户
-            if current_user_id:
-                effective_owner_user_id = current_user_id
-            else:
-                # 如果没有用户ID，返回空列表
-                logger.warning(f"非ADMIN用户但缺少current_user_id，返回空列表")
-                return CustomerListResponse(
-                    items=[],
-                    total=0,
-                    page=page,
-                    size=size,
-                )
+        if owner_user_id is None:
+            # 如果前端没有传递 owner_user_id，根据角色决定
+            if current_user_roles and 'ADMIN' not in current_user_roles:
+                # 非ADMIN角色，只能看自己的客户
+                if current_user_id:
+                    effective_owner_user_id = current_user_id
+                else:
+                    # 如果没有用户ID，返回空列表
+                    logger.warning(f"非ADMIN用户但缺少current_user_id，返回空列表")
+                    return CustomerListResponse(
+                        items=[],
+                        total=0,
+                        page=page,
+                        size=size,
+                    )
+            # ADMIN角色且 owner_user_id 为 None，表示查看所有客户（不过滤）
+        else:
+            # 前端明确传递了 owner_user_id（包括 view_type='my' 的情况），使用该值
+            logger.debug(f"使用前端传递的 owner_user_id: {effective_owner_user_id}")
         
         items, total = await self.customer_repo.get_list(
             organization_id=organization_id,  # 必须包含组织ID过滤
@@ -284,7 +292,17 @@ class CustomerService:
                 industry_name_zh = industry.name_zh
                 industry_name_id = industry.name_id
         
-        # TODO: 获取 owner_user_name, agent_name, source_name, channel_name
+        # 获取 owner_user_name
+        owner_user_name = None
+        if customer.owner_user_id:
+            stmt = select(User).where(User.id == customer.owner_user_id)
+            result = await self.db.execute(stmt)
+            user = result.scalar_one_or_none()
+            if user:
+                # 优先使用 display_name，如果没有则使用 username
+                owner_user_name = user.display_name or user.username
+        
+        # TODO: 获取 agent_name, source_name, channel_name
         # 这些需要从其他表查询，暂时设为 None
         
         return CustomerResponse(
@@ -296,7 +314,7 @@ class CustomerService:
             parent_customer_id=customer.parent_customer_id,
             parent_customer_name=parent_customer_name,
             owner_user_id=customer.owner_user_id,
-            owner_user_name=None,  # TODO: 从 users 表查询
+            owner_user_name=owner_user_name,
             agent_user_id=customer.agent_user_id,
             agent_id=customer.agent_id,
             agent_name=None,  # TODO: 从 organizations 表查询

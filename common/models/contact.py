@@ -52,11 +52,6 @@ class Contact(Base):
     # 备注
     notes = Column(Text, nullable=True)
     
-    # 外部系统字段
-    id_external = Column(String(255), nullable=True, unique=True)
-    created_by_external = Column(String(255), nullable=True)
-    updated_by_external = Column(String(255), nullable=True)
-    
     # 审计字段
     created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

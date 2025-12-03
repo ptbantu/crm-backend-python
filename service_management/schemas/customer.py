@@ -59,7 +59,7 @@ class CustomerCreateRequest(BaseModel):
     """创建客户请求"""
     name: str = Field(..., min_length=1, max_length=255, description="客户名称")
     code: Optional[str] = Field(None, max_length=100, description="客户编码（唯一，如果不提供则自动生成）")
-    customer_type: Literal['B', 'C'] = Field(default="C", description="客户类型：B (B端), C (C端)")
+    customer_type: Literal['individual', 'organization'] = Field(default="individual", description="客户类型：individual (个人), organization (组织)")
     customer_source_type: str = Field(default="own", description="客户来源类型：own, agent")
     
     # 关联关系
@@ -89,7 +89,7 @@ class CustomerUpdateRequest(BaseModel):
     """更新客户请求"""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     code: Optional[str] = Field(None, max_length=100)
-    customer_type: Optional[Literal['B', 'C']] = None
+    customer_type: Optional[Literal['individual', 'organization']] = None
     customer_source_type: Optional[str] = None
     
     # 关联关系

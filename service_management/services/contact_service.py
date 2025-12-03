@@ -44,11 +44,19 @@ class ContactService:
             logger.debug(f"设置主要联系人，取消其他主要联系人: customer_id={request.customer_id}")
             await self.contact_repo.set_primary_contact("", request.customer_id)  # 先取消所有
         
+        # 合并 first_name 和 last_name 为 name
+        name = f"{request.first_name} {request.last_name}".strip()
+        
+        # 从客户信息中获取 organization_id 和 owner_user_id（用于数据隔离）
+        organization_id = customer.organization_id
+        owner_user_id = customer.owner_user_id
+        
         # 创建联系人
         contact = Contact(
             customer_id=request.customer_id,
-            first_name=request.first_name,
-            last_name=request.last_name,
+            organization_id=organization_id,
+            owner_user_id=owner_user_id,
+            name=name,
             email=request.email,
             phone=request.phone,
             mobile=request.mobile,
@@ -75,7 +83,7 @@ class ContactService:
             await self.db.refresh(contact)
             logger.debug(f"主要联系人设置成功: contact_id={contact.id}, customer_id={request.customer_id}")
         
-        logger.info(f"联系人创建成功: id={contact.id}, customer_id={request.customer_id}, name={contact.full_name}")
+        logger.info(f"联系人创建成功: id={contact.id}, customer_id={request.customer_id}, name={contact.name}")
         return await self._to_response(contact)
     
     async def get_contact_by_id(self, contact_id: str) -> ContactResponse:
@@ -86,7 +94,7 @@ class ContactService:
             logger.warning(f"联系人不存在: contact_id={contact_id}")
             raise BusinessException(detail="联系人不存在", status_code=404)
         
-        logger.debug(f"联系人查询成功: id={contact.id}, name={contact.full_name}")
+        logger.debug(f"联系人查询成功: id={contact.id}, name={contact.name}")
         return await self._to_response(contact)
     
     async def update_contact(self, contact_id: str, request: ContactUpdateRequest) -> ContactResponse:
@@ -103,10 +111,11 @@ class ContactService:
             await self.contact_repo.set_primary_contact(contact_id, contact.customer_id)
         
         # 更新字段
-        if request.first_name is not None:
-            contact.first_name = request.first_name
-        if request.last_name is not None:
-            contact.last_name = request.last_name
+        # 如果 first_name 或 last_name 有更新，合并为 name
+        if request.first_name is not None or request.last_name is not None:
+            first_name = request.first_name if request.first_name is not None else (contact.name.split(' ', 1)[0] if contact.name else '')
+            last_name = request.last_name if request.last_name is not None else (contact.name.split(' ', 1)[1] if ' ' in (contact.name or '') else '')
+            contact.name = f"{first_name} {last_name}".strip()
         if request.email is not None:
             contact.email = request.email
         if request.phone is not None:
@@ -143,7 +152,7 @@ class ContactService:
             contact.notes = request.notes
         
         contact = await self.contact_repo.update(contact)
-        logger.info(f"联系人更新成功: id={contact.id}, name={contact.full_name}")
+        logger.info(f"联系人更新成功: id={contact.id}, name={contact.name}")
         
         return await self._to_response(contact)
     
@@ -156,7 +165,7 @@ class ContactService:
             raise BusinessException(detail="联系人不存在", status_code=404)
         
         await self.contact_repo.delete(contact)
-        logger.info(f"联系人删除成功: id={contact.id}, name={contact.full_name}, customer_id={contact.customer_id}")
+        logger.info(f"联系人删除成功: id={contact.id}, name={contact.name}, customer_id={contact.customer_id}")
     
     async def get_contact_list_by_customer(
         self,
@@ -208,13 +217,20 @@ class ContactService:
             if customer:
                 customer_name = customer.name
         
+        # 从 name 字段解析 first_name 和 last_name（如果 name 包含空格，则分割）
+        # 否则将整个 name 作为 first_name
+        name_parts = contact.name.split(' ', 1) if contact.name else ['', '']
+        first_name = name_parts[0] if name_parts else ''
+        last_name = name_parts[1] if len(name_parts) > 1 else ''
+        full_name = contact.name
+        
         return ContactResponse(
             id=contact.id,
             customer_id=contact.customer_id,
             customer_name=customer_name,
-            first_name=contact.first_name,
-            last_name=contact.last_name,
-            full_name=contact.full_name,
+            first_name=first_name,
+            last_name=last_name,
+            full_name=full_name,
             email=contact.email,
             phone=contact.phone,
             mobile=contact.mobile,

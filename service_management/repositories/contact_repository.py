@@ -3,7 +3,7 @@
 """
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, and_
 from common.models.contact import Contact
 from common.utils.repository import BaseRepository
 
@@ -23,7 +23,7 @@ class ContactRepository(BaseRepository[Contact]):
         is_active: Optional[bool] = None,
     ) -> Tuple[List[Contact], int]:
         """根据客户ID查询联系人列表"""
-        query = select(Contact).where(Contact.customer_id == customer_id)
+        # 构建查询条件：customer_id 是必须的，is_primary 和 is_active 是可选的
         conditions = [Contact.customer_id == customer_id]
         
         if is_primary is not None:
@@ -31,15 +31,14 @@ class ContactRepository(BaseRepository[Contact]):
         if is_active is not None:
             conditions.append(Contact.is_active == is_active)
         
-        query = query.where(or_(*conditions))
+        # 使用 and_ 连接所有条件
+        query = select(Contact).where(and_(*conditions))
         
         # 排序：主要联系人优先
         query = query.order_by(Contact.is_primary.desc(), Contact.created_at.desc())
         
         # 计算总数
-        count_query = select(func.count()).select_from(Contact)
-        if conditions:
-            count_query = count_query.where(or_(*conditions))
+        count_query = select(func.count()).select_from(Contact).where(and_(*conditions))
         total_result = await self.db.execute(count_query)
         total = total_result.scalar() or 0
         

@@ -138,6 +138,7 @@ async def get_customer_list(
     source_id: Optional[str] = None,
     channel_id: Optional[str] = None,
     is_locked: Optional[bool] = None,
+    view_type: Optional[str] = None,  # 'my' 或 'global'
     db: AsyncSession = Depends(get_db)
 ):
     """分页查询客户列表（带权限过滤）"""
@@ -153,6 +154,28 @@ async def get_customer_list(
         current_user_id = get_current_user_id(request_obj)
         current_user_roles = get_current_user_roles(request_obj)
         
+        # 如果 view_type 是 'my'，强制设置 owner_user_id 为当前用户 ID
+        # 如果 view_type 是 'global' 或 None，且用户是 ADMIN，则 owner_user_id 为 None（显示所有客户）
+        effective_owner_user_id = owner_user_id
+        if view_type == 'my':
+            if current_user_id:
+                effective_owner_user_id = current_user_id
+                logger.info(f"我的客户视图：强制设置 owner_user_id={current_user_id}, view_type={view_type}")
+            else:
+                logger.warning(f"我的客户视图：但缺少 current_user_id，无法过滤")
+        elif view_type == 'global':
+            # 全局客户视图：ADMIN 可以看到所有客户（owner_user_id=None），SALES 只能看自己的
+            if current_user_roles and 'ADMIN' in current_user_roles:
+                effective_owner_user_id = None  # ADMIN 查看所有客户
+                logger.info(f"全局客户视图（ADMIN）：显示所有客户，view_type={view_type}")
+            else:
+                # 非 ADMIN 用户，即使选择全局视图，也只能看自己的客户
+                effective_owner_user_id = current_user_id if current_user_id else None
+                logger.info(f"全局客户视图（非ADMIN）：只能看自己的客户，owner_user_id={effective_owner_user_id}")
+        else:
+            # view_type 为 None 的情况，根据角色决定
+            logger.debug(f"未指定 view_type，使用默认权限过滤逻辑")
+        
         service = CustomerService(db)
         result = await service.get_customer_list(
             organization_id=organization_id,
@@ -165,7 +188,7 @@ async def get_customer_list(
             customer_type=customer_type,
             customer_source_type=customer_source_type,
             parent_customer_id=parent_customer_id,
-            owner_user_id=owner_user_id,
+            owner_user_id=effective_owner_user_id,
             agent_id=agent_id,
             source_id=source_id,
             channel_id=channel_id,

@@ -24,7 +24,7 @@ async def generate_customer_code(
     
     Args:
         db: 数据库会话
-        customer_type: 客户类型 ('B' 或 'C')
+        customer_type: 客户类型 ('individual' 或 'organization')
         organization_id: 组织ID
         max_retries: 最大重试次数（处理并发情况）
     
@@ -32,17 +32,20 @@ async def generate_customer_code(
         生成的客户编码
     """
     # 验证客户类型
-    if customer_type not in ('B', 'C'):
-        raise ValueError(f"无效的客户类型: {customer_type}，必须是 'B' 或 'C'")
+    if customer_type not in ('individual', 'organization'):
+        raise ValueError(f"无效的客户类型: {customer_type}，必须是 'individual' 或 'organization'")
+    
+    # 将 customer_type 映射为编码前缀（I 代表 individual，O 代表 organization）
+    type_prefix = 'I' if customer_type == 'individual' else 'O'
     
     # 获取当前日期（格式：YYYYMMDD）
     today = datetime.now().strftime('%Y%m%d')
     
     # 生成编码前缀
-    prefix = f"{customer_type}{today}"
+    prefix = f"{type_prefix}{today}"
     
     # 查询当日该类型和组织下的最大序号
-    # 编码格式：{类型}{日期}{序号}，例如 B20241128001
+    # 编码格式：{类型}{日期}{序号}，例如 I20241128001 (individual) 或 O20241128001 (organization)
     # 需要匹配前缀并提取序号部分
     # 使用SQLAlchemy的text()执行原生SQL，因为MySQL的SUBSTRING函数在SQLAlchemy中可能不支持
     from sqlalchemy import text
@@ -80,7 +83,7 @@ async def generate_customer_code(
             select(Customer).where(Customer.code == code)
         )
         if existing.scalar_one_or_none() is None:
-            logger.info(f"生成客户编码成功: code={code}, type={customer_type}, organization_id={organization_id}")
+            logger.info(f"生成客户编码成功: code={code}, type={customer_type} (prefix={type_prefix}), organization_id={organization_id}")
             return code
         
         # 如果已存在，递增序号重试
