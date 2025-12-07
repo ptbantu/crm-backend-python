@@ -18,8 +18,6 @@ metadata:
     # Traefik 在配置了 TLS 时会自动将 HTTP 重定向到 HTTPS
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
-    # 生产环境性能优化
-    traefik.ingress.kubernetes.io/router.middlewares: default-compress@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
