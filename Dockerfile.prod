@@ -1,6 +1,7 @@
 # 生产环境通用 Dockerfile
 # 使用构建参数指定服务名称
 ARG SERVICE_NAME
+ARG SERVICE_DIR
 ARG SERVICE_PORT
 
 FROM python:3.11-slim
@@ -31,8 +32,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY common/ /app/common/
 
 # 复制服务代码（根据构建参数）
+# SERVICE_DIR 是实际的目录名，SERVICE_NAME 是 Python 模块名
+# 注意：代码中使用的是带 _service 后缀的模块名，所以需要复制到对应的目录
+ARG SERVICE_DIR
 ARG SERVICE_NAME
-COPY ${SERVICE_NAME}/ /app/${SERVICE_NAME}/
+# 根据服务名称确定目标目录（代码中的模块名）
+COPY ${SERVICE_DIR}/ /app/${SERVICE_DIR}/
 
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
@@ -49,9 +54,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # 启动命令（根据构建参数）
 # 注意：CMD 不支持变量展开，使用 ENTRYPOINT + shell 形式
-ARG SERVICE_NAME
+# 代码中使用的是带 _service 后缀的模块名
+ARG SERVICE_DIR
 ARG SERVICE_PORT
-ENV SERVICE_NAME=${SERVICE_NAME} SERVICE_PORT=${SERVICE_PORT}
+ENV SERVICE_DIR=${SERVICE_DIR} SERVICE_PORT=${SERVICE_PORT}
 ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["uvicorn ${SERVICE_NAME}.main:app --host 0.0.0.0 --port ${SERVICE_PORT} --workers 4 --log-level info"]
+CMD ["uvicorn ${SERVICE_DIR}.main:app --host 0.0.0.0 --port ${SERVICE_PORT} --workers 4 --log-level info"]
 
