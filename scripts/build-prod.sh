@@ -59,6 +59,26 @@ build_service() {
     # 转换服务名称（将连字符转换为下划线，用于 Python 模块路径）
     local python_module=$(echo "$service_name" | tr '-' '_')
     
+    # 服务目录名称映射（实际目录名可能包含 _service 后缀）
+    local service_dir="$python_module"
+    case "$service_name" in
+        foundation)
+            service_dir="foundation_service"
+            ;;
+        gateway)
+            service_dir="gateway_service"
+            ;;
+        analytics-monitoring)
+            service_dir="analytics_monitoring_service"
+            ;;
+        order-workflow)
+            service_dir="order_workflow_service"
+            ;;
+        service-management)
+            service_dir="service_management"
+            ;;
+    esac
+    
     # 镜像名称
     local image_name="${IMAGE_PREFIX}-${service_name}-service:${IMAGE_TAG}"
     
@@ -69,9 +89,16 @@ build_service() {
     echo -e "${GREEN}镜像名称: $image_name${NC}"
     echo -e "${GREEN}========================================${NC}"
     
+    # 检查服务目录是否存在
+    if [ ! -d "$service_dir" ]; then
+        echo -e "${RED}错误: 服务目录不存在: $service_dir${NC}"
+        return 1
+    fi
+    
     # 构建 Docker 镜像
     docker build \
         --build-arg SERVICE_NAME="$python_module" \
+        --build-arg SERVICE_DIR="$service_dir" \
         --build-arg SERVICE_PORT="$service_port" \
         -f Dockerfile.prod \
         -t "$image_name" \
