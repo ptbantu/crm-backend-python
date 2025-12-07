@@ -13,8 +13,8 @@ from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.repositories.organization_employee_repository import OrganizationEmployeeRepository
 from foundation_service.services.user_service import UserService
 from foundation_service.repositories.organization_domain_repository import OrganizationDomainRepository
-from foundation_service.models.organization import Organization
-from foundation_service.models.user import User
+from common.models.organization import Organization
+from common.models.user import User
 from common.exceptions import OrganizationNotFoundError, BusinessException
 from common.utils.logger import get_logger
 from sqlalchemy import select

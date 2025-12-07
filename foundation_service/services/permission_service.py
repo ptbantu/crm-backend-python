@@ -9,7 +9,7 @@ from foundation_service.repositories.permission_repository import (
     MenuRepository,
     MenuPermissionRepository
 )
-from foundation_service.models.permission import Permission, Menu
+from common.models.permission import Permission, Menu
 from foundation_service.schemas.permission import (
     PermissionCreateRequest,
     PermissionUpdateRequest,

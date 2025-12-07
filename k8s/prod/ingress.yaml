@@ -1,6 +1,7 @@
 # ============================================================
-# CRM Python 微服务生产环境 Ingress 配置
+# CRM Python 统一 ERP 服务生产环境 Ingress 配置
 # 使用 www.bantuqifu.xin 作为访问域名
+# 所有路由直接指向 foundation_service（统一 ERP 服务）
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
@@ -24,47 +25,14 @@ spec:
     - host: www.bantuqifu.xin
       http:
         paths:
-          # 直接访问 Foundation Service (用于测试，生产环境建议通过 Gateway)
-          # 注意: 更具体的路径必须放在通用路径之前
-          - path: /api/foundation
+          # 所有请求路由到 Foundation Service (统一 ERP 服务)
+          - path: /
             pathType: Prefix
             backend:
               service:
                 name: crm-foundation-service
                 port:
                   number: 8081
-          # 直接访问 Service Management Service (用于测试，生产环境建议通过 Gateway)
-          - path: /api/service-management
-            pathType: Prefix
-            backend:
-              service:
-                name: crm-service-management-service
-                port:
-                  number: 8082
-          # 直接访问 Analytics and Monitoring Service (用于测试，生产环境建议通过 Gateway)
-          - path: /api/analytics-monitoring
-            pathType: Prefix
-            backend:
-              service:
-                name: crm-analytics-monitoring-service
-                port:
-                  number: 8083
-          # 直接访问 Order and Workflow Service (用于测试，生产环境建议通过 Gateway)
-          - path: /api/order-workflow
-            pathType: Prefix
-            backend:
-              service:
-                name: crm-order-workflow-service
-                port:
-                  number: 8084
-          # 所有其他请求路由到 Gateway Service
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: crm-gateway-service
-                port:
-                  number: 8080
   # TLS 配置（HTTPS）
   # cert-manager 会自动创建和管理证书
   tls:
