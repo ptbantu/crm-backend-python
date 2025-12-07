@@ -1,4 +1,18 @@
-mysqldump: [Warning] Using a password on the command line interface can be insecure.
+-- ============================================================
+-- BANTU CRM 数据库 Schema
+-- 字符集: utf8mb4
+-- 排序规则: utf8mb4_0900_ai_ci
+-- ============================================================
+
+-- 设置数据库和会话字符集为 utf8mb4（必须在最前面执行）
+SET NAMES utf8mb4;
+SET CHARACTER_SET_CLIENT = utf8mb4;
+SET CHARACTER_SET_CONNECTION = utf8mb4;
+SET CHARACTER_SET_RESULTS = utf8mb4;
+
+-- 修改数据库默认字符集（如果数据库已存在）
+ALTER DATABASE `bantu_crm` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+
 -- MySQL dump 10.13  Distrib 8.0.44, for Linux (x86_64)
 --
 -- Host: localhost    Database: bantu_crm
@@ -446,7 +460,7 @@ CREATE TABLE `customers` (
   `parent_id_external` varchar(255) DEFAULT NULL,
   `parent_customer_id` char(36) DEFAULT NULL,
   `parent_name` varchar(255) DEFAULT NULL,
-  `industry` varchar(255) DEFAULT NULL,
+  `industry_id` char(36) DEFAULT NULL COMMENT 'è¡Œä¸šIDï¼ˆå¤–é”® â†’ industries.idï¼‰',
   `description` text,
   `tags` json DEFAULT (json_array()),
   `is_locked` tinyint(1) DEFAULT NULL,
@@ -482,6 +496,7 @@ CREATE TABLE `customers` (
   KEY `ix_customers_organization` (`organization_id`),
   KEY `ix_customers_last_follow_up` (`last_follow_up_at`),
   KEY `ix_customers_next_follow_up` (`next_follow_up_at`),
+  KEY `ix_customers_industry_id` (`industry_id`),
   CONSTRAINT `customers_ibfk_1` FOREIGN KEY (`parent_customer_id`) REFERENCES `customers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_2` FOREIGN KEY (`source_id`) REFERENCES `customer_sources` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_3` FOREIGN KEY (`channel_id`) REFERENCES `customer_channels` (`id`) ON DELETE SET NULL,
@@ -489,6 +504,7 @@ CREATE TABLE `customers` (
   CONSTRAINT `customers_ibfk_5` FOREIGN KEY (`agent_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_6` FOREIGN KEY (`agent_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
   CONSTRAINT `customers_ibfk_7` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_customers_industry` FOREIGN KEY (`industry_id`) REFERENCES `industries` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `chk_customer_source_type` CHECK ((`customer_source_type` in (_utf8mb4'own',_utf8mb4'agent'))),
   CONSTRAINT `chk_customer_type` CHECK ((`customer_type` in (_utf8mb4'individual',_utf8mb4'organization')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -1315,9 +1331,9 @@ DROP TABLE IF EXISTS `organization_domain_relations`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `organization_domain_relations` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
-  `organization_id` char(36) NOT NULL COMMENT '组织ID',
-  `domain_id` char(36) NOT NULL COMMENT '领域ID',
-  `is_primary` tinyint(1) DEFAULT '0' COMMENT '是否主要领域',
+  `organization_id` char(36) NOT NULL COMMENT 'ç»„ç»‡ID',
+  `domain_id` char(36) NOT NULL COMMENT 'é¢†åŸŸID',
+  `is_primary` tinyint(1) DEFAULT '0' COMMENT 'æ˜¯å¦ä¸»è¦é¢†åŸŸ',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -1327,7 +1343,7 @@ CREATE TABLE `organization_domain_relations` (
   KEY `ix_org_domain_relations_primary` (`organization_id`,`is_primary`),
   CONSTRAINT `organization_domain_relations_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `organization_domain_relations_ibfk_2` FOREIGN KEY (`domain_id`) REFERENCES `organization_domains` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='组织领域关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ç»„ç»‡é¢†åŸŸå…³è”è¡¨';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1344,8 +1360,8 @@ CREATE TABLE `organization_domains` (
   `name_id` varchar(255) NOT NULL COMMENT '领域名称（印尼语）',
   `description_zh` text COMMENT '领域描述（中文）',
   `description_id` text COMMENT '领域描述（印尼语）',
-  `display_order` int DEFAULT '0' COMMENT 'æ˜¾ç¤ºé¡ºåº',
-  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
+  `display_order` int DEFAULT '0' COMMENT '显示顺序',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否激活',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -1678,8 +1694,8 @@ CREATE TABLE `permissions` (
   `name_id` varchar(255) NOT NULL COMMENT '权限名称（印尼语）',
   `description_zh` text COMMENT '权限描述（中文）',
   `description_id` text COMMENT '权限描述（印尼语）',
-  `resource_type` varchar(50) NOT NULL COMMENT '资源类型（如：user, organization, order等）',
-  `action` varchar(50) NOT NULL COMMENT '操作类型（如：create, view, update, delete, list等）',
+  `resource_type` varchar(50) NOT NULL COMMENT '资源类型（如：user、organization、order 等）',
+  `action` varchar(50) NOT NULL COMMENT '操作类型（如：create、view、update、delete、list 等）',
   `display_order` int DEFAULT '0' COMMENT '显示顺序',
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否激活',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1801,49 +1817,56 @@ CREATE TABLE `products` (
   `category_id` char(36) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `price_cost_idr_test` decimal(18,2) DEFAULT NULL COMMENT 'æµ‹è¯•å­—æ®µ',
-  `price_cost_idr` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆIDRï¼‰',
-  `price_cost_cny` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆCNYï¼‰',
-  `price_channel_idr` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“ä»·ï¼ˆIDRï¼‰',
-  `price_channel_cny` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“ä»·ï¼ˆCNYï¼‰',
-  `price_direct_idr` decimal(18,2) DEFAULT NULL COMMENT 'ç›´å®¢ä»·ï¼ˆIDRï¼‰',
-  `price_direct_cny` decimal(18,2) DEFAULT NULL COMMENT 'ç›´å®¢ä»·ï¼ˆCNYï¼‰',
-  `price_list_idr` decimal(18,2) DEFAULT NULL COMMENT 'åˆ—è¡¨ä»·ï¼ˆIDRï¼‰',
-  `price_list_cny` decimal(18,2) DEFAULT NULL COMMENT 'åˆ—è¡¨ä»·ï¼ˆCNYï¼‰',
-  `default_currency` varchar(10) DEFAULT 'IDR' COMMENT 'é»˜è®¤è´§å¸',
-  `exchange_rate` decimal(18,9) DEFAULT '2000.000000000' COMMENT 'æ±‡çŽ‡ï¼ˆIDR/CNYï¼‰',
-  `service_type` varchar(50) DEFAULT NULL COMMENT 'æœåŠ¡ç±»åž‹',
-  `status` varchar(50) DEFAULT 'active' COMMENT 'çŠ¶æ€',
-  `service_subtype` varchar(50) DEFAULT NULL COMMENT 'æœåŠ¡å­ç±»åž‹',
-  `validity_period` int DEFAULT NULL COMMENT 'æœ‰æ•ˆæœŸï¼ˆå¤©æ•°ï¼‰',
-  `processing_days` int DEFAULT NULL COMMENT 'å¤„ç†å¤©æ•°',
-  `processing_time_text` varchar(255) DEFAULT NULL COMMENT 'å¤„ç†æ—¶é—´æ–‡æœ¬æè¿°',
-  `is_urgent_available` tinyint(1) DEFAULT '0' COMMENT 'æ˜¯å¦æ”¯æŒåŠ æ€¥',
-  `urgent_processing_days` int DEFAULT NULL COMMENT 'åŠ æ€¥å¤„ç†å¤©æ•°',
-  `urgent_price_surcharge` decimal(18,2) DEFAULT NULL COMMENT 'åŠ æ€¥é™„åŠ è´¹',
-  `channel_profit` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“æ–¹åˆ©æ¶¦',
-  `channel_profit_rate` decimal(5,4) DEFAULT NULL COMMENT 'æ¸ é“æ–¹åˆ©æ¶¦çŽ‡',
-  `channel_customer_profit` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“å®¢æˆ·åˆ©æ¶¦',
-  `channel_customer_profit_rate` decimal(5,4) DEFAULT NULL COMMENT 'æ¸ é“å®¢æˆ·åˆ©æ¶¦çŽ‡',
-  `direct_profit` decimal(18,2) DEFAULT NULL COMMENT 'ç›´å®¢åˆ©æ¶¦',
-  `direct_profit_rate` decimal(5,4) DEFAULT NULL COMMENT 'ç›´å®¢åˆ©æ¶¦çŽ‡',
-  `commission_rate` decimal(5,4) DEFAULT NULL COMMENT 'ææˆæ¯”ä¾‹',
-  `commission_amount` decimal(18,2) DEFAULT NULL COMMENT 'ææˆé‡‘é¢',
-  `equivalent_cny` decimal(18,2) DEFAULT NULL COMMENT 'ç­‰å€¼äººæ°‘å¸',
-  `monthly_orders` int DEFAULT NULL COMMENT 'æ¯æœˆå•æ•°',
-  `total_amount` decimal(18,2) DEFAULT NULL COMMENT 'åˆè®¡',
-  `sla_description` text COMMENT 'SLA æè¿°',
-  `service_level` varchar(50) DEFAULT NULL COMMENT 'æœåŠ¡çº§åˆ«',
-  `suspended_reason` text COMMENT 'æš‚åœåŽŸå› ',
-  `discontinued_at` datetime DEFAULT NULL COMMENT 'åœç”¨æ—¶é—´',
-  `service_type_id` char(36) DEFAULT NULL COMMENT 'æœåŠ¡ç±»åž‹ID',
+
+  -- 以下全部已修正中文注释
+  `price_cost_idr_test` decimal(18,2) DEFAULT NULL COMMENT '测试字段',
+  `price_cost_idr` decimal(18,2) DEFAULT NULL COMMENT '成本价（IDR）',
+  `price_cost_cny` decimal(18,2) DEFAULT NULL COMMENT '成本价（CNY）',
+  `price_channel_idr` decimal(18,2) DEFAULT NULL COMMENT '渠道价（IDR）',
+  `price_channel_cny` decimal(18,2) DEFAULT NULL COMMENT '渠道价（CNY）',
+  `price_direct_idr` decimal(18,2) DEFAULT NULL COMMENT '直客价（IDR）',
+  `price_direct_cny` decimal(18,2) DEFAULT NULL COMMENT '直客价（CNY）',
+  `price_list_idr` decimal(18,2) DEFAULT NULL COMMENT '列表价（IDR）',
+  `price_list_cny` decimal(18,2) DEFAULT NULL COMMENT '列表价（CNY）',
+  `default_currency` varchar(10) DEFAULT 'IDR' COMMENT '默认货币',
+  `exchange_rate` decimal(18,9) DEFAULT '2000.000000000' COMMENT '汇率（IDR/CNY）',
+  `service_type` varchar(50) DEFAULT NULL COMMENT '服务类型',
+  `status` varchar(50) DEFAULT 'active' COMMENT '状态',
+  `service_subtype` varchar(50) DEFAULT NULL COMMENT '服务子类型',
+  `validity_period` int DEFAULT NULL COMMENT '有效期（天数）',
+  `processing_days` int DEFAULT NULL COMMENT '处理天数',
+  `processing_time_text` varchar(255) DEFAULT NULL COMMENT '处理时间文本描述',
+  `is_urgent_available` tinyint(1) DEFAULT '0' COMMENT '是否支持加急',
+  `urgent_processing_days` int DEFAULT NULL COMMENT '加急处理天数',
+  `urgent_price_surcharge` decimal(18,2) DEFAULT NULL COMMENT '加急附加费',
+  `channel_profit` decimal(18,2) DEFAULT NULL COMMENT '渠道方利润',
+  `channel_profit_rate` decimal(5,4) DEFAULT NULL COMMENT '渠道方利润率',
+  `channel_customer_profit` decimal(18,2) DEFAULT NULL COMMENT '渠道客户利润',
+  `channel_customer_profit_rate` decimal(5,4) DEFAULT NULL COMMENT '渠道客户利润率',
+  `direct_profit` decimal(18,2) DEFAULT NULL COMMENT '直客利润',
+  `direct_profit_rate` decimal(5,4) DEFAULT NULL COMMENT '直客利润率',
+  `commission_rate` decimal(5,4) DEFAULT NULL COMMENT '提成比例',
+  `commission_amount` decimal(18,2) DEFAULT NULL COMMENT '提成金额',
+  `equivalent_cny` decimal(18,2) DEFAULT NULL COMMENT '等值人民币',
+  `monthly_orders` int DEFAULT NULL COMMENT '每月单数',
+  `total_amount` decimal(18,2) DEFAULT NULL COMMENT '合计',
+  `sla_description` text COMMENT 'SLA 描述',
+  `service_level` varchar(50) DEFAULT NULL COMMENT '服务级别',
+  `suspended_reason` text COMMENT '暂停原因',
+  `discontinued_at` datetime DEFAULT NULL COMMENT '停用时间',
+  `service_type_id` char(36) DEFAULT NULL COMMENT '服务类型ID',
+
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_external` (`id_external`),
   UNIQUE KEY `ux_products_code` (`code`),
   KEY `vendor_id` (`vendor_id`),
   KEY `category_id` (`category_id`),
   KEY `ix_products_active` (`is_active`),
-  CONSTRAINT `chk_products_prices_nonneg` CHECK (((coalesce(`price_list`,0) >= 0) and (coalesce(`price_channel`,0) >= 0) and (coalesce(`price_cost`,0) >= 0)))
+  CONSTRAINT `chk_products_prices_nonneg` CHECK (
+    (COALESCE(`price_list`, 0) >= 0) AND
+    (COALESCE(`price_channel`, 0) >= 0) AND
+    (COALESCE(`price_cost`, 0) >= 0)
+  )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
@@ -1894,11 +1917,11 @@ CREATE TABLE `roles` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `code` varchar(50) NOT NULL,
   `name` varchar(255) NOT NULL,
-  `name_zh` varchar(255) DEFAULT NULL COMMENT 'è§’è‰²åç§°ï¼ˆä¸­æ–‡ï¼‰',
-  `name_id` varchar(255) DEFAULT NULL COMMENT 'è§’è‰²åç§°ï¼ˆå°å°¼è¯­ï¼‰',
+  `name_zh` varchar(255) DEFAULT NULL COMMENT '角色名称（中文）',
+  `name_id` varchar(255) DEFAULT NULL COMMENT '角色名称（印尼语）',
   `description` text,
-  `description_zh` text COMMENT 'è§’è‰²æè¿°ï¼ˆä¸­æ–‡ï¼‰',
-  `description_id` text COMMENT 'è§’è‰²æè¿°ï¼ˆå°å°¼è¯­ï¼‰',
+  `description_zh` text COMMENT '角色描述（中文）',
+  `description_id` text COMMENT '角色描述（印尼语）',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -2137,7 +2160,7 @@ CREATE TABLE `users` (
   `whatsapp` varchar(50) DEFAULT NULL,
   `wechat` varchar(100) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
-  `is_locked` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'æ˜¯å¦é”å®šï¼šFalse=æ­£å¸¸ï¼ˆé»˜è®¤ï¼‰ï¼ŒTrue=é”å®šï¼ˆç¦ç”¨ç™»å½•ï¼‰',
+  `is_locked` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否锁定：0=正常（默认），1=锁定（禁止登录）',
   `last_login_at` datetime DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -2274,19 +2297,19 @@ DROP TABLE IF EXISTS `workflow_definitions`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `workflow_definitions` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
-  `name_zh` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆä¸­æ–‡ï¼‰',
-  `name_id` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆå°å°¼è¯­ï¼‰',
-  `code` varchar(100) NOT NULL COMMENT 'å·¥ä½œæµä»£ç ï¼ˆå”¯ä¸€ï¼‰',
-  `description_zh` text COMMENT 'æè¿°ï¼ˆä¸­æ–‡ï¼‰',
-  `description_id` text COMMENT 'æè¿°ï¼ˆå°å°¼è¯­ï¼‰',
-  `workflow_type` varchar(50) DEFAULT NULL COMMENT 'å·¥ä½œæµç±»åž‹',
-  `definition_json` json DEFAULT NULL COMMENT 'å·¥ä½œæµå®šä¹‰ï¼ˆJSON æ ¼å¼ï¼‰',
-  `version` int DEFAULT '1' COMMENT 'ç‰ˆæœ¬å·',
-  `is_active` tinyint(1) DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
-  `created_by` char(36) DEFAULT NULL COMMENT 'åˆ›å»ºäººID',
-  `updated_by` char(36) DEFAULT NULL COMMENT 'æ›´æ–°äººID',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'åˆ›å»ºæ—¶é—´',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'æ›´æ–°æ—¶é—´',
+  `name_zh` varchar(255) NOT NULL COMMENT '工作流名称（中文）',
+  `name_id` varchar(255) NOT NULL COMMENT '工作流名称（印尼语）',
+  `code` varchar(100) NOT NULL COMMENT '工作流代码（唯一）',
+  `description_zh` text COMMENT '描述（中文）',
+  `description_id` text COMMENT '描述（印尼语）',
+  `workflow_type` varchar(50) DEFAULT NULL COMMENT '工作流类型',
+  `definition_json` json DEFAULT NULL COMMENT '工作流定义（JSON 格式）',
+  `version` int DEFAULT '1' COMMENT '版本号',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT '是否激活',
+  `created_by` char(36) DEFAULT NULL COMMENT '创建人ID',
+  `updated_by` char(36) DEFAULT NULL COMMENT '更新人ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`),
   UNIQUE KEY `ux_workflow_definitions_code` (`code`),
@@ -2297,7 +2320,7 @@ CREATE TABLE `workflow_definitions` (
   KEY `ix_workflow_definitions_created_at` (`created_at` DESC),
   CONSTRAINT `workflow_definitions_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `workflow_definitions_ibfk_2` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='å·¥ä½œæµå®šä¹‰è¡¨ - å­˜å‚¨å·¥ä½œæµçš„é…ç½®ä¿¡æ¯';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流定义表 - 存储工作流的配置信息';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2447,4 +2470,59 @@ CREATE TABLE `workflow_transitions` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-12-02 16:17:58
+-- ============================================================
+-- 确保所有表和字段使用 utf8mb4 字符集
+-- ============================================================
+
+-- 使用存储过程批量修改所有表的字符集
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS `fix_all_tables_charset`$$
+
+CREATE PROCEDURE `fix_all_tables_charset`()
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE table_name VARCHAR(255);
+    DECLARE cur CURSOR FOR 
+        SELECT TABLE_NAME 
+        FROM information_schema.TABLES 
+        WHERE TABLE_SCHEMA = 'bantu_crm' 
+        AND TABLE_TYPE = 'BASE TABLE'
+        AND TABLE_COLLATION != 'utf8mb4_0900_ai_ci';
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN cur;
+    
+    read_loop: LOOP
+        FETCH cur INTO table_name;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+        
+        -- 修改表字符集（这会同时修改所有字段的字符集）
+        SET @sql = CONCAT('ALTER TABLE `', table_name, '` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci');
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+        
+    END LOOP;
+    
+    CLOSE cur;
+END$$
+
+DELIMITER ;
+
+-- 执行存储过程，确保所有表都是 utf8mb4
+CALL `fix_all_tables_charset`();
+
+-- 删除临时存储过程
+DROP PROCEDURE IF EXISTS `fix_all_tables_charset`;
+
+-- 验证字符集设置（应该返回 0）
+-- SELECT COUNT(*) as non_utf8mb4_tables
+-- FROM information_schema.TABLES 
+-- WHERE TABLE_SCHEMA = 'bantu_crm' 
+-- AND TABLE_TYPE = 'BASE TABLE'
+-- AND TABLE_COLLATION != 'utf8mb4_0900_ai_ci';
+
+-- Dump completed on 2025-12-07  7:09:48

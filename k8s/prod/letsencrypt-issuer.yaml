@@ -1,0 +1,22 @@
+# Let's Encrypt ClusterIssuer - 生产环境
+# 用于自动管理 TLS 证书
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    environment: production
+spec:
+  acme:
+    # Let's Encrypt 生产环境服务器
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@bantuqifu.xin  # 请替换为实际的管理员邮箱
+    # 私钥存储方式
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    # HTTP-01 验证方式
+    solvers:
+    - http01:
+        ingress:
+          class: traefik
+

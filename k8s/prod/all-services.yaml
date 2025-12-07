@@ -1,0 +1,744 @@
+# ============================================================
+# CRM Python 微服务生产环境配置
+# 包含所有服务的 Deployment 和 Service
+# 使用 Docker 镜像启动，无热重载，无代码挂载
+# ============================================================
+
+# ============================================================
+# 1. Foundation Service
+# ============================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-foundation-service
+  namespace: default
+  labels:
+    app: crm-foundation-service
+    service: foundation
+    version: python
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-foundation-service
+  template:
+    metadata:
+      labels:
+        app: crm-foundation-service
+        service: foundation
+        version: python
+        environment: production
+    spec:
+      containers:
+      - name: foundation
+        image: bantu-crm-foundation-service:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8081
+          protocol: TCP
+        command: ["uvicorn", "foundation_service.main:app", "--host", "0.0.0.0", "--port", "8081", "--workers", "4", "--log-level", "info"]
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
+        - name: JWT_EXPIRATION
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_EXPIRATION
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_DEBUG
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-foundation-service
+  namespace: default
+  labels:
+    app: crm-foundation-service
+    service: foundation
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-foundation-service
+
+# ============================================================
+# 2. Gateway Service
+# ============================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-gateway-service
+  namespace: default
+  labels:
+    app: crm-gateway-service
+    service: gateway
+    version: python
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-gateway-service
+  template:
+    metadata:
+      labels:
+        app: crm-gateway-service
+        service: gateway
+        version: python
+        environment: production
+    spec:
+      containers:
+      - name: gateway
+        image: bantu-crm-gateway-service:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        command: ["uvicorn", "gateway_service.main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4", "--log-level", "info"]
+        env:
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
+        - name: FOUNDATION_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: GATEWAY_FOUNDATION_SERVICE_URL
+        - name: SERVICE_MANAGEMENT_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: GATEWAY_SERVICE_MANAGEMENT_SERVICE_URL
+        - name: ANALYTICS_MONITORING_SERVICE_URL
+          value: "http://crm-analytics-monitoring-service:8083"
+        - name: ORDER_WORKFLOW_SERVICE_URL
+          value: "http://crm-order-workflow-service:8084"
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: GATEWAY_DEBUG
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-gateway-service
+  namespace: default
+  labels:
+    app: crm-gateway-service
+    service: gateway
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-gateway-service
+
+# ============================================================
+# 3. Service Management Service
+# ============================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-service-management-service
+  namespace: default
+  labels:
+    app: crm-service-management-service
+    service: service-management
+    version: python
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-service-management-service
+  template:
+    metadata:
+      labels:
+        app: crm-service-management-service
+        service: service-management
+        version: python
+        environment: production
+    spec:
+      containers:
+      - name: service-management
+        image: bantu-crm-service-management-service:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8082
+          protocol: TCP
+        command: ["uvicorn", "service_management.main:app", "--host", "0.0.0.0", "--port", "8082", "--workers", "4", "--log-level", "info"]
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: SERVICE_MANAGEMENT_DEBUG
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-service-management-service
+  namespace: default
+  labels:
+    app: crm-service-management-service
+    service: service-management
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8082
+    targetPort: 8082
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-service-management-service
+
+# ============================================================
+# 4. Analytics and Monitoring Service
+# ============================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-analytics-monitoring-service
+  namespace: default
+  labels:
+    app: crm-analytics-monitoring-service
+    service: analytics-monitoring
+    version: python
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-analytics-monitoring-service
+  template:
+    metadata:
+      labels:
+        app: crm-analytics-monitoring-service
+        service: analytics-monitoring
+        version: python
+        environment: production
+    spec:
+      containers:
+      - name: analytics-monitoring
+        image: bantu-crm-analytics-monitoring-service:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8083
+          protocol: TCP
+        command: ["uvicorn", "analytics_monitoring_service.main:app", "--host", "0.0.0.0", "--port", "8083", "--workers", "4", "--log-level", "info"]
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+        - name: METRICS_COLLECTION_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_METRICS_COLLECTION_INTERVAL
+        - name: ALERT_CHECK_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_CHECK_INTERVAL
+        - name: CPU_THRESHOLD_WARNING
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_CPU_THRESHOLD_WARNING
+        - name: CPU_THRESHOLD_CRITICAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_CPU_THRESHOLD_CRITICAL
+        - name: MEMORY_THRESHOLD_WARNING
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_MEMORY_THRESHOLD_WARNING
+        - name: MEMORY_THRESHOLD_CRITICAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_MEMORY_THRESHOLD_CRITICAL
+        - name: ALERT_EMAIL_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_EMAIL_ENABLED
+        - name: ALERT_EMAIL_RECIPIENTS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_EMAIL_RECIPIENTS
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        - name: DEBUG
+          value: "false"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8083
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-analytics-monitoring-service
+  namespace: default
+  labels:
+    app: crm-analytics-monitoring-service
+    service: analytics-monitoring
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8083
+    targetPort: 8083
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-analytics-monitoring-service
+
+# ============================================================
+# 5. Order and Workflow Service
+# ============================================================
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crm-order-workflow-service
+  namespace: default
+  labels:
+    app: crm-order-workflow-service
+    service: order-workflow
+    version: python
+    environment: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crm-order-workflow-service
+  template:
+    metadata:
+      labels:
+        app: crm-order-workflow-service
+        service: order-workflow
+        version: python
+        environment: production
+    spec:
+      containers:
+      - name: order-workflow
+        image: bantu-crm-order-workflow-service:latest
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 8084
+          protocol: TCP
+        command: ["uvicorn", "order_workflow_service.main:app", "--host", "0.0.0.0", "--port", "8084", "--workers", "4", "--log-level", "info"]
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: JWT_SECRET
+        - name: JWT_ALGORITHM
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: FOUNDATION_JWT_ALGORITHM
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secret
+              key: REDIS_PASSWORD
+        - name: REDIS_DB
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: REDIS_DB
+        - name: MINIO_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: MINIO_ENDPOINT
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: MINIO_ROOT_USER
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: MINIO_ROOT_PASSWORD
+        - name: CORS_ALLOWED_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: CORS_ALLOWED_ORIGINS
+        - name: DEBUG
+          value: "false"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crm-order-workflow-service
+  namespace: default
+  labels:
+    app: crm-order-workflow-service
+    service: order-workflow
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8084
+    targetPort: 8084
+    protocol: TCP
+    name: http
+  selector:
+    app: crm-order-workflow-service
+
