@@ -31,10 +31,10 @@ class CollectionTask(Base):
     notes = Column(Text, nullable=True, comment="备注")
     
     # 分配信息
-    assigned_to_user_id = Column(String(36), nullable=True, index=True, comment="分配给的用户ID（销售负责人，跨服务引用）")
+    assigned_to_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="分配给的用户ID（销售负责人）")
     
     # 审计字段
-    created_by = Column(String(36), nullable=True, comment="创建人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     

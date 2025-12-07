@@ -25,7 +25,7 @@ class LeadNote(Base):
     is_important = Column(Boolean, default=False, nullable=False, index=True, comment="是否重要")
     
     # 审计字段
-    created_by = Column(String(36), nullable=True, comment="创建人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     
     # 关系

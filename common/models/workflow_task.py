@@ -24,14 +24,14 @@ class WorkflowTask(Base):
     task_type = Column(String(50), nullable=True, comment="任务类型：user_task, service_task, script_task")
     
     # 任务分配
-    assigned_to_user_id = Column(String(36), nullable=True, index=True, comment="分配给的用户ID（跨服务引用）")
-    assigned_to_role_id = Column(String(36), nullable=True, index=True, comment="分配给的角色ID（跨服务引用）")
+    assigned_to_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="分配给的用户ID")
+    assigned_to_role_id = Column(String(36), ForeignKey("roles.id", ondelete="SET NULL"), nullable=True, index=True, comment="分配给的角色ID")
     
     # 任务状态
     status = Column(String(50), nullable=False, default="pending", index=True, comment="任务状态：pending, in_progress, completed, cancelled")
     due_date = Column(DateTime, nullable=True, index=True)
     completed_at = Column(DateTime, nullable=True)
-    completed_by = Column(String(36), nullable=True, comment="完成人ID（跨服务引用）")
+    completed_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="完成人ID")
     
     # 任务变量
     variables = Column(JSON, nullable=True, comment="任务变量（JSON 格式）")

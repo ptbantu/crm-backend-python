@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, Chec
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
+from common.models import User
 import uuid
 
 
@@ -34,12 +35,13 @@ class OrderComment(Base):
     replied_to_comment_id = Column(String(36), ForeignKey("order_comments.id", ondelete="SET NULL"), nullable=True, index=True)
     
     # 审计字段
-    created_by = Column(String(36), nullable=True, index=True, comment="创建人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="创建人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
     
     # 关系
     order = relationship("Order", back_populates="order_comments")
+    creator = relationship(User, foreign_keys=[created_by], backref="created_order_comments")
     
     # 检查约束
     __table_args__ = (
@@ -48,4 +50,8 @@ class OrderComment(Base):
             name="chk_order_comments_type"
         ),
     )
+
+
+
+
 

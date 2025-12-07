@@ -26,7 +26,7 @@ class WorkflowInstance(Base):
     status = Column(String(50), nullable=False, default="running", index=True, comment="实例状态：running, completed, cancelled, suspended")
     
     # 启动信息
-    started_by = Column(String(36), nullable=True, index=True, comment="启动人ID（跨服务引用）")
+    started_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="启动人ID")
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     

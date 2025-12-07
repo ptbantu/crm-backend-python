@@ -23,7 +23,7 @@ class WorkflowTransition(Base):
     transition_condition = Column(Text, nullable=True, comment="流转条件")
     
     # 触发信息
-    triggered_by = Column(String(36), nullable=True, index=True, comment="触发人ID（跨服务引用）")
+    triggered_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="触发人ID")
     triggered_at = Column(DateTime, nullable=False, server_default=func.now(), index=True)
     notes = Column(Text, nullable=True, comment="备注")
     

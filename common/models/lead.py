@@ -27,12 +27,12 @@ class Lead(Base):
     
     # 关联信息
     # 注意：customers 表现在在本地定义，可以使用外键约束
-    customer_id = Column(String(36), nullable=True, index=True, comment="关联客户ID（可选，跨服务引用）")
+    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True, comment="关联客户ID（可选）")
     # 注意：organizations 表在 foundation_service 的数据库中，不能使用外键约束，只保留索引
     # organization_id 必须为 NOT NULL，创建时从用户的 organization_employees 表自动获取
     organization_id = Column(String(36), nullable=True, index=True, comment="组织ID（可选，跨服务引用）")
     # 注意：users 表现在在本地定义，可以使用外键约束
-    owner_user_id = Column(String(36), nullable=True, index=True, comment="销售负责人ID（跨服务引用）")
+    owner_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="销售负责人ID")
     
     # 状态管理
     status = Column(String(50), default="new", nullable=False, index=True, comment="状态：new(新建), contacted(已联系), qualified(已确认), converted(已转化), lost(已丢失)")
@@ -54,8 +54,8 @@ class Lead(Base):
     
     # 审计字段
     # 注意：users 表现在在本地定义，可以使用外键约束
-    created_by = Column(String(36), nullable=True, index=True, comment="创建人ID（跨服务引用）")
-    updated_by = Column(String(36), nullable=True, index=True, comment="更新人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="创建人ID")
+    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="更新人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     

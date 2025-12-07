@@ -32,8 +32,8 @@ class WorkflowDefinition(Base):
     is_active = Column(Boolean, nullable=False, default=True, index=True, comment="是否激活")
     
     # 审计字段
-    created_by = Column(String(36), nullable=True, comment="创建人ID（跨服务引用）")
-    updated_by = Column(String(36), nullable=True, comment="更新人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
+    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="更新人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
 
