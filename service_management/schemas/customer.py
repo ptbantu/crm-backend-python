@@ -60,14 +60,15 @@ class CustomerCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="客户名称")
     code: Optional[str] = Field(None, max_length=100, description="客户编码（唯一，如果不提供则自动生成）")
     customer_type: Literal['individual', 'organization'] = Field(default="individual", description="客户类型：individual (个人), organization (组织)")
-    customer_source_type: str = Field(default="own", description="客户来源类型：own, agent")
+    # customer_source_type 已废弃，统一使用 source_id
+    customer_source_type: Optional[str] = Field(None, description="客户来源类型（已废弃，请使用 source_id）")
     
     # 关联关系
     parent_customer_id: Optional[str] = Field(None, description="父客户ID")
     owner_user_id: Optional[str] = Field(None, description="内部客户所有者ID")
     agent_user_id: Optional[str] = Field(None, description="渠道客户用户ID")
     agent_id: Optional[str] = Field(None, description="渠道客户组织ID")
-    source_id: Optional[str] = Field(None, description="客户来源ID")
+    source_id: str = Field(..., description="客户来源ID（必填）")
     channel_id: Optional[str] = Field(None, description="客户渠道ID")
     
     # 业务字段
@@ -90,14 +91,15 @@ class CustomerUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     code: Optional[str] = Field(None, max_length=100)
     customer_type: Optional[Literal['individual', 'organization']] = None
-    customer_source_type: Optional[str] = None
+    # customer_source_type 已废弃，统一使用 source_id
+    customer_source_type: Optional[str] = Field(None, description="客户来源类型（已废弃，请使用 source_id）")
     
     # 关联关系
     parent_customer_id: Optional[str] = None
     owner_user_id: Optional[str] = None
     agent_user_id: Optional[str] = None
     agent_id: Optional[str] = None
-    source_id: Optional[str] = None
+    source_id: Optional[str] = Field(None, description="客户来源ID（可选，编辑时可以不修改）")
     channel_id: Optional[str] = None
     
     # 业务字段

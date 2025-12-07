@@ -156,10 +156,11 @@ from order_workflow_service.api.v1 import (
     collection_tasks,
     temporary_links,
     notifications,
-    customer_levels,
     opportunities,
     product_dependencies,
 )
+# 直接导入 customer_levels 模块（使用完整路径）
+from order_workflow_service.api.v1.customer_levels import router as customer_levels_router
 
 app.include_router(
     orders.router,
@@ -210,7 +211,7 @@ app.include_router(
 )
 
 app.include_router(
-    customer_levels.router,
+    customer_levels_router,
     prefix="/api/order-workflow",
     tags=["选项配置"]
 )

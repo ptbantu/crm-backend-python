@@ -15,8 +15,9 @@ class CustomerSource(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     code = Column(String(100), nullable=True, unique=True, index=True)  # 允许为空，因为可能有些旧数据没有code
     name = Column(String(255), nullable=False)  # 保留旧字段以兼容
-    name_zh = Column(String(255), nullable=True)  # 中文名称
-    name_id = Column(String(255), nullable=True)  # 印尼语名称
+    # 注意：数据库表可能没有 name_zh 和 name_id 字段，使用 nullable=True 并允许不存在
+    name_zh = Column(String(255), nullable=True)  # 中文名称（可能不存在）
+    name_id = Column(String(255), nullable=True)  # 印尼语名称（可能不存在）
     description = Column(Text, nullable=True)
     display_order = Column(String(36), nullable=True, default="0")
     is_active = Column(Boolean, nullable=False, default=True, index=True)

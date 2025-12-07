@@ -14,6 +14,9 @@ from service_management.repositories.customer_repository import CustomerReposito
 from common.models.customer import Customer
 from common.models.customer_level import CustomerLevel
 from common.models.industry import Industry
+from common.models.customer_source import CustomerSource
+from common.models.customer_channel import CustomerChannel
+from common.models.organization import Organization
 from common.models import User
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
@@ -302,8 +305,41 @@ class CustomerService:
                 # 优先使用 display_name，如果没有则使用 username
                 owner_user_name = user.display_name or user.username
         
-        # TODO: 获取 agent_name, source_name, channel_name
-        # 这些需要从其他表查询，暂时设为 None
+        # 获取 source_name（客户来源名称）
+        source_name = None
+        if customer.source_id:
+            # 只选择实际存在的列，避免查询不存在的 name_zh 和 name_id 字段
+            source_query = select(
+                CustomerSource.id,
+                CustomerSource.code,
+                CustomerSource.name,
+                CustomerSource.description,
+                CustomerSource.display_order,
+                CustomerSource.is_active
+            ).where(CustomerSource.id == customer.source_id)
+            source_result = await self.db.execute(source_query)
+            source_row = source_result.first()
+            if source_row:
+                # 使用 name 字段（数据库表中实际存在的字段）
+                source_name = source_row.name
+        
+        # 获取 channel_name（客户渠道名称）
+        channel_name = None
+        if customer.channel_id:
+            channel_query = select(CustomerChannel).where(CustomerChannel.id == customer.channel_id)
+            channel_result = await self.db.execute(channel_query)
+            channel = channel_result.scalar_one_or_none()
+            if channel:
+                channel_name = channel.name
+        
+        # 获取 agent_name（渠道组织名称）
+        agent_name = None
+        if customer.agent_id:
+            agent_query = select(Organization).where(Organization.id == customer.agent_id)
+            agent_result = await self.db.execute(agent_query)
+            agent = agent_result.scalar_one_or_none()
+            if agent:
+                agent_name = agent.name
         
         return CustomerResponse(
             id=customer.id,
@@ -317,11 +353,11 @@ class CustomerService:
             owner_user_name=owner_user_name,
             agent_user_id=customer.agent_user_id,
             agent_id=customer.agent_id,
-            agent_name=None,  # TODO: 从 organizations 表查询
+            agent_name=agent_name,
             source_id=customer.source_id,
-            source_name=customer.source_name,
+            source_name=source_name,
             channel_id=customer.channel_id,
-            channel_name=customer.channel_name,
+            channel_name=channel_name,
             level=customer.level,
             level_name_zh=level_name_zh,
             level_name_id=level_name_id,
