@@ -402,7 +402,7 @@ class OpportunityService:
                 created_by=created_by,
             )
             
-            await self.db.add(opportunity)
+            self.db.add(opportunity)
             await self.db.flush()
             
             # 5. 创建商机产品关联
