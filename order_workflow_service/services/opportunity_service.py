@@ -87,7 +87,7 @@ class OpportunityService:
                 created_by=created_by,
             )
             
-            await self.db.add(opportunity)
+            self.db.add(opportunity)
             await self.db.flush()  # 获取opportunity.id
             
             # 处理产品列表
@@ -134,7 +134,7 @@ class OpportunityService:
                         execution_order=product_req.execution_order or (idx + 1),
                         status="pending",
                     )
-                    await self.db.add(opp_product)
+                    self.db.add(opp_product)
             
             # 处理付款阶段
             if request.payment_stages:
@@ -149,7 +149,7 @@ class OpportunityService:
                         payment_trigger=stage_req.payment_trigger,
                         status="pending",
                     )
-                    await self.db.add(opp_payment_stage)
+                    self.db.add(opp_payment_stage)
             
             await self.db.commit()
             await self.db.refresh(opportunity)
@@ -349,9 +349,11 @@ class OpportunityService:
                 logger.info(f"创建客户: customer_id={customer.id}, organization_id={organization_id}")
                 if self.db is None:
                     raise BusinessException(detail="数据库会话不可用", status_code=500)
-                await self.db.add(customer)
+                # add() 是同步方法，不需要 await
+                self.db.add(customer)
                 await self.db.flush()
                 customer_id = customer.id
+                logger.info(f"客户已创建并刷新: customer_id={customer_id}")
             else:
                 # 验证客户是否存在
                 if self.db is None:
@@ -422,7 +424,7 @@ class OpportunityService:
                     execution_order=product_req.execution_order or (idx + 1),
                     status="pending",
                 )
-                await self.db.add(opp_product)
+                self.db.add(opp_product)
             
             # 6. 创建付款阶段
             if request.payment_stages:
@@ -437,7 +439,7 @@ class OpportunityService:
                         payment_trigger=stage_req.payment_trigger,
                         status="pending",
                     )
-                    await self.db.add(opp_payment_stage)
+                    self.db.add(opp_payment_stage)
             
             # 7. 更新线索状态为已转化
             lead.status = "converted"
