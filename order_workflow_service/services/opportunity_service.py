@@ -342,9 +342,11 @@ class OpportunityService:
                     customer_type="organization" if lead.company_name else "individual",
                     customer_source_type="own",
                     owner_user_id=lead.owner_user_id or created_by,
+                    organization_id=organization_id,  # 确保设置 organization_id
                     level=lead.level,
                     description=f"从线索转化：{lead.name}",
                 )
+                logger.info(f"创建客户: customer_id={customer.id}, organization_id={organization_id}")
                 if self.db is None:
                     raise BusinessException(detail="数据库会话不可用", status_code=500)
                 await self.db.add(customer)
