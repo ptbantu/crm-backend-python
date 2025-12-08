@@ -344,26 +344,27 @@ class OpportunityService:
                 if not customer:
                     raise BusinessException(detail="客户不存在", status_code=404)
             
-            # 2. 验证产品依赖关系
-            product_ids = [p.product_id for p in request.products]
-            is_valid, missing_deps, warnings = await self.dependency_service.validate_dependency_chain(product_ids)
-            
-            if not is_valid:
-                raise BusinessException(
-                    detail=f"产品依赖关系验证失败：{', '.join(missing_deps)}",
-                    status_code=400
-                )
-            
-            # 3. 计算执行顺序
-            if request.auto_calculate_order:
-                execution_order_map = await self.dependency_service.get_execution_order(product_ids)
-                order_dict = {item["product_id"]: item["execution_order"] for item in execution_order_map}
-                for product_req in request.products:
-                    if product_req.execution_order is None:
-                        product_req.execution_order = order_dict.get(product_req.product_id, 999)
-            
-            # 按执行顺序排序
-            request.products.sort(key=lambda x: x.execution_order or 999)
+            # 2. 验证产品依赖关系（如果提供了产品）
+            if request.products:
+                product_ids = [p.product_id for p in request.products]
+                is_valid, missing_deps, warnings = await self.dependency_service.validate_dependency_chain(product_ids)
+                
+                if not is_valid:
+                    raise BusinessException(
+                        detail=f"产品依赖关系验证失败：{', '.join(missing_deps)}",
+                        status_code=400
+                    )
+                
+                # 3. 计算执行顺序
+                if request.auto_calculate_order:
+                    execution_order_map = await self.dependency_service.get_execution_order(product_ids)
+                    order_dict = {item["product_id"]: item["execution_order"] for item in execution_order_map}
+                    for product_req in request.products:
+                        if product_req.execution_order is None:
+                            product_req.execution_order = order_dict.get(product_req.product_id, 999)
+                
+                # 按执行顺序排序
+                request.products.sort(key=lambda x: x.execution_order or 999)
             
             # 4. 创建商机
             opportunity = Opportunity(
@@ -426,9 +427,27 @@ class OpportunityService:
             lead.customer_id = customer_id
             
             await self.db.commit()
-            await self.db.refresh(opportunity)
             
-            return await self._to_response(opportunity)
+            # 重新加载 opportunity 及其关联对象，确保 relationship 正确加载
+            from sqlalchemy.orm import selectinload
+            from sqlalchemy import select
+            result = await self.db.execute(
+                select(Opportunity)
+                .options(
+                    selectinload(Opportunity.customer),
+                    selectinload(Opportunity.lead),
+                    selectinload(Opportunity.owner),
+                    selectinload(Opportunity.products).selectinload(OpportunityProduct.product),
+                    selectinload(Opportunity.payment_stages)
+                )
+                .where(Opportunity.id == opportunity.id)
+            )
+            reloaded_opportunity = result.scalar_one_or_none()
+            
+            if not reloaded_opportunity:
+                raise BusinessException(detail="商机创建失败，无法重新加载", status_code=500)
+            
+            return await self._to_response(reloaded_opportunity)
         except BusinessException:
             raise
         except Exception as e:
