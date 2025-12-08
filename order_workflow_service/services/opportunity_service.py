@@ -321,7 +321,17 @@ class OpportunityService:
         if not organization_id:
             organization_id = lead.organization_id
         
+        # 确保 organization_id 不为 None
+        if not organization_id:
+            raise BusinessException(detail="无法确定组织ID，请确保线索已关联组织", status_code=400)
+        
+        logger.info(f"线索转商机: lead_id={lead_id}, organization_id={organization_id}, created_by={created_by}")
+        
         try:
+            # 检查 self.db 是否为 None
+            if self.db is None:
+                raise BusinessException(detail="数据库会话不可用", status_code=500)
+            
             # 1. 创建或使用已有客户
             customer_id = request.customer_id
             if not customer_id:
@@ -335,11 +345,15 @@ class OpportunityService:
                     level=lead.level,
                     description=f"从线索转化：{lead.name}",
                 )
+                if self.db is None:
+                    raise BusinessException(detail="数据库会话不可用", status_code=500)
                 await self.db.add(customer)
                 await self.db.flush()
                 customer_id = customer.id
             else:
                 # 验证客户是否存在
+                if self.db is None:
+                    raise BusinessException(detail="数据库会话不可用", status_code=500)
                 customer = await self.db.get(Customer, customer_id)
                 if not customer:
                     raise BusinessException(detail="客户不存在", status_code=404)
@@ -467,8 +481,14 @@ class OpportunityService:
         except BusinessException:
             raise
         except Exception as e:
-            await self.db.rollback()
+            # 安全地执行 rollback，即使 self.db 可能是 None
+            try:
+                if self.db is not None:
+                    await self.db.rollback()
+            except Exception as rollback_error:
+                logger.error(f"回滚事务失败: {rollback_error}", exc_info=True)
             logger.error(f"线索转化商机失败: {e}", exc_info=True)
+            logger.error(f"错误类型: {type(e).__name__}, 错误详情: {str(e)}", exc_info=True)
             raise BusinessException(detail=f"线索转化商机失败: {str(e)}")
     
     async def convert_opportunity_to_order(
