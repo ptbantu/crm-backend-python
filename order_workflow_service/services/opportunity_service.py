@@ -367,6 +367,7 @@ class OpportunityService:
                 request.products.sort(key=lambda x: x.execution_order or 999)
             
             # 4. 创建商机
+            # LeadConvertToOpportunityRequest 没有 status 字段，使用默认值 "active"
             opportunity = Opportunity(
                 id=str(uuid.uuid4()),
                 customer_id=customer_id,
@@ -374,8 +375,8 @@ class OpportunityService:
                 name=request.name,
                 amount=request.amount,
                 probability=request.probability,
-                stage=request.stage,
-                status=request.status,
+                stage=request.stage or "initial_contact",
+                status="active",  # 线索转商机时默认状态为 active
                 owner_user_id=request.owner_user_id or lead.owner_user_id or created_by,
                 organization_id=organization_id,
                 expected_close_date=request.expected_close_date,
@@ -429,25 +430,40 @@ class OpportunityService:
             await self.db.commit()
             
             # 重新加载 opportunity 及其关联对象，确保 relationship 正确加载
+            # 注意：必须在 commit 后重新查询，因为 relationship 在 commit 后可能无法访问
             from sqlalchemy.orm import selectinload
             from sqlalchemy import select
-            result = await self.db.execute(
-                select(Opportunity)
-                .options(
-                    selectinload(Opportunity.customer),
-                    selectinload(Opportunity.lead),
-                    selectinload(Opportunity.owner),
-                    selectinload(Opportunity.products).selectinload(OpportunityProduct.product),
-                    selectinload(Opportunity.payment_stages)
+            
+            # 检查 self.db 是否为 None
+            if self.db is None:
+                raise BusinessException(detail="数据库会话不可用", status_code=500)
+            
+            try:
+                result = await self.db.execute(
+                    select(Opportunity)
+                    .options(
+                        selectinload(Opportunity.customer),
+                        selectinload(Opportunity.lead),
+                        selectinload(Opportunity.owner),
+                        selectinload(Opportunity.products).selectinload(OpportunityProduct.product),
+                        selectinload(Opportunity.payment_stages)
+                    )
+                    .where(Opportunity.id == opportunity.id)
                 )
-                .where(Opportunity.id == opportunity.id)
-            )
-            reloaded_opportunity = result.scalar_one_or_none()
-            
-            if not reloaded_opportunity:
-                raise BusinessException(detail="商机创建失败，无法重新加载", status_code=500)
-            
-            return await self._to_response(reloaded_opportunity)
+                reloaded_opportunity = result.scalar_one_or_none()
+                
+                if not reloaded_opportunity:
+                    raise BusinessException(detail="商机创建失败，无法重新加载", status_code=500)
+                
+                return await self._to_response(reloaded_opportunity)
+            except Exception as reload_error:
+                logger.error(f"重新加载商机失败: {reload_error}", exc_info=True)
+                # 如果重新加载失败，尝试使用原始对象（但可能无法访问 relationship）
+                try:
+                    return await self._to_response(opportunity)
+                except Exception as response_error:
+                    logger.error(f"构建响应对象失败: {response_error}", exc_info=True)
+                    raise BusinessException(detail=f"线索转化商机成功，但构建响应失败: {str(response_error)}", status_code=500)
         except BusinessException:
             raise
         except Exception as e:
@@ -547,62 +563,84 @@ class OpportunityService:
             OpportunityPaymentStageResponse,
         )
         
-        # 填充关联数据
+        # 填充关联数据（安全访问 relationship，避免 NoneType 错误）
         customer_name = None
-        if opportunity.customer:
-            customer_name = opportunity.customer.name
+        try:
+            if hasattr(opportunity, 'customer') and opportunity.customer is not None:
+                customer_name = opportunity.customer.name if hasattr(opportunity.customer, 'name') else None
+        except Exception as e:
+            logger.warning(f"获取客户名称失败: {e}")
         
         lead_name = None
-        if opportunity.lead:
-            lead_name = opportunity.lead.name
+        try:
+            if hasattr(opportunity, 'lead') and opportunity.lead is not None:
+                lead_name = opportunity.lead.name if hasattr(opportunity.lead, 'name') else None
+        except Exception as e:
+            logger.warning(f"获取线索名称失败: {e}")
         
         owner_username = None
-        if opportunity.owner:
-            owner_username = opportunity.owner.display_name or opportunity.owner.username
+        try:
+            if hasattr(opportunity, 'owner') and opportunity.owner is not None:
+                owner = opportunity.owner
+                owner_username = (owner.display_name if hasattr(owner, 'display_name') and owner.display_name else None) or (owner.username if hasattr(owner, 'username') else None)
+        except Exception as e:
+            logger.warning(f"获取负责人用户名失败: {e}")
         
-        # 转换产品列表
+        # 转换产品列表（安全访问 relationship）
         products = []
-        for opp_product in opportunity.products:
-            product_name = None
-            product_code = None
-            if opp_product.product:
-                product_name = opp_product.product.name
-                product_code = opp_product.product.code
+        try:
+            products_list = opportunity.products if hasattr(opportunity, 'products') and opportunity.products is not None else []
+            for opp_product in products_list:
+                product_name = None
+                product_code = None
+                try:
+                    if hasattr(opp_product, 'product') and opp_product.product is not None:
+                        product = opp_product.product
+                        product_name = product.name if hasattr(product, 'name') else None
+                        product_code = product.code if hasattr(product, 'code') else None
+                except Exception as e:
+                    logger.warning(f"获取产品信息失败: {e}")
             
-            products.append(OpportunityProductResponse(
-                id=opp_product.id,
-                opportunity_id=opp_product.opportunity_id,
-                product_id=opp_product.product_id,
-                product_name=product_name,
-                product_code=product_code,
-                quantity=opp_product.quantity,
-                unit_price=opp_product.unit_price,
-                total_amount=opp_product.total_amount,
-                execution_order=opp_product.execution_order,
-                status=opp_product.status,
-                start_date=opp_product.start_date,
-                expected_completion_date=opp_product.expected_completion_date,
-                actual_completion_date=opp_product.actual_completion_date,
-                notes=opp_product.notes,
-                created_at=opp_product.created_at,
-                updated_at=opp_product.updated_at,
-            ))
+                products.append(OpportunityProductResponse(
+                    id=opp_product.id,
+                    opportunity_id=opp_product.opportunity_id,
+                    product_id=opp_product.product_id,
+                    product_name=product_name,
+                    product_code=product_code,
+                    quantity=opp_product.quantity,
+                    unit_price=opp_product.unit_price,
+                    total_amount=opp_product.total_amount,
+                    execution_order=opp_product.execution_order,
+                    status=opp_product.status,
+                    start_date=opp_product.start_date,
+                    expected_completion_date=opp_product.expected_completion_date,
+                    actual_completion_date=opp_product.actual_completion_date,
+                    notes=opp_product.notes,
+                    created_at=opp_product.created_at,
+                    updated_at=opp_product.updated_at,
+                ))
+        except Exception as e:
+            logger.warning(f"转换产品列表失败: {e}")
         
-        # 转换付款阶段列表
+        # 转换付款阶段列表（安全访问 relationship）
         payment_stages = []
-        for stage in opportunity.payment_stages:
-            payment_stages.append(OpportunityPaymentStageResponse(
-                id=stage.id,
-                opportunity_id=stage.opportunity_id,
-                stage_number=stage.stage_number,
-                stage_name=stage.stage_name,
-                amount=stage.amount,
-                due_date=stage.due_date,
-                payment_trigger=stage.payment_trigger,
-                status=stage.status,
-                created_at=stage.created_at,
-                updated_at=stage.updated_at,
-            ))
+        try:
+            stages_list = opportunity.payment_stages if hasattr(opportunity, 'payment_stages') and opportunity.payment_stages is not None else []
+            for stage in stages_list:
+                payment_stages.append(OpportunityPaymentStageResponse(
+                    id=stage.id,
+                    opportunity_id=stage.opportunity_id,
+                    stage_number=stage.stage_number,
+                    stage_name=stage.stage_name,
+                    amount=stage.amount,
+                    due_date=stage.due_date,
+                    payment_trigger=stage.payment_trigger,
+                    status=stage.status,
+                    created_at=stage.created_at,
+                    updated_at=stage.updated_at,
+                ))
+        except Exception as e:
+            logger.warning(f"转换付款阶段列表失败: {e}")
         
         return OpportunityResponse(
             id=opportunity.id,
