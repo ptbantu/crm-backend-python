@@ -160,7 +160,7 @@ class LeadConvertToOpportunityRequest(BaseModel):
     owner_user_id: Optional[str] = Field(None, description="负责人ID")
     expected_close_date: Optional[date] = Field(None, description="预期成交日期")
     description: Optional[str] = Field(None, description="描述")
-    products: List[OpportunityProductRequest] = Field(..., description="产品列表")
+    products: List[OpportunityProductRequest] = Field(default=[], description="产品列表（可选）")
     payment_stages: Optional[List[OpportunityPaymentStageRequest]] = Field(default=[], description="付款阶段列表")
     auto_calculate_order: bool = Field(default=True, description="是否自动计算执行顺序")
 
