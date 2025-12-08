@@ -66,10 +66,3 @@ class OrderFile(Base):
             name="chk_order_files_file_size_nonneg"
         ),
     )
-
-
-    )
-
-
-    )
-
