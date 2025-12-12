@@ -2,7 +2,7 @@
 
 ## 概述
 
-本目录包含 BANTU CRM Python 服务的 Kubernetes 部署配置。这些配置用于生产环境部署。
+本目录包含 BANTU CRM Python 服务的 Kubernetes 部署配置。**所有微服务已合并为单体服务（foundation_service）**，简化了部署和管理。
 
 **注意**：开发环境请使用 Docker Compose，参考项目根目录的 `docker-compose.dev.yml`。
 
@@ -10,63 +10,126 @@
 
 ```
 k8s/
-├── deployments/          # Kubernetes 部署配置文件
-│   ├── foundation-deployment.yaml
-│   ├── gateway-deployment.yaml
-│   ├── crm-ingress.yaml
-│   ├── configmap.yaml
-│   ├── secret.yaml
-│   ├── services.yaml
-│   ├── letsencrypt-issuer.yaml
-│   ├── bantu-sbs-tls-secret.yaml
-│   └── README-LETSENCRYPT.md
+├── deployments/          # Kubernetes 部署配置文件（开发/测试环境）
+│   ├── foundation-deployment.yaml    # Foundation Service 部署配置（支持开发模式热重载）
+│   ├── crm-ingress.yaml              # Ingress 配置（所有路径路由到 foundation_service）
+│   ├── configmap.yaml                # 应用配置（环境变量、服务 URL 等）
+│   ├── secret.yaml                   # 敏感信息（数据库密码、JWT 密钥等）
+│   ├── services.yaml                 # Kubernetes Service 配置（仅 foundation_service）
+│   ├── letsencrypt-issuer.yaml      # Let's Encrypt 证书配置
+│   ├── bantu-sbs-tls-secret.yaml    # TLS 证书 Secret（备用）
+│   └── README-LETSENCRYPT.md        # Let's Encrypt 证书配置文档
 │
-└── create_and_test_admin.py  # 创建管理员用户脚本
+└── prod/                 # 生产环境配置
+    ├── all-services.yaml  # 生产环境完整配置（Deployment + Service）
+    ├── ingress.yaml      # 生产环境 Ingress 配置
+    ├── configmap.yaml    # 生产环境 ConfigMap
+    ├── secret.yaml       # 生产环境 Secret
+    └── letsencrypt-issuer.yaml  # Let's Encrypt 证书配置
 ```
+
+## 架构说明
+
+### 单体服务架构
+
+所有微服务已合并到 `foundation_service`：
+- ✅ **Foundation Service** - 基础服务（用户、组织、权限等）
+- ✅ **Service Management** - 服务管理（客户、产品、服务记录等）
+- ✅ **Order Workflow** - 订单工作流（订单、线索、商机等）
+- ✅ **Analytics & Monitoring** - 分析和监控（指标、日志、告警等）
+
+**优势**：
+- 简化部署：只需部署一个服务
+- 减少资源消耗：共享数据库连接池和缓存
+- 简化运维：统一的日志、监控和配置管理
+- 提高性能：减少服务间网络调用
+
+### API 路径映射
+
+所有 API 路径都路由到 `foundation_service`，保持前端兼容性：
+
+- `/api/foundation/*` → Foundation Service API
+- `/api/service-management/*` → Service Management API（已合并）
+- `/api/order-workflow/*` → Order Workflow API（已合并）
+- `/api/analytics-monitoring/*` → Analytics & Monitoring API（已合并）
 
 ## 文件说明
 
 ### Kubernetes 配置文件（位于 deployments/ 目录）
 
 - **foundation-deployment.yaml** - Foundation Service 部署配置（支持开发模式热重载）
-- **gateway-deployment.yaml** - Gateway Service 部署配置
-- **services.yaml** - Kubernetes Services 配置
+- **services.yaml** - Kubernetes Service 配置（仅 foundation_service）
 - **configmap.yaml** - 应用配置（环境变量、服务 URL 等）
 - **secret.yaml** - 敏感信息（数据库密码、JWT 密钥等）
 - **crm-ingress.yaml** - Ingress 配置（外部访问，使用 traefik）
 - **letsencrypt-issuer.yaml** - Let's Encrypt 证书配置
 - **bantu-sbs-tls-secret.yaml** - TLS 证书 Secret（备用）
-- **README-LETSENCRYPT.md** - Let's Encrypt 证书配置文档
 
-### 工具脚本
+### 生产环境配置（位于 prod/ 目录）
 
-- **create_and_test_admin.py** - 创建管理员用户并测试登录
+- **all-services.yaml** - 生产环境完整配置（Deployment + Service）
+- **ingress.yaml** - 生产环境 Ingress 配置
+- **configmap.yaml** - 生产环境 ConfigMap
+- **secret.yaml** - 生产环境 Secret
 
 ## 快速开始
 
 ### 1. 构建和推送镜像
 
 ```bash
-./build-and-push.sh
+# 构建单体服务镜像
+docker build -f Dockerfile.prod -t bantu-crm-foundation-service:latest .
 ```
 
-### 2. 部署到 Kubernetes
+### 2. 部署到 Kubernetes（开发/测试环境）
 
 ```bash
-./deploy.sh
+cd k8s/deployments
+
+# 部署 ConfigMap 和 Secret
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+
+# 部署 Service
+kubectl apply -f services.yaml
+
+# 部署 Foundation Service
+kubectl apply -f foundation-deployment.yaml
+
+# 部署 Ingress
+kubectl apply -f crm-ingress.yaml
+
+# 部署 Let's Encrypt Issuer（如果需要）
+kubectl apply -f letsencrypt-issuer.yaml
 ```
 
-### 3. 验证部署
+### 3. 部署到生产环境
+
+```bash
+cd k8s/prod
+
+# 部署所有资源
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f all-services.yaml
+kubectl apply -f ingress.yaml
+kubectl apply -f letsencrypt-issuer.yaml
+```
+
+### 4. 验证部署
 
 ```bash
 # 查看 Pod 状态
-kubectl get pods
+kubectl get pods -l app=crm-foundation-service
 
 # 查看服务状态
-kubectl get svc
+kubectl get svc crm-foundation-service
 
 # 查看 Ingress
 kubectl get ingress
+
+# 查看日志
+kubectl logs -f deployment/crm-foundation-service
 ```
 
 ## 配置说明
@@ -82,16 +145,13 @@ kubectl get ingress
 
 - **域名**: `www.bantu.sbs`
 - **协议**: HTTPS（HTTP 自动重定向到 HTTPS）
-- **TLS**: 使用 `bantu-sbs-tls` Secret
+- **TLS**: 使用 cert-manager 自动管理证书
 - **Ingress Controller**: traefik
-- **路由规则**:
-  - `/api/foundation/*` → Foundation Service (直接访问，无需 Gateway 认证)
-  - `/*` → Gateway Service (需要 JWT 认证)
+- **路由规则**: 所有路径都路由到 `crm-foundation-service:8081`
 
 ### 服务端口
 
-- **Gateway Service**: 8080
-- **Foundation Service**: 8081
+- **Foundation Service**: 8081（单体服务，包含所有功能）
 
 ## 访问服务
 
@@ -103,16 +163,20 @@ echo "EXTERNAL_IP www.bantu.sbs" | sudo tee -a /etc/hosts
 
 # 访问服务
 curl -k https://www.bantu.sbs/health
+curl -k https://www.bantu.sbs/api/foundation/organizations
+curl -k https://www.bantu.sbs/api/service-management/customers
+curl -k https://www.bantu.sbs/api/order-workflow/orders
+curl -k https://www.bantu.sbs/api/analytics-monitoring/metrics
 ```
 
 ### 通过 Port Forward（临时测试）
 
 ```bash
-# Gateway Service
-kubectl port-forward svc/crm-gateway-service 8080:8080
-
 # Foundation Service
 kubectl port-forward svc/crm-foundation-service 8081:8081
+
+# 访问
+curl http://localhost:8081/health
 ```
 
 ## 开发模式
@@ -149,8 +213,6 @@ Foundation Service 已配置为开发模式，支持热重载：
 2. 保存后，服务会自动检测并重新加载
 3. 查看日志：`kubectl logs -f deployment/crm-foundation-service`
 
-**注意**：Gateway Service 暂不支持开发模式，建议使用 Docker Compose 进行 Gateway 开发。
-
 ## 故障排查
 
 ### Pod 无法启动
@@ -167,7 +229,7 @@ kubectl logs <pod-name>
 
 ```bash
 # 检查 Service
-kubectl get svc
+kubectl get svc crm-foundation-service
 
 # 检查 Ingress
 kubectl describe ingress crm-python-ingress
@@ -192,29 +254,68 @@ kubectl apply -f secret.yaml
 
 # 重启 Pod 使配置生效
 kubectl rollout restart deployment/crm-foundation-service
-kubectl rollout restart deployment/crm-gateway-service
 ```
 
 ### 更新镜像
 
 ```bash
-# 重新构建和推送
-./build-and-push.sh
+# 重新构建镜像
+docker build -f Dockerfile.prod -t bantu-crm-foundation-service:latest .
 
 # 更新部署
 kubectl set image deployment/crm-foundation-service foundation=bantu-crm-foundation-service:latest
-kubectl set image deployment/crm-gateway-service gateway=bantu-crm-gateway-service:latest
+
+# 或滚动更新
+kubectl rollout restart deployment/crm-foundation-service
 ```
 
 ## 清理资源
 
 ```bash
-# 删除所有资源
-kubectl delete -f .
-
-# 或使用部署脚本
+# 删除所有资源（开发/测试环境）
+cd k8s/deployments
 kubectl delete -f foundation-deployment.yaml
-kubectl delete -f gateway-deployment.yaml
 kubectl delete -f services.yaml
 kubectl delete -f crm-ingress.yaml
+
+# 删除所有资源（生产环境）
+cd k8s/prod
+kubectl delete -f all-services.yaml
+kubectl delete -f ingress.yaml
+```
+
+## 资源需求
+
+### 开发/测试环境
+
+- **内存**: 256Mi - 512Mi
+- **CPU**: 100m - 500m
+- **副本数**: 1
+
+### 生产环境
+
+- **内存**: 1Gi - 2Gi
+- **CPU**: 500m - 2000m
+- **副本数**: 2+（推荐）
+
+## 监控和日志
+
+### 健康检查
+
+- **健康检查端点**: `/health`
+- **Liveness Probe**: 60秒初始延迟，每10秒检查一次
+- **Readiness Probe**: 30秒初始延迟，每5秒检查一次
+- **Startup Probe**: 10秒初始延迟，最多30次失败
+
+### 日志查看
+
+```bash
+# 查看实时日志
+kubectl logs -f deployment/crm-foundation-service
+
+# 查看最近100行日志
+kubectl logs --tail=100 deployment/crm-foundation-service
+
+# 查看特定 Pod 的日志
+kubectl logs <pod-name>
 ```

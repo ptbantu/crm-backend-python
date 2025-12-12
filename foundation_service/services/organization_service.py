@@ -13,8 +13,8 @@ from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.repositories.organization_employee_repository import OrganizationEmployeeRepository
 from foundation_service.services.user_service import UserService
 from foundation_service.repositories.organization_domain_repository import OrganizationDomainRepository
-from foundation_service.models.organization import Organization
-from foundation_service.models.user import User
+from common.models.organization import Organization
+from common.models.user import User
 from common.exceptions import OrganizationNotFoundError, BusinessException
 from common.utils.logger import get_logger
 from sqlalchemy import select
@@ -302,7 +302,10 @@ class OrganizationService:
                 is_admin = "ADMIN" in role_codes
                 
                 # 检查是否是 internal 内部组织的 admin
-                if current_org and current_org.organization_type == "internal" and is_admin:
+                # 使用 getattr 安全访问 organization_type，如果不存在则默认为 None
+                # 注意：如果数据库表缺少 organization_type 字段，需要先执行数据库迁移
+                org_type = getattr(current_org, 'organization_type', None) if current_org else None
+                if current_org and org_type == "internal" and is_admin:
                     # 是 internal 组织的 admin，可以查看所有组织
                     logger.debug(f"Internal admin 用户查询所有组织: user_id={current_user_id}, organization_id={current_org.id}")
                     organizations, total = await self.org_repo.get_list(
@@ -348,7 +351,12 @@ class OrganizationService:
         # 转换为响应对象
         records = []
         for org in organizations:
-            records.append(await self._to_response(org))
+            try:
+                records.append(await self._to_response(org))
+            except Exception as e:
+                logger.error(f"转换组织响应对象失败: organization_id={org.id}, error={str(e)}", exc_info=True)
+                # 跳过有问题的记录，继续处理其他记录
+                continue
         
         logger.debug(f"组织列表查询成功: total={total}, returned={len(records)}")
         return {
@@ -386,15 +394,15 @@ class OrganizationService:
             id=organization.id,
             name=organization.name,
             code=organization.code,
-            organization_type=organization.organization_type,
-            is_locked=organization.is_locked or False,
-            email=organization.email,
-            phone=organization.phone,
-            website=organization.website,
-            logo_url=organization.logo_url,
-            description=organization.description,
-            is_active=organization.is_active,
-            is_verified=organization.is_verified or False,
+            organization_type=getattr(organization, 'organization_type', 'internal'),
+            is_locked=getattr(organization, 'is_locked', False) or False,
+            email=getattr(organization, 'email', None),
+            phone=getattr(organization, 'phone', None),
+            website=getattr(organization, 'website', None),
+            logo_url=getattr(organization, 'logo_url', None),
+            description=getattr(organization, 'description', None),
+            is_active=getattr(organization, 'is_active', True),
+            is_verified=getattr(organization, 'is_verified', False) or False,
             employees_count=employees_count,
             domains=domain_infos,
             created_at=organization.created_at,

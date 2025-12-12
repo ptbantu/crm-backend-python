@@ -17,7 +17,7 @@ class Notification(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # 用户关联
-    user_id = Column(String(36), nullable=False, index=True, comment="用户ID（跨服务引用）")
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True, comment="用户ID")
     
     # 通知信息
     notification_type = Column(String(50), nullable=False, index=True, comment="通知类型：collection_task(催款任务), lead_assigned(线索分配), order_updated(订单更新)")
@@ -36,7 +36,7 @@ class Notification(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     
     # 关系（users 表现在在本地定义，可以使用 relationship）
-    user = relationship(User, foreign_keys=[user_id], backref="notifications")
+    user = relationship(User, foreign_keys=[user_id], primaryjoin="Notification.user_id == User.id", backref="notifications")
     
     # 检查约束
     __table_args__ = (
