@@ -20,7 +20,7 @@ from foundation_service.api.v1 import (
     orders, order_items, order_comments, order_files, leads, collection_tasks,
     temporary_links, notifications, opportunities, product_dependencies,
     product_categories, products, service_types, customers, contacts,
-    service_records, industries, customer_sources, analytics, monitoring, logs
+    service_records, industries, customer_sources, analytics, monitoring, logs, audit
 )
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
 from foundation_service.config import settings
@@ -36,7 +36,7 @@ from common.models import (
     WorkflowDefinition, WorkflowInstance, WorkflowTask, WorkflowTransition,
     ProductDependency, Customer, CustomerSource, CustomerChannel,
     ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
-    VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry
+    VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog
 )
 
 # 初始化日志
@@ -204,6 +204,10 @@ class CharsetMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(CharsetMiddleware)
 
+# 审计中间件（记录所有 HTTP 请求）
+from foundation_service.middleware.audit_middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
+
 # CORS 配置
 # 临时允许所有域名访问（开发环境）
 app.add_middleware(
@@ -282,6 +286,9 @@ app.include_router(customer_sources.router, prefix="/api/service-management/cust
 app.include_router(analytics.router, prefix="/api/analytics-monitoring/analytics", tags=["数据分析"])
 app.include_router(monitoring.router, prefix="/api/analytics-monitoring/monitoring", tags=["系统监控"])
 app.include_router(logs.router, prefix="/api/analytics-monitoring/logs", tags=["日志查询"])
+
+# Audit Service 路由
+app.include_router(audit.router, prefix="/api/foundation/audit-logs", tags=["审计日志"])
 
 
 @app.get("/health")
