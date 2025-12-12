@@ -4,7 +4,7 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, delete
-from foundation_service.models.permission import Permission, RolePermission, Menu, MenuPermission
+from common.models.permission import Permission, RolePermission, Menu, MenuPermission
 from common.utils.repository import BaseRepository
 
 
@@ -68,7 +68,7 @@ class RolePermissionRepository:
     
     async def get_user_permissions(self, user_id: str) -> List[Permission]:
         """获取用户的所有权限（通过角色）"""
-        from foundation_service.models.user_role import UserRole
+        from common.models.user_role import UserRole
         
         result = await self.db.execute(
             select(Permission)
@@ -180,7 +180,7 @@ class MenuPermissionRepository:
     
     async def get_user_menus(self, user_id: str) -> List[Menu]:
         """获取用户可访问的菜单（根据权限过滤）"""
-        from foundation_service.models.user_role import UserRole
+        from common.models.user_role import UserRole
         
         # 获取用户的所有权限
         result = await self.db.execute(

@@ -27,17 +27,17 @@ class Lead(Base):
     
     # 关联信息
     # 注意：customers 表现在在本地定义，可以使用外键约束
-    customer_id = Column(String(36), nullable=True, index=True, comment="关联客户ID（可选，跨服务引用）")
+    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True, comment="关联客户ID（可选）")
     # 注意：organizations 表在 foundation_service 的数据库中，不能使用外键约束，只保留索引
     # organization_id 必须为 NOT NULL，创建时从用户的 organization_employees 表自动获取
     organization_id = Column(String(36), nullable=True, index=True, comment="组织ID（可选，跨服务引用）")
     # 注意：users 表现在在本地定义，可以使用外键约束
-    owner_user_id = Column(String(36), nullable=True, index=True, comment="销售负责人ID（跨服务引用）")
+    owner_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="销售负责人ID")
     
     # 状态管理
     status = Column(String(50), default="new", nullable=False, index=True, comment="状态：new(新建), contacted(已联系), qualified(已确认), converted(已转化), lost(已丢失)")
     # 客户分级（通过外键关联到 customer_levels.code）
-    level = Column(String(50), nullable=True, index=True, comment="客户分级代码（关联到 customer_levels.code）")
+    level = Column(String(50), ForeignKey("customer_levels.code", ondelete="SET NULL"), nullable=True, index=True, comment="客户分级代码（外键关联到 customer_levels.code）")
     
     # 公海池
     is_in_public_pool = Column(Boolean, default=False, nullable=False, index=True, comment="是否在公海池")
@@ -54,17 +54,38 @@ class Lead(Base):
     
     # 审计字段
     # 注意：users 表现在在本地定义，可以使用外键约束
-    created_by = Column(String(36), nullable=True, index=True, comment="创建人ID（跨服务引用）")
-    updated_by = Column(String(36), nullable=True, index=True, comment="更新人ID（跨服务引用）")
+    created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="创建人ID")
+    updated_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="更新人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
     # 关系（从共享模型导入，支持 relationship）
-    customer = relationship(Customer, foreign_keys=[customer_id], backref="leads")
+    # 明确指定 primaryjoin 确保 SQLAlchemy 能正确识别外键关系
+    customer = relationship(
+        Customer,
+        foreign_keys=[customer_id],
+        primaryjoin="Lead.customer_id == Customer.id",
+        backref="leads"
+    )
     # organization = relationship("Organization", foreign_keys=[organization_id])  # 跨服务引用，不使用 relationship
-    owner = relationship(User, foreign_keys=[owner_user_id], backref="owned_leads")
-    creator = relationship(User, foreign_keys=[created_by], backref="created_leads")
-    updater = relationship(User, foreign_keys=[updated_by], backref="updated_leads")
+    owner = relationship(
+        User,
+        foreign_keys=[owner_user_id],
+        primaryjoin="Lead.owner_user_id == User.id",
+        backref="owned_leads"
+    )
+    creator = relationship(
+        User,
+        foreign_keys=[created_by],
+        primaryjoin="Lead.created_by == User.id",
+        backref="created_leads"
+    )
+    updater = relationship(
+        User,
+        foreign_keys=[updated_by],
+        primaryjoin="Lead.updated_by == User.id",
+        backref="updated_leads"
+    )
     # 客户分级关系（通过 code 关联）
     customer_level = relationship(
         "CustomerLevel",

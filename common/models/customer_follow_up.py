@@ -32,7 +32,7 @@ class CustomerFollowUp(Base):
     
     # 关系
     customer = relationship("Customer", back_populates="follow_ups")
-    creator = relationship(User, foreign_keys=[created_by], backref="created_customer_follow_ups")
+    creator = relationship(User, foreign_keys=[created_by], primaryjoin="CustomerFollowUp.created_by == User.id", backref="created_customer_follow_ups")
     
     # 检查约束
     __table_args__ = (

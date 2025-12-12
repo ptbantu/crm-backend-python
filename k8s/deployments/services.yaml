@@ -1,4 +1,9 @@
-# Foundation Service
+# ============================================================
+# CRM Python 单体服务 Kubernetes Service 配置
+# 所有微服务已合并到 foundation_service，只需要一个 Service
+# ============================================================
+
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -16,85 +21,3 @@ spec:
     name: http
   selector:
     app: crm-foundation-service
-
----
-# Gateway Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: crm-gateway-service
-  namespace: default
-  labels:
-    app: crm-gateway-service
-    service: gateway
-spec:
-  type: ClusterIP
-  ports:
-  - port: 8080
-    targetPort: 8080
-    protocol: TCP
-    name: http
-  selector:
-    app: crm-gateway-service
-
----
-# Service Management Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: crm-service-management-service
-  namespace: default
-  labels:
-    app: crm-service-management-service
-    service: service-management
-spec:
-  type: ClusterIP
-  ports:
-  - port: 8082
-    targetPort: 8082
-    protocol: TCP
-    name: http
-  selector:
-    app: crm-service-management-service
-
----
-# Analytics and Monitoring Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: crm-analytics-monitoring-service
-  namespace: default
-  labels:
-    app: crm-analytics-monitoring-service
-    service: analytics-monitoring
-spec:
-  type: ClusterIP
-  ports:
-  - port: 8083
-    targetPort: 8083
-    protocol: TCP
-    name: http
-  selector:
-    app: crm-analytics-monitoring-service
-
----
-# Order and Workflow Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: crm-order-workflow-service
-  namespace: default
-  labels:
-    app: crm-order-workflow-service
-    service: order-workflow
-spec:
-  type: ClusterIP
-  ports:
-  - port: 8084
-    targetPort: 8084
-    protocol: TCP
-    name: http
-  selector:
-    app: crm-order-workflow-service
-
-

@@ -11,9 +11,9 @@ from foundation_service.repositories.user_repository import UserRepository
 from foundation_service.repositories.organization_repository import OrganizationRepository
 from foundation_service.repositories.organization_employee_repository import OrganizationEmployeeRepository
 from foundation_service.repositories.role_repository import RoleRepository
-from foundation_service.models.user import User
-from foundation_service.models.organization_employee import OrganizationEmployee
-from foundation_service.models.user_role import UserRole
+from common.models.user import User
+from common.models.organization_employee import OrganizationEmployee
+from common.models.user_role import UserRole
 from foundation_service.utils.password import hash_password, verify_password
 from common.exceptions import (
     UserNotFoundError, OrganizationNotFoundError, OrganizationInactiveError, 

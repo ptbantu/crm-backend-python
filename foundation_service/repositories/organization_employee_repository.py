@@ -4,7 +4,7 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-from foundation_service.models.organization_employee import OrganizationEmployee
+from common.models.organization_employee import OrganizationEmployee
 
 
 class OrganizationEmployeeRepository:

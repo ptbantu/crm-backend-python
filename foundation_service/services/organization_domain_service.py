@@ -10,7 +10,7 @@ from foundation_service.schemas.organization_domain import (
 from foundation_service.repositories.organization_domain_repository import (
     OrganizationDomainRepository, OrganizationDomainRelationRepository
 )
-from foundation_service.models.organization_domain import OrganizationDomain, OrganizationDomainRelation
+from common.models.organization_domain import OrganizationDomain, OrganizationDomainRelation
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
 

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from foundation_service.schemas.role import RoleCreateRequest, RoleUpdateRequest, RoleResponse
 from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.repositories.permission_repository import RolePermissionRepository
-from foundation_service.models.role import Role
+from common.models.role import Role
 from common.exceptions import RoleNotFoundError, BusinessException
 from common.utils.logger import get_logger
 

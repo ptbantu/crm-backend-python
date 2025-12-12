@@ -1,6 +1,6 @@
 """
-Foundation Service - 基础服务
-提供用户、组织、角色管理功能
+Foundation Service - 单体服务
+合并了所有微服务的功能：用户、组织、角色、订单、工作流、服务管理等
 """
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,9 +13,31 @@ import json
 from common.schemas.response import Result
 from common.exceptions import BusinessException
 from common.utils.logger import Logger, get_logger
-from foundation_service.api.v1 import auth, users, organizations, roles, organization_domains, permissions, menus
+from common.redis_client import init_redis, get_redis
+from common.mongodb_client import init_mongodb
+from foundation_service.api.v1 import (
+    auth, users, organizations, roles, organization_domains, permissions, menus,
+    orders, order_items, order_comments, order_files, leads, collection_tasks,
+    temporary_links, notifications, opportunities, product_dependencies,
+    product_categories, products, service_types, customers, contacts,
+    service_records, industries, customer_sources, analytics, monitoring, logs
+)
+from foundation_service.api.v1.customer_levels import router as customer_levels_router
 from foundation_service.config import settings
 from foundation_service.utils.jwt import verify_token
+
+# 导入所有模型，确保它们被注册到 SQLAlchemy metadata 中
+from common.models import (
+    User, Organization, Role, OrganizationEmployee, UserRole,
+    OrganizationDomain, OrganizationDomainRelation, Permission, RolePermission, Menu, MenuPermission,
+    Order, OrderItem, OrderComment, OrderFile, Lead, LeadFollowUp, LeadNote,
+    LeadPool, Notification, Opportunity, OpportunityProduct, OpportunityPaymentStage,
+    CollectionTask, TemporaryLink, CustomerLevel, FollowUpStatus,
+    WorkflowDefinition, WorkflowInstance, WorkflowTask, WorkflowTransition,
+    ProductDependency, Customer, CustomerSource, CustomerChannel,
+    ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
+    VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry
+)
 
 # 初始化日志
 Logger.initialize(
@@ -23,6 +45,13 @@ Logger.initialize(
     log_level="DEBUG" if settings.DEBUG else "INFO",
     enable_file_logging=True,
     enable_console_logging=True,
+    enable_mongodb_logging=True,  # 启用 MongoDB 日志
+    mongodb_host=settings.MONGO_HOST,
+    mongodb_port=settings.MONGO_PORT,
+    mongodb_database=settings.MONGO_DATABASE,
+    mongodb_username=settings.MONGO_USERNAME,
+    mongodb_password=settings.MONGO_PASSWORD,
+    mongodb_auth_source=settings.MONGO_AUTH_SOURCE,
 )
 
 # 获取 logger
@@ -45,17 +74,47 @@ class UTF8JSONResponse(JSONResponse):
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
-    logger.info("🚀 Foundation Service 启动中...")
+    logger.info("🚀 Foundation Service (单体服务) 启动中...")
     logger.info(f"服务版本: {settings.APP_VERSION}")
     logger.info(f"调试模式: {settings.DEBUG}")
+    logger.info(f"数据库: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
+    
+    # 初始化 Redis 连接
+    try:
+        init_redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD,
+            db=settings.REDIS_DB,
+            decode_responses=True,
+            max_connections=20
+        )
+        logger.info("✅ Redis 连接已初始化")
+    except Exception as e:
+        logger.warning(f"⚠️ Redis 连接初始化失败: {str(e)}，将不使用缓存功能")
+    
+    # 初始化 MongoDB 连接（用于日志查询）
+    try:
+        init_mongodb(
+            host=settings.MONGO_HOST,
+            port=settings.MONGO_PORT,
+            database=settings.MONGO_DATABASE,
+            username=settings.MONGO_USERNAME,
+            password=settings.MONGO_PASSWORD,
+            auth_source=settings.MONGO_AUTH_SOURCE,
+        )
+        logger.info("✅ MongoDB 连接已初始化")
+    except Exception as e:
+        logger.warning(f"⚠️ MongoDB 连接初始化失败: {str(e)}，日志查询功能将不可用")
+    
     yield
     # 关闭时执行
     logger.info("🛑 Foundation Service 关闭中...")
 
 
 app = FastAPI(
-    title="BANTU CRM Foundation Service",
-    description="基础服务 - 用户、组织、角色管理",
+    title="BANTU CRM Foundation Service (单体服务)",
+    description="单体服务 - 合并了所有微服务功能：用户、组织、角色、订单、工作流、服务管理、数据分析等",
     version="1.0.0",
     lifespan=lifespan,
     # 使用自定义 JSON 响应，确保中文正确编码
@@ -187,6 +246,7 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 
 
 # 注册路由
+# Foundation Service 路由
 app.include_router(auth.router, prefix="/api/foundation/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/foundation/users", tags=["用户管理"])
 app.include_router(organizations.router, prefix="/api/foundation/organizations", tags=["组织管理"])
@@ -194,6 +254,34 @@ app.include_router(roles.router, prefix="/api/foundation/roles", tags=["角色�
 app.include_router(organization_domains.router, prefix="/api/foundation/organization-domains", tags=["组织领域管理"])
 app.include_router(permissions.router, prefix="/api/foundation", tags=["权限管理"])
 app.include_router(menus.router, prefix="/api/foundation", tags=["菜单管理"])
+
+# Order Workflow Service 路由
+app.include_router(orders.router, prefix="/api/order-workflow/orders", tags=["订单管理"])
+app.include_router(order_items.router, prefix="/api/order-workflow/order-items", tags=["订单项"])
+app.include_router(order_comments.router, prefix="/api/order-workflow/order-comments", tags=["订单评论"])
+app.include_router(order_files.router, prefix="/api/order-workflow/order-files", tags=["订单文件"])
+app.include_router(leads.router, prefix="/api/order-workflow/leads", tags=["线索管理"])
+app.include_router(collection_tasks.router, prefix="/api/order-workflow/collection-tasks", tags=["催款任务"])
+app.include_router(temporary_links.router, prefix="/api/order-workflow/temporary-links", tags=["临时链接"])
+app.include_router(notifications.router, prefix="/api/order-workflow/notifications", tags=["通知系统"])
+app.include_router(customer_levels_router, prefix="/api/order-workflow", tags=["选项配置"])
+app.include_router(opportunities.router, prefix="/api/order-workflow/opportunities", tags=["商机管理"])
+app.include_router(product_dependencies.router, prefix="/api/order-workflow/product-dependencies", tags=["产品依赖关系"])
+
+# Service Management 路由
+app.include_router(product_categories.router, prefix="/api/service-management/categories", tags=["产品分类"])
+app.include_router(products.router, prefix="/api/service-management/products", tags=["产品/服务"])
+app.include_router(service_types.router, prefix="/api/service-management/service-types", tags=["服务类型"])
+app.include_router(customers.router, prefix="/api/service-management/customers", tags=["客户管理"])
+app.include_router(contacts.router, prefix="/api/service-management/contacts", tags=["联系人管理"])
+app.include_router(service_records.router, prefix="/api/service-management/service-records", tags=["服务记录"])
+app.include_router(industries.router, prefix="/api/service-management/industries", tags=["行业管理"])
+app.include_router(customer_sources.router, prefix="/api/service-management/customer-sources", tags=["客户来源管理"])
+
+# Analytics and Monitoring Service 路由
+app.include_router(analytics.router, prefix="/api/analytics-monitoring/analytics", tags=["数据分析"])
+app.include_router(monitoring.router, prefix="/api/analytics-monitoring/monitoring", tags=["系统监控"])
+app.include_router(logs.router, prefix="/api/analytics-monitoring/logs", tags=["日志查询"])
 
 
 @app.get("/health")
@@ -205,7 +293,7 @@ async def health_check():
 @app.get("/")
 async def root():
     """根路径"""
-    return Result.success(data={"message": "BANTU CRM Foundation Service"})
+    return Result.success(data={"message": "BANTU CRM Foundation Service (单体服务)"})
 
 
 if __name__ == "__main__":

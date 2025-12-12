@@ -5,8 +5,16 @@
 注意：这些模型只用于代码层面的类型定义和 relationship，不实际创建表
 数据库表结构由 schema.sql 统一管理
 """
+# Foundation Service 模型
 from common.models.user import User
 from common.models.organization import Organization
+from common.models.role import Role
+from common.models.organization_employee import OrganizationEmployee
+from common.models.user_role import UserRole
+from common.models.organization_domain import OrganizationDomain, OrganizationDomainRelation
+from common.models.permission import Permission, RolePermission, Menu, MenuPermission
+
+# Service Management 模型
 from common.models.customer import Customer
 # 注意：不导入 Order 和 Lead，因为 order_workflow_service 有自己的版本（带外键约束）
 # 如果其他服务需要，可以直接从 common.models.order 或 common.models.lead 导入
@@ -39,20 +47,42 @@ from common.models.vendor_product import VendorProduct
 from common.models.product_price import ProductPrice
 from common.models.product_price_history import ProductPriceHistory
 from common.models.vendor_product_financial import VendorProductFinancial
-# 注意：不导入 LeadFollowUp 和 LeadNote，因为 order_workflow_service 有自己的版本（带外键约束）
-# 如果其他服务需要，可以直接从 common.models.lead_follow_up 或 common.models.lead_note 导入
-
-# 注意：Order、Lead、Notification、LeadFollowUp 和 LeadNote 不在 __all__ 中导出，因为 order_workflow_service 有自己的版本（带外键约束）
-# 如果其他服务需要，可以直接从对应的 common.models 模块导入
+# 导入 Order、Lead、Notification、LeadFollowUp、LeadNote（现在统一使用 common.models 中的版本）
+from common.models.order import Order
+from common.models.lead import Lead
+from common.models.notification import Notification
+from common.models.lead_follow_up import LeadFollowUp
+from common.models.lead_note import LeadNote
+from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
 __all__ = [
     "User",
     "Organization",
+    "Role",
+    "OrganizationEmployee",
+    "UserRole",
+    "OrganizationDomain",
+    "OrganizationDomainRelation",
+    "Permission",
+    "RolePermission",
+    "Menu",
+    "MenuPermission",
     "Customer",
     "CustomerSource",
     "CustomerChannel",
+    "CustomerFollowUp",
+    "CustomerNote",
+    "Order",
     "OrderItem",
     "OrderComment",
     "OrderFile",
+    "Lead",
+    "LeadFollowUp",
+    "LeadNote",
+    "LeadPool",
+    "Notification",
+    "Opportunity",
+    "OpportunityProduct",
+    "OpportunityPaymentStage",
     "WorkflowDefinition",
     "WorkflowInstance",
     "WorkflowTask",
@@ -62,7 +92,6 @@ __all__ = [
     "CustomerLevel",
     "Industry",
     "FollowUpStatus",
-    "LeadPool",
     "ProductDependency",
     "Product",
     "ProductCategory",
@@ -73,7 +102,5 @@ __all__ = [
     "ProductPrice",
     "ProductPriceHistory",
     "VendorProductFinancial",
-    "CustomerFollowUp",
-    "CustomerNote",
 ]
 
