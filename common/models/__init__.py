@@ -54,6 +54,7 @@ from common.models.notification import Notification
 from common.models.lead_follow_up import LeadFollowUp
 from common.models.lead_note import LeadNote
 from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
+from common.models.audit_log import AuditLog
 __all__ = [
     "User",
     "Organization",
@@ -102,5 +103,6 @@ __all__ = [
     "ProductPrice",
     "ProductPriceHistory",
     "VendorProductFinancial",
+    "AuditLog",
 ]
 
