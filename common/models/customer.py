@@ -73,7 +73,7 @@ class Customer(Base):
     next_follow_up_at = Column(DateTime, nullable=True, index=True, comment="下次跟进时间")
     
     # 关系
-    parent_customer = relationship("Customer", foreign_keys=[parent_customer_id], remote_side=[id], backref="child_customers")
+    parent_customer = relationship("Customer", foreign_keys=[parent_customer_id], remote_side=[id], primaryjoin="Customer.parent_customer_id == Customer.id", backref="child_customers")
     follow_ups = relationship("CustomerFollowUp", back_populates="customer", cascade="all, delete-orphan")
     notes = relationship("CustomerNote", back_populates="customer", cascade="all, delete-orphan")
     

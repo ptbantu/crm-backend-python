@@ -4,10 +4,10 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from foundation_service.models.user import User
-from foundation_service.models.organization_employee import OrganizationEmployee
-from foundation_service.models.user_role import UserRole
-from foundation_service.models.role import Role
+from common.models.user import User
+from common.models.organization_employee import OrganizationEmployee
+from common.models.user_role import UserRole
+from common.models.role import Role
 from common.utils.repository import BaseRepository
 
 

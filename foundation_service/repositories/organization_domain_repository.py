@@ -4,7 +4,7 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
-from foundation_service.models.organization_domain import OrganizationDomain, OrganizationDomainRelation
+from common.models.organization_domain import OrganizationDomain, OrganizationDomainRelation
 from common.utils.repository import BaseRepository
 
 

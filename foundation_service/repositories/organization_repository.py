@@ -4,8 +4,8 @@
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from foundation_service.models.organization import Organization
-from foundation_service.models.organization_employee import OrganizationEmployee
+from common.models.organization import Organization
+from common.models.organization_employee import OrganizationEmployee
 from common.utils.repository import BaseRepository
 
 
@@ -127,7 +127,7 @@ class OrganizationRepository(BaseRepository[Organization]):
     
     async def get_organization_user_count(self, organization_id: str) -> int:
         """获取组织的用户数量（用于生成用户ID序号）"""
-        from foundation_service.models.organization_employee import OrganizationEmployee
+        from common.models.organization_employee import OrganizationEmployee
         result = await self.db.execute(
             select(func.count(OrganizationEmployee.id))
             .where(

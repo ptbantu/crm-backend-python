@@ -30,7 +30,7 @@ class CustomerNote(Base):
     
     # 关系
     customer = relationship("Customer", back_populates="notes")
-    creator = relationship(User, foreign_keys=[created_by], backref="created_customer_notes")
+    creator = relationship(User, foreign_keys=[created_by], primaryjoin="CustomerNote.created_by == User.id", backref="created_customer_notes")
     
     # 检查约束
     __table_args__ = (

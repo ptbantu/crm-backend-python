@@ -10,7 +10,7 @@ from foundation_service.repositories.organization_employee_repository import Org
 from foundation_service.repositories.role_repository import RoleRepository
 from foundation_service.utils.password import verify_password
 from foundation_service.utils.jwt import create_access_token, create_refresh_token
-from foundation_service.models.user_role import UserRole
+from common.models.user_role import UserRole
 from common.exceptions import (
     UserNotFoundError, PasswordIncorrectError, OrganizationNotFoundError,
     OrganizationLockedError, OrganizationInactiveError, UserInactiveError

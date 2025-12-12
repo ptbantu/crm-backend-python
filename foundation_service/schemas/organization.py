@@ -96,14 +96,13 @@ class OrganizationResponse(BaseModel):
     organization_type: str
     is_locked: bool = Field(False, description="是否锁定：False=合作（默认），True=锁定（断开合作）")
     domains: Optional[List[OrganizationDomainInfo]] = Field(default_factory=list, description="组织领域列表")
-    email: Optional[str]
-    phone: Optional[str]
-    website: Optional[str]
-    logo_url: Optional[str]
-    description: Optional[str]
-    is_active: bool
-    is_locked: bool
-    is_verified: bool
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    logo_url: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    is_verified: bool = False
     employees_count: int = 0
     created_at: datetime
     updated_at: datetime
