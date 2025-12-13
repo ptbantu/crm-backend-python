@@ -68,8 +68,4 @@ site/
 *.crt
 !certs/README.md
 
-# Temporary files
-*.tmp
-*.bak
-*.swp
-
+*.py.bak
