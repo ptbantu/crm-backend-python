@@ -84,11 +84,3 @@ class Order(Base):
         Index("ix_orders_created", "created_at"),
     )
 
-
-        Index("ix_orders_created", "created_at"),
-    )
-
-
-        Index("ix_orders_created", "created_at"),
-    )
-

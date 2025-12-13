@@ -66,6 +66,10 @@ site/
 *.crt
 !certs/README.md
 
+# OSS credentials (keep example file)
+config/oss.json
+!config/oss.json.example
+
 # Temporary files
 *.tmp
 *.bak

@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: foundation
-        image: bantu-crm-foundation-service:latest
+        image: bantu-crm-crm-foundation-service:dev
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

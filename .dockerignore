@@ -49,6 +49,9 @@ logs/
 .env.local
 .env.*.local
 
+# Config (keep config directory but exclude sensitive files)
+
+
 # OS
 .DS_Store
 Thumbs.db

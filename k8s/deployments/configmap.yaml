@@ -50,6 +50,12 @@ data:
   REDIS_PORT: "6379"
   REDIS_DB: "0"
   
+  # MongoDB 配置
+  MONGO_HOST: "mongodb.default.svc.cluster.local"
+  MONGO_PORT: "27017"
+  MONGO_DATABASE: "bantu_crm"
+  MONGO_AUTH_SOURCE: "bantu_crm"
+  
   # MinIO 配置
   MINIO_ENDPOINT: "minio.default.svc.cluster.local"
 

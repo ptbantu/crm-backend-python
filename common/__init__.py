@@ -15,6 +15,20 @@ from .minio_client import (
     init_minio, get_minio, get_default_bucket,
     upload_file, download_file, delete_file, get_file_url, ping_minio
 )
+from .oss_client import (
+    init_oss, get_oss, get_oss_config, get_bucket_name,
+    upload_file as oss_upload_file,
+    download_file as oss_download_file,
+    delete_file as oss_delete_file,
+    batch_delete_files as oss_batch_delete_files,
+    get_file_url as oss_get_file_url,
+    get_upload_url as oss_get_upload_url,
+    file_exists as oss_file_exists,
+    get_file_info as oss_get_file_info,
+    list_files as oss_list_files,
+    copy_file as oss_copy_file,
+    ping_oss, generate_object_name
+)
 from .chroma_client import (
     init_chroma, get_chroma, close_chroma, ping_chroma,
     create_collection, get_collection, add_documents, query_collection
@@ -105,6 +119,23 @@ __all__ = [
     "delete_file",
     "get_file_url",
     "ping_minio",
+    # OSS
+    "init_oss",
+    "get_oss",
+    "get_oss_config",
+    "get_bucket_name",
+    "oss_upload_file",
+    "oss_download_file",
+    "oss_delete_file",
+    "oss_batch_delete_files",
+    "oss_get_file_url",
+    "oss_get_upload_url",
+    "oss_file_exists",
+    "oss_get_file_info",
+    "oss_list_files",
+    "oss_copy_file",
+    "ping_oss",
+    "generate_object_name",
     # Chroma
     "init_chroma",
     "get_chroma",
