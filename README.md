@@ -52,6 +52,7 @@ uvicorn main:app --host 0.0.0.0 --port 8081 --reload
 服务启动后，访问：
 - API 文档：http://localhost:8081/docs
 - 健康检查：http://localhost:8081/health
+- 审计日志 API：http://localhost:8081/api/foundation/audit-logs
 
 ### Docker 运行
 
