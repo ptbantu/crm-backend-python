@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, desc
 from sqlalchemy.orm import selectinload
 
-from common.models.operation_audit_log import OperationAuditLog
+from common.models.audit_log import AuditLog
 from common.models.user import User
 from common.models.organization import Organization
+from foundation_service.repositories.audit_repository import AuditRepository
 from common.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -22,6 +23,7 @@ class AuditService:
     
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.audit_repo = AuditRepository(db)
     
     async def log_operation(
         self,
@@ -46,7 +48,7 @@ class AuditService:
         batch_id: Optional[str] = None,
         duration_ms: Optional[int] = None,
         notes: Optional[str] = None,
-    ) -> OperationAuditLog:
+    ) -> AuditLog:
         """
         记录操作审计日志
         
@@ -127,34 +129,27 @@ class AuditService:
                     logger.warning(f"序列化数据失败: {str(e)}")
                     return str(data)
             
-            # 创建审计日志记录
-            audit_log = OperationAuditLog(
-                operation_type=operation_type,
-                entity_type=entity_type,
-                entity_id=entity_id,
+            # 创建审计日志记录（使用 AuditRepository）
+            audit_log = await self.audit_repo.create_audit_log(
+                organization_id=organization_id or "",
                 user_id=user_id,
-                username=username,
-                organization_id=organization_id,
-                operated_at=datetime.now(),
-                data_before=serialize_data(data_before),
-                data_after=serialize_data(data_after),
-                changed_fields=changed_fields,
+                user_name=username,
+                action=operation_type,
+                resource_type=entity_type,
+                resource_id=entity_id,
+                resource_name=None,  # 可以从 entity 查询获取
+                category=None,  # 可以根据 entity_type 设置
                 ip_address=ip_address,
                 user_agent=user_agent,
-                request_path=request_path,
                 request_method=request_method,
+                request_path=request_path,
                 request_params=serialize_data(request_params),
-                status=status,
+                old_values=serialize_data(data_before),
+                new_values=serialize_data(data_after),
+                status="success" if status == "SUCCESS" else "failed",
                 error_message=error_message,
-                error_code=error_code,
-                operation_source=operation_source,
-                batch_id=batch_id,
                 duration_ms=duration_ms,
-                notes=notes
             )
-            
-            self.db.add(audit_log)
-            await self.db.commit()
             
             logger.debug(
                 f"审计日志已记录 | "
@@ -208,47 +203,21 @@ class AuditService:
                 "size": int
             }
         """
-        query = select(OperationAuditLog)
-        
-        # 构建查询条件
-        conditions = []
-        if user_id:
-            conditions.append(OperationAuditLog.user_id == user_id)
-        if organization_id:
-            conditions.append(OperationAuditLog.organization_id == organization_id)
-        if operation_type:
-            conditions.append(OperationAuditLog.operation_type == operation_type)
-        if entity_type:
-            conditions.append(OperationAuditLog.entity_type == entity_type)
-        if entity_id:
-            conditions.append(OperationAuditLog.entity_id == entity_id)
-        if status:
-            conditions.append(OperationAuditLog.status == status)
-        if start_date:
-            conditions.append(OperationAuditLog.operated_at >= start_date)
-        if end_date:
-            conditions.append(OperationAuditLog.operated_at <= end_date)
-        
-        if conditions:
-            query = query.where(and_(*conditions))
-        
-        # 排序（时间倒序）
-        query = query.order_by(desc(OperationAuditLog.operated_at))
-        
-        # 分页
-        offset = (page - 1) * size
-        query = query.offset(offset).limit(size)
-        
-        # 执行查询
-        result = await self.db.execute(query)
-        logs = result.scalars().all()
-        
-        # 查询总数
-        count_query = select(func.count(OperationAuditLog.id))
-        if conditions:
-            count_query = count_query.where(and_(*conditions))
-        total_result = await self.db.execute(count_query)
-        total = total_result.scalar()
+        # 使用 AuditRepository 查询
+        logs, total = await self.audit_repo.get_audit_logs(
+            page=page,
+            size=size,
+            organization_id=organization_id,
+            user_id=user_id,
+            action=operation_type,
+            resource_type=entity_type,
+            resource_id=entity_id,
+            status="success" if status == "SUCCESS" else ("failed" if status == "FAILURE" else None),
+            start_time=start_date,
+            end_time=end_date,
+            order_by="created_at",
+            order_desc=True,
+        )
         
         return {
             "items": [self._to_dict(log) for log in logs],
@@ -283,31 +252,31 @@ class AuditService:
             size=size
         )
     
-    def _to_dict(self, log: OperationAuditLog) -> Dict:
+    def _to_dict(self, log: AuditLog) -> Dict:
         """转换为字典"""
         return {
             "id": log.id,
-            "operation_type": log.operation_type,
-            "entity_type": log.entity_type,
-            "entity_id": log.entity_id,
+            "operation_type": log.action,  # action 对应 operation_type
+            "entity_type": log.resource_type,  # resource_type 对应 entity_type
+            "entity_id": log.resource_id,  # resource_id 对应 entity_id
             "user_id": log.user_id,
-            "username": log.username,
+            "username": log.user_name,  # user_name 对应 username
             "organization_id": log.organization_id,
-            "operated_at": log.operated_at.isoformat() if log.operated_at else None,
-            "data_before": log.data_before,
-            "data_after": log.data_after,
-            "changed_fields": log.changed_fields,
+            "operated_at": log.created_at.isoformat() if log.created_at else None,
+            "data_before": log.old_values,  # old_values 对应 data_before
+            "data_after": log.new_values,  # new_values 对应 data_after
+            "changed_fields": None,  # AuditLog 没有 changed_fields，可以从 old_values 和 new_values 计算
             "ip_address": log.ip_address,
             "user_agent": log.user_agent,
             "request_path": log.request_path,
             "request_method": log.request_method,
             "request_params": log.request_params,
-            "status": log.status,
+            "status": log.status.upper() if log.status else "SUCCESS",  # 转换为大写
             "error_message": log.error_message,
-            "error_code": log.error_code,
-            "operation_source": log.operation_source,
-            "batch_id": log.batch_id,
+            "error_code": None,  # AuditLog 没有 error_code
+            "operation_source": "API",  # 默认值
+            "batch_id": None,  # AuditLog 没有 batch_id
             "duration_ms": log.duration_ms,
-            "notes": log.notes,
+            "notes": None,  # AuditLog 没有 notes 字段
             "created_at": log.created_at.isoformat() if log.created_at else None
         }

@@ -16,6 +16,8 @@ class Product(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
     code = Column(String(100), nullable=True, unique=True, index=True)
+    enterprise_service_code = Column(String(50), nullable=True, unique=True, index=True)  # 企业服务编码（系统自动生成）
+    code_generation_rule = Column(String(100), nullable=True)  # 编码生成规则（用于记录）
     category_id = Column(String(36), ForeignKey("product_categories.id", ondelete="SET NULL"), nullable=True, index=True)
     service_type_id = Column(String(36), ForeignKey("service_types.id", ondelete="SET NULL"), nullable=True, index=True)
     # 注意：organizations 表在 foundation_service 的数据库中，不能使用外键约束

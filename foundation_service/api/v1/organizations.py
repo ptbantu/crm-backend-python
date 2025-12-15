@@ -115,3 +115,25 @@ async def unlock_organization(
     organization = await service.unlock_organization(organization_id)
     return Result.success(data=organization, message="组织已解锁，该组织用户可以正常登录")
 
+
+@router.post("/{organization_id}/enable", response_model=Result[OrganizationResponse])
+async def enable_organization(
+    organization_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """启用组织"""
+    service = OrganizationService(db)
+    organization = await service.enable_organization(organization_id)
+    return Result.success(data=organization, message="组织已启用")
+
+
+@router.post("/{organization_id}/disable", response_model=Result[OrganizationResponse])
+async def disable_organization(
+    organization_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """禁用组织"""
+    service = OrganizationService(db)
+    organization = await service.disable_organization(organization_id)
+    return Result.success(data=organization, message="组织已禁用")
+

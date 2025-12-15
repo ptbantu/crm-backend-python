@@ -20,7 +20,7 @@ from foundation_service.api.v1 import (
     orders, order_items, order_comments, order_files, leads, collection_tasks,
     temporary_links, notifications, opportunities, product_dependencies,
     product_categories, products, service_types, customers, contacts,
-    service_records, industries, customer_sources, analytics, monitoring, logs, audit
+    service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers
 )
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
 from foundation_service.config import settings
@@ -56,6 +56,32 @@ Logger.initialize(
 
 # 获取 logger
 logger = get_logger(__name__)
+
+# 配置 Uvicorn 访问日志过滤器（过滤健康检查日志）
+import logging
+
+class HealthCheckFilter(logging.Filter):
+    """过滤健康检查访问日志"""
+    def filter(self, record):
+        """过滤包含 /health 的访问日志"""
+        # 检查日志消息
+        if hasattr(record, "msg"):
+            msg = str(record.msg)
+            # 过滤健康检查路径（检查 GET /health 请求）
+            if "/health" in msg and "GET" in msg:
+                return False
+        
+        # 检查日志参数（Uvicorn 可能使用参数记录）
+        if hasattr(record, "args") and record.args:
+            for arg in record.args:
+                if isinstance(arg, str) and "/health" in arg:
+                    return False
+        
+        return True
+
+# 为 uvicorn.access 记录器添加过滤器
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addFilter(HealthCheckFilter())
 
 
 class UTF8JSONResponse(JSONResponse):
@@ -275,6 +301,7 @@ app.include_router(product_dependencies.router, prefix="/api/order-workflow/prod
 # Service Management 路由
 app.include_router(product_categories.router, prefix="/api/service-management/categories", tags=["产品分类"])
 app.include_router(products.router, prefix="/api/service-management/products", tags=["产品/服务"])
+app.include_router(suppliers.router, prefix="/api/service-management/suppliers", tags=["企服供应商"])
 app.include_router(service_types.router, prefix="/api/service-management/service-types", tags=["服务类型"])
 app.include_router(customers.router, prefix="/api/service-management/customers", tags=["客户管理"])
 app.include_router(contacts.router, prefix="/api/service-management/contacts", tags=["联系人管理"])
