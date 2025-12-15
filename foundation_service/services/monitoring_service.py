@@ -34,7 +34,8 @@ class MonitoringService:
         """获取所有服务健康状态"""
         method_name = "get_services_health"
         start_time = time.time()
-        logger.info(f"[Service] {method_name} - 方法调用开始")
+        # Health check 不记录日志，避免影响 debug
+        # logger.info(f"[Service] {method_name} - 方法调用开始")
         
         try:
             services_data = await self.health_checker.check_all_services_health()
@@ -58,11 +59,12 @@ class MonitoringService:
             )
             
             elapsed_time = (time.time() - start_time) * 1000
-            logger.info(
-                f"[Service] {method_name} - 方法调用成功 | "
-                f"耗时: {elapsed_time:.2f}ms | "
-                f"结果: overall_status={result.overall_status}, services_count={len(result.services)}"
-            )
+            # Health check 成功不记录日志，避免影响 debug
+            # logger.info(
+            #     f"[Service] {method_name} - 方法调用成功 | "
+            #     f"耗时: {elapsed_time:.2f}ms | "
+            #     f"结果: overall_status={result.overall_status}, services_count={len(result.services)}"
+            # )
             
             return result
         except Exception as e:
@@ -79,18 +81,20 @@ class MonitoringService:
         """获取数据库健康状态"""
         method_name = "get_database_health"
         start_time = time.time()
-        logger.info(f"[Service] {method_name} - 方法调用开始")
+        # Health check 不记录日志，避免影响 debug
+        # logger.info(f"[Service] {method_name} - 方法调用开始")
         
         try:
             health_data = await self.health_checker.check_database_health(self.db)
             result = DatabaseHealthResponse(**health_data)
             
             elapsed_time = (time.time() - start_time) * 1000
-            logger.info(
-                f"[Service] {method_name} - 方法调用成功 | "
-                f"耗时: {elapsed_time:.2f}ms | "
-                f"结果: status={result.status}"
-            )
+            # Health check 成功不记录日志，避免影响 debug
+            # logger.info(
+            #     f"[Service] {method_name} - 方法调用成功 | "
+            #     f"耗时: {elapsed_time:.2f}ms | "
+            #     f"结果: status={result.status}"
+            # )
             
             return result
         except Exception as e:

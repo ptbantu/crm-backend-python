@@ -1,8 +1,9 @@
 """
 产品分类服务
 """
-from typing import List
+from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 from foundation_service.schemas.product_category import (
     ProductCategoryCreateRequest,
     ProductCategoryUpdateRequest,
@@ -10,7 +11,9 @@ from foundation_service.schemas.product_category import (
     ProductCategoryListResponse,
 )
 from foundation_service.repositories.product_category_repository import ProductCategoryRepository
+from foundation_service.repositories.product_repository import ProductRepository
 from common.models.product_category import ProductCategory
+from common.models.product import Product
 from common.exceptions import BusinessException
 
 
@@ -20,6 +23,7 @@ class ProductCategoryService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.category_repo = ProductCategoryRepository(db)
+        self.product_repo = ProductRepository(db)
     
     async def create_category(self, request: ProductCategoryCreateRequest) -> ProductCategoryResponse:
         """创建产品分类"""
@@ -212,4 +216,97 @@ class ProductCategoryService:
             page=page,
             size=size,
         )
+    
+    async def get_category_tree_with_products(
+        self,
+        include_products: bool = True,
+        is_active: Optional[bool] = True,
+    ) -> List[Dict[str, Any]]:
+        """
+        获取分类树结构（包含产品列表）
+        
+        Args:
+            include_products: 是否包含产品列表
+            is_active: 是否只查询激活的分类
+        
+        Returns:
+            分类树列表
+        """
+        # 查询所有分类
+        query = select(ProductCategory)
+        if is_active is not None:
+            query = query.where(ProductCategory.is_active == is_active)
+        query = query.order_by(ProductCategory.display_order, ProductCategory.created_at)
+        
+        result = await self.db.execute(query)
+        all_categories = list(result.scalars().all())
+        
+        # 构建分类字典（便于查找）
+        category_dict = {cat.id: cat for cat in all_categories}
+        
+        # 如果包含产品，查询每个分类的产品数量
+        category_product_counts = {}
+        category_products = {}
+        
+        if include_products:
+            # 查询所有激活的产品
+            product_query = select(Product)
+            if is_active is not None:
+                product_query = product_query.where(Product.is_active == is_active)
+            
+            product_result = await self.db.execute(product_query)
+            all_products = list(product_result.scalars().all())
+            
+            # 按分类分组产品
+            for product in all_products:
+                if product.category_id:
+                    if product.category_id not in category_product_counts:
+                        category_product_counts[product.category_id] = 0
+                        category_products[product.category_id] = []
+                    category_product_counts[product.category_id] += 1
+                    category_products[product.category_id].append({
+                        'id': product.id,
+                        'name': product.name,
+                        'code': product.code,
+                        'enterprise_service_code': product.enterprise_service_code,
+                        'is_active': product.is_active,
+                    })
+        
+        # 递归构建树结构
+        def build_tree(parent_id: Optional[str] = None) -> List[Dict[str, Any]]:
+            children = []
+            for category in all_categories:
+                if (parent_id is None and category.parent_id is None) or \
+                   (parent_id is not None and category.parent_id == parent_id):
+                    # 获取产品数量（包括子分类的产品）
+                    product_count = category_product_counts.get(category.id, 0)
+                    
+                    # 递归获取子分类
+                    sub_children = build_tree(category.id)
+                    
+                    # 累加子分类的产品数量
+                    for sub_child in sub_children:
+                        product_count += sub_child.get('product_count', 0)
+                    
+                    category_data = {
+                        'id': category.id,
+                        'code': category.code,
+                        'name': category.name,
+                        'description': category.description,
+                        'parent_id': category.parent_id,
+                        'display_order': category.display_order,
+                        'is_active': category.is_active,
+                        'product_count': product_count,
+                        'children': sub_children,
+                    }
+                    
+                    # 如果包含产品，添加产品列表
+                    if include_products:
+                        category_data['products'] = category_products.get(category.id, [])
+                    
+                    children.append(category_data)
+            
+            return children
+        
+        return build_tree()
 
