@@ -41,6 +41,15 @@ class OrderItemCreateRequest(BaseModel):
     expected_start_date: Optional[date] = Field(None, description="预期开始日期")
     expected_completion_date: Optional[date] = Field(None, description="预期完成日期")
     
+    # 服务提供方和成本信息（2024-12-13新增）
+    selected_supplier_id: Optional[str] = Field(None, description="执行该项的服务提供方ID（可以是内部团队或外部供应商）")
+    delivery_type: Optional[str] = Field(None, description="交付类型: INTERNAL=内部交付, VENDOR=供应商交付")
+    supplier_cost_history_id: Optional[str] = Field(None, description="关联的成本版本ID")
+    snapshot_cost_cny: Optional[Decimal] = Field(None, ge=0, description="下单时的RMB成本快照")
+    snapshot_cost_idr: Optional[Decimal] = Field(None, ge=0, description="下单时的IDR成本快照")
+    estimated_profit_cny: Optional[Decimal] = Field(None, ge=0, description="预估毛利(CNY)")
+    estimated_profit_idr: Optional[Decimal] = Field(None, ge=0, description="预估毛利(IDR)")
+    
     # 状态
     status: str = Field(default="pending", description="订单项状态：pending, in_progress, completed, cancelled")
 
@@ -64,6 +73,16 @@ class OrderItemUpdateRequest(BaseModel):
     requirements: Optional[str] = None
     expected_start_date: Optional[date] = None
     expected_completion_date: Optional[date] = None
+    
+    # 服务提供方和成本信息（2024-12-13新增）
+    selected_supplier_id: Optional[str] = None
+    delivery_type: Optional[str] = None
+    supplier_cost_history_id: Optional[str] = None
+    snapshot_cost_cny: Optional[Decimal] = Field(None, ge=0)
+    snapshot_cost_idr: Optional[Decimal] = Field(None, ge=0)
+    estimated_profit_cny: Optional[Decimal] = Field(None, ge=0)
+    estimated_profit_idr: Optional[Decimal] = Field(None, ge=0)
+    
     status: Optional[str] = None
 
 
@@ -99,6 +118,15 @@ class OrderItemResponse(BaseModel):
     # 时间信息
     expected_start_date: Optional[date] = None
     expected_completion_date: Optional[date] = None
+    
+    # 服务提供方和成本信息（2024-12-13新增）
+    selected_supplier_id: Optional[str] = None
+    delivery_type: Optional[str] = None  # INTERNAL=内部交付, VENDOR=供应商交付
+    supplier_cost_history_id: Optional[str] = None
+    snapshot_cost_cny: Optional[Decimal] = None
+    snapshot_cost_idr: Optional[Decimal] = None
+    estimated_profit_cny: Optional[Decimal] = None
+    estimated_profit_idr: Optional[Decimal] = None
     
     # 状态
     status: str

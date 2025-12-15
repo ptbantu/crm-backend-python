@@ -1,7 +1,7 @@
 """
 订单 API 路由
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
@@ -15,6 +15,7 @@ from foundation_service.schemas.order import (
 )
 from common.schemas.response import Result
 from common.utils.logger import get_logger
+from foundation_service.utils import log_audit_operation
 
 logger = get_logger(__name__)
 
@@ -24,6 +25,7 @@ router = APIRouter()
 @router.post("", response_model=Result[OrderResponse], status_code=status.HTTP_201_CREATED)
 async def create_order(
     request: OrderCreateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -40,9 +42,33 @@ async def create_order(
     try:
         service = OrderService(db)
         result = await service.create_order(request)
+        
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=http_request,
+            operation_type="CREATE",
+            entity_type="orders",
+            entity_id=result.id if hasattr(result, 'id') else None,
+            data_after=result.dict() if hasattr(result, 'dict') else None,
+            status="SUCCESS"
+        )
+        
         return Result.success(data=result, message="订单创建成功")
     except Exception as e:
         logger.error(f"创建订单失败: {str(e)}", exc_info=True)
+        
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=http_request,
+            operation_type="CREATE",
+            entity_type="orders",
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"创建订单失败: {str(e)}"
@@ -84,6 +110,7 @@ async def get_order(
 async def update_order(
     order_id: str,
     request: OrderUpdateRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -94,6 +121,10 @@ async def update_order(
     """
     try:
         service = OrderService(db)
+        
+        # 查询更新前的数据
+        old_order = await service.get_order_by_id(order_id)
+        
         result = await service.update_order(order_id, request)
         
         if result is None:
@@ -102,11 +133,44 @@ async def update_order(
                 detail="订单不存在"
             )
         
+        # 计算变更字段
+        changed_fields = []
+        if old_order and result:
+            old_dict = old_order.dict() if hasattr(old_order, 'dict') else {}
+            new_dict = result.dict() if hasattr(result, 'dict') else {}
+            changed_fields = [k for k in new_dict.keys() if old_dict.get(k) != new_dict.get(k)]
+        
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=http_request,
+            operation_type="UPDATE",
+            entity_type="orders",
+            entity_id=order_id,
+            data_before=old_order.dict() if old_order and hasattr(old_order, 'dict') else None,
+            data_after=result.dict() if hasattr(result, 'dict') else None,
+            changed_fields=changed_fields,
+            status="SUCCESS"
+        )
+        
         return Result.success(data=result, message="订单更新成功")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"更新订单失败: {str(e)}", exc_info=True)
+        
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=http_request,
+            operation_type="UPDATE",
+            entity_type="orders",
+            entity_id=order_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"更新订单失败: {str(e)}"
@@ -116,6 +180,7 @@ async def update_order(
 @router.delete("/{order_id}", response_model=Result[bool])
 async def delete_order(
     order_id: str,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -127,6 +192,10 @@ async def delete_order(
     """
     try:
         service = OrderService(db)
+        
+        # 查询删除前的数据
+        old_order = await service.get_order_by_id(order_id)
+        
         success = await service.delete_order(order_id)
         
         if not success:
@@ -135,11 +204,35 @@ async def delete_order(
                 detail="订单不存在"
             )
         
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=http_request,
+            operation_type="DELETE",
+            entity_type="orders",
+            entity_id=order_id,
+            data_before=old_order.dict() if old_order and hasattr(old_order, 'dict') else None,
+            status="SUCCESS"
+        )
+        
         return Result.success(data=True, message="订单删除成功")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"删除订单失败: {str(e)}", exc_info=True)
+        
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=http_request,
+            operation_type="DELETE",
+            entity_type="orders",
+            entity_id=order_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
+        
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"删除订单失败: {str(e)}"

@@ -53,3 +53,9 @@ class RoleNotFoundError(BusinessException):
     """角色不存在"""
     def __init__(self):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在")
+
+
+class NotFoundError(BusinessException):
+    """资源不存在（通用）"""
+    def __init__(self, detail: str = "资源不存在"):
+        super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail)

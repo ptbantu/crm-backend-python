@@ -23,6 +23,11 @@ class ProductCreateRequest(BaseModel):
     urgent_processing_days: Optional[int] = Field(None, ge=0, description="加急处理天数")
     urgent_price_surcharge: Optional[Decimal] = Field(None, ge=0, description="加急附加费")
     
+    # 服务与供应商管理字段（2024-12-13新增）
+    std_duration_days: Optional[int] = Field(None, ge=0, description="标准执行总时长(天)")
+    allow_multi_vendor: bool = Field(default=True, description="是否允许多供应商接单（1=允许，0=单一供应商）")
+    default_supplier_id: Optional[str] = Field(None, description="默认供应商ID（当allow_multi_vendor=0时使用）")
+    
     # 多货币价格（IDR/CNY）
     price_cost_idr: Optional[Decimal] = Field(None, ge=0, description="成本价（IDR）")
     price_cost_cny: Optional[Decimal] = Field(None, ge=0, description="成本价（CNY）")
@@ -74,6 +79,11 @@ class ProductUpdateRequest(BaseModel):
     is_urgent_available: Optional[bool] = None
     urgent_processing_days: Optional[int] = Field(None, ge=0)
     urgent_price_surcharge: Optional[Decimal] = Field(None, ge=0)
+    
+    # 服务与供应商管理字段（2024-12-13新增）
+    std_duration_days: Optional[int] = Field(None, ge=0)
+    allow_multi_vendor: Optional[bool] = None
+    default_supplier_id: Optional[str] = None
     
     # 多货币价格
     price_cost_idr: Optional[Decimal] = Field(None, ge=0)
@@ -131,6 +141,11 @@ class ProductResponse(BaseModel):
     is_urgent_available: bool
     urgent_processing_days: Optional[int]
     urgent_price_surcharge: Optional[Decimal]
+    
+    # 服务与供应商管理字段（2024-12-13新增）
+    std_duration_days: Optional[int] = None
+    allow_multi_vendor: bool = True
+    default_supplier_id: Optional[str] = None
     
     # 多货币价格
     price_cost_idr: Optional[Decimal]

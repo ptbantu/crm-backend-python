@@ -4,6 +4,8 @@
 
 本文档包含 BANTU CRM 系统服务管理的所有 API 接口，包括服务分类、服务类型、服务、客户、联系人和服务记录管理。
 
+**⚠️ 重要更新 (2024-12-13)**: 产品/服务API响应新增字段，详见 [API变更日志](./API_CHANGELOG_2024-12-13.md)
+
 **访问地址**：
 - **生产环境 (HTTPS)**: `https://www.bantu.sbs` (通过 Kubernetes Ingress)
 - **生产环境 (HTTP)**: `http://www.bantu.sbs` (自动重定向到 HTTPS)
@@ -513,6 +515,9 @@ Authorization: Bearer <token>
   "is_urgent_available": true,
   "urgent_processing_days": 3,
   "urgent_price_surcharge": 500000,
+  "std_duration_days": 7,                    // 新增：标准执行总时长(天)
+  "allow_multi_vendor": true,                 // 新增：是否允许多供应商接单
+  "default_supplier_id": null,               // 新增：默认供应商ID
   "price_cost_idr": 2000000,
   "price_cost_cny": 1000,
   "price_channel_idr": 2500000,
@@ -538,6 +543,8 @@ Authorization: Bearer <token>
 }
 ```
 
+**⚠️ 注意**: 2024-12-13 更新 - 请求体新增字段：`std_duration_days`, `allow_multi_vendor`, `default_supplier_id`。详见 [API变更日志](./API_CHANGELOG_2024-12-13.md)
+
 **响应示例**:
 ```json
 {
@@ -557,6 +564,9 @@ Authorization: Bearer <token>
     "is_urgent_available": true,
     "urgent_processing_days": 3,
     "urgent_price_surcharge": 500000,
+    "std_duration_days": 7,                    // 新增：标准执行总时长(天)
+    "allow_multi_vendor": true,                // 新增：是否允许多供应商接单
+    "default_supplier_id": null,              // 新增：默认供应商ID
     "price_cost_idr": 2000000,
     "price_cost_cny": 1000,
     "price_channel_idr": 2500000,

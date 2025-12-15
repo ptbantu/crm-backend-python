@@ -25,7 +25,8 @@ async def get_services_health(
     db: AsyncSession = Depends(get_db)
 ):
     """获取所有服务健康状态"""
-    logger.info("API: 获取所有服务健康状态")
+    # Health check 成功不记录日志，避免影响 debug
+    # logger.info("API: 获取所有服务健康状态")
     try:
         service = MonitoringService(db)
         health = await service.get_services_health()
@@ -40,7 +41,8 @@ async def get_database_health(
     db: AsyncSession = Depends(get_db)
 ):
     """获取数据库健康状态"""
-    logger.info("API: 获取数据库健康状态")
+    # Health check 成功不记录日志，避免影响 debug
+    # logger.info("API: 获取数据库健康状态")
     try:
         service = MonitoringService(db)
         health = await service.get_database_health()

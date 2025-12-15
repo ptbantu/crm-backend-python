@@ -279,6 +279,28 @@ Authorization: Bearer <token>
 }
 ```
 
+**请求体**（新增字段，2024-12-13）:
+```json
+{
+  "order_id": "uuid",
+  "item_number": 1,
+  "product_id": "uuid",
+  "selected_supplier_id": "uuid",           // 新增：服务提供方ID
+  "delivery_type": "VENDOR",                 // 新增：交付类型（INTERNAL/VENDOR）
+  "supplier_cost_history_id": "uuid",       // 新增：成本版本ID
+  "quantity": 1,
+  "unit_price": 3000000,
+  "discount_amount": 0,
+  "currency_code": "IDR",
+  "description_zh": "订单项描述（中文）",
+  "description_id": "Order item description (Indonesian)",
+  "requirements": "需求和要求",
+  "expected_start_date": "2024-12-01",
+  "expected_completion_date": "2024-12-10",
+  "status": "pending"
+}
+```
+
 **响应示例**:
 ```json
 {
@@ -293,10 +315,19 @@ Authorization: Bearer <token>
     "unit_price": 3000000,
     "item_amount": 3000000,
     "status": "pending",
+    "selected_supplier_id": "uuid",           // 新增：服务提供方ID
+    "delivery_type": "VENDOR",                // 新增：交付类型
+    "supplier_cost_history_id": "uuid",      // 新增：成本版本ID
+    "snapshot_cost_cny": "2500.00",          // 新增：成本快照(CNY)
+    "snapshot_cost_idr": "5000000.00",       // 新增：成本快照(IDR)
+    "estimated_profit_cny": "500.00",        // 新增：预估毛利(CNY)
+    "estimated_profit_idr": "1000000.00",    // 新增：预估毛利(IDR)
     "created_at": "2024-11-19T05:00:00"
   }
 }
 ```
+
+**⚠️ 注意**: 2024-12-13 更新 - 订单项响应新增了服务提供方、成本快照和预估毛利字段。详见 [API变更日志](./API_CHANGELOG_2024-12-13.md)
 
 ### 2.2 获取订单项详情
 

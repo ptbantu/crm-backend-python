@@ -64,6 +64,11 @@ class Product(Base):
     urgent_processing_days = Column(Integer, nullable=True)  # 加急处理天数
     urgent_price_surcharge = Column(Numeric(18, 2), nullable=True)  # 加急附加费
     
+    # 服务与供应商管理新增字段（2024-12-13）
+    std_duration_days = Column(Integer, nullable=True, comment="标准执行总时长(天)")
+    allow_multi_vendor = Column(Boolean, default=True, nullable=False, comment="是否允许多供应商接单（1=允许，0=单一供应商）")
+    default_supplier_id = Column(String(36), nullable=True, comment="默认供应商ID（当allow_multi_vendor=0时使用）")
+    
     # 利润计算字段（冗余字段，便于查询）
     channel_profit = Column(Numeric(18, 2), nullable=True)  # 渠道方利润
     channel_profit_rate = Column(Numeric(5, 4), nullable=True)  # 渠道方利润率

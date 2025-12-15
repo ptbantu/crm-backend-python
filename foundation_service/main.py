@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from starlette.middleware.base import BaseHTTPMiddleware
 import json
+import logging
 
 from common.schemas.response import Result
 from common.exceptions import BusinessException
@@ -182,6 +183,29 @@ class CharsetMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(CharsetMiddleware)
+
+# 配置 uvicorn 访问日志过滤器，过滤掉 /health 路径
+class HealthCheckAccessLogFilter(logging.Filter):
+    """过滤 uvicorn 访问日志中的 /health 请求"""
+    def filter(self, record):
+        # 检查日志消息中是否包含 /health 路径
+        # uvicorn 访问日志格式: "GET /health HTTP/1.1" 200 OK
+        message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
+        # 匹配包含 "/health" 的访问日志
+        if '/health' in message:
+            # 进一步确认是 GET /health 请求
+            if 'GET /health' in message or '"GET /health' in message:
+                return False
+        return True
+
+# 在应用启动时配置访问日志过滤器
+def configure_access_log_filter():
+    """配置访问日志过滤器"""
+    access_logger = logging.getLogger("uvicorn.access")
+    access_logger.addFilter(HealthCheckAccessLogFilter())
+
+# 立即配置访问日志过滤器（应用启动时）
+configure_access_log_filter()
 
 # CORS 配置
 # 临时允许所有域名访问（开发环境）
@@ -416,6 +440,15 @@ app.include_router(
     tags=["日志查询"]
 )
 
+# 操作审计日志路由
+from foundation_service.api.v1 import audit_logs
+
+app.include_router(
+    audit_logs.router,
+    prefix="/api/foundation/audit-logs",
+    tags=["操作审计"]
+)
+
 
 @app.get("/health")
 async def health_check():
@@ -431,6 +464,7 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
+    # 访问日志过滤器已在模块加载时配置，这里不需要再次配置
     uvicorn.run(app, host="0.0.0.0", port=8081)
 # 测试注释
 # 热重载测试 - Sun Nov  9 11:48:01 PM EST 2025

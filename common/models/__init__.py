@@ -38,6 +38,7 @@ from common.models.service_record import ServiceRecord
 from common.models.vendor_product import VendorProduct
 from common.models.product_price import ProductPrice
 from common.models.product_price_history import ProductPriceHistory
+from common.models.operation_audit_log import OperationAuditLog
 from common.models.vendor_product_financial import VendorProductFinancial
 # 注意：不导入 LeadFollowUp 和 LeadNote，因为 order_workflow_service 有自己的版本（带外键约束）
 # 如果其他服务需要，可以直接从 common.models.lead_follow_up 或 common.models.lead_note 导入
@@ -75,5 +76,6 @@ __all__ = [
     "VendorProductFinancial",
     "CustomerFollowUp",
     "CustomerNote",
+    "OperationAuditLog",
 ]
 

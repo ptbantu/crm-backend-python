@@ -49,6 +49,15 @@ class OrderItem(Base):
     expected_start_date = Column(Date, nullable=True, comment="预期开始日期")
     expected_completion_date = Column(Date, nullable=True, comment="预期完成日期")
     
+    # 服务提供方和成本信息（2024-12-13新增）
+    selected_supplier_id = Column(String(36), nullable=True, index=True, comment="执行该项的服务提供方ID（可以是内部团队或外部供应商）")
+    delivery_type = Column(String(20), nullable=True, index=True, comment="交付类型: INTERNAL=内部交付, VENDOR=供应商交付")
+    supplier_cost_history_id = Column(String(36), nullable=True, index=True, comment="关联的成本版本ID")
+    snapshot_cost_cny = Column(Numeric(18, 2), default=0, nullable=False, comment="下单时的RMB成本快照")
+    snapshot_cost_idr = Column(Numeric(18, 2), default=0, nullable=False, comment="下单时的IDR成本快照")
+    estimated_profit_cny = Column(Numeric(18, 2), default=0, nullable=False, comment="预估毛利(CNY)")
+    estimated_profit_idr = Column(Numeric(18, 2), default=0, nullable=False, comment="预估毛利(IDR)")
+    
     # 状态
     status = Column(String(50), nullable=False, default="pending", index=True, comment="订单项状态：pending, in_progress, completed, cancelled")
     

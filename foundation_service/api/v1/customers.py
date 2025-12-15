@@ -35,6 +35,7 @@ from foundation_service.dependencies import (
     get_current_organization_id,
     get_current_user_roles
 )
+from foundation_service.utils import log_audit_operation
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -65,9 +66,32 @@ async def create_customer(
             current_user_id=current_user_id
         )
         logger.info(f"API: 客户创建成功: id={customer.id}, name={customer.name}")
+        
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="CREATE",
+            entity_type="customers",
+            entity_id=customer.id,
+            data_after=customer.dict() if hasattr(customer, 'dict') else None,
+            status="SUCCESS"
+        )
+        
         return Result.success(data=customer, message="客户创建成功")
     except Exception as e:
         logger.error(f"API: 创建客户失败: {str(e)}", exc_info=True)
+        
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="CREATE",
+            entity_type="customers",
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
         raise
 
 
@@ -92,34 +116,102 @@ async def get_customer(
 async def update_customer(
     customer_id: str,
     request: CustomerUpdateRequest,
+    request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """更新客户"""
     logger.info(f"API: 更新客户请求: customer_id={customer_id}")
     try:
         service = CustomerService(db)
+        
+        # 查询更新前的数据
+        old_customer = await service.get_customer_by_id(customer_id)
+        
+        # 执行更新
         customer = await service.update_customer(customer_id, request)
-        logger.info(f"API: 客户更新成功: id={customer.id}, name={customer.name}")
+        
+        # 计算变更字段
+        changed_fields = []
+        if old_customer and customer:
+            old_dict = old_customer.dict() if hasattr(old_customer, 'dict') else {}
+            new_dict = customer.dict() if hasattr(customer, 'dict') else {}
+            changed_fields = [k for k in new_dict.keys() if old_dict.get(k) != new_dict.get(k)]
+        
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="UPDATE",
+            entity_type="customers",
+            entity_id=customer_id,
+            data_before=old_customer.dict() if old_customer and hasattr(old_customer, 'dict') else None,
+            data_after=customer.dict() if hasattr(customer, 'dict') else None,
+            changed_fields=changed_fields,
+            status="SUCCESS"
+        )
+        
         return Result.success(data=customer, message="客户更新成功")
     except Exception as e:
         logger.error(f"API: 更新客户失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="UPDATE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
         raise
 
 
 @router.delete("/{customer_id}", response_model=Result[None])
 async def delete_customer(
     customer_id: str,
+    request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """删除客户"""
     logger.info(f"API: 删除客户请求: customer_id={customer_id}")
     try:
         service = CustomerService(db)
+        
+        # 查询删除前的数据
+        old_customer = await service.get_customer_by_id(customer_id)
+        
+        # 执行删除
         await service.delete_customer(customer_id)
         logger.info(f"API: 客户删除成功: customer_id={customer_id}")
+        
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="DELETE",
+            entity_type="customers",
+            entity_id=customer_id,
+            data_before=old_customer.dict() if old_customer and hasattr(old_customer, 'dict') else None,
+            status="SUCCESS"
+        )
+        
         return Result.success(message="客户删除成功")
     except Exception as e:
         logger.error(f"API: 删除客户失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="DELETE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
         raise
 
 
