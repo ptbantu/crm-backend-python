@@ -69,3 +69,4 @@ site/
 !certs/README.md
 
 *.py.bak
+config/*
