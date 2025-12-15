@@ -4,7 +4,7 @@
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.models import Notification
+from common.models.notification import Notification
 from foundation_service.repositories.notification_repository import NotificationRepository
 from foundation_service.schemas.notification import (
     NotificationResponse,
