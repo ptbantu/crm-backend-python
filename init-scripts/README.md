@@ -4,16 +4,30 @@
 
 此目录包含 MySQL 容器启动时自动执行的 SQL 脚本。MySQL 容器会在首次启动时（数据库为空时）按文件名顺序执行这些脚本。
 
+## 📁 目录结构
+
+```
+init-scripts/
+├── schema.sql              # 核心：数据库表结构（自动执行）
+├── seed_data.sql           # 核心：种子数据（自动执行）
+├── import_schema_with_charset.sh  # 工具：带字符集导入脚本
+├── migrations/             # 增量迁移脚本（手动执行）
+├── tools/                  # 开发工具脚本
+├── archive/                # 归档的历史脚本
+└── README.md               # 本文档
+```
+
 ## 文件说明
 
-### 核心脚本文件（仅保留两个）
+### 核心脚本文件（自动执行）
 
 #### schema.sql
 - **作用**：创建所有数据库表结构
 - **包含**：所有表、索引、外键、触发器、存储过程、视图
 - **来源**：从生产数据库直接导出
-- **大小**：约 192KB
-- **行数**：约 1457 行
+- **大小**：约 90KB
+- **行数**：约 1392 行
+- **执行时机**：MySQL 容器首次启动时自动执行
 
 #### seed_data.sql
 - **作用**：导入系统所有种子数据
@@ -38,8 +52,52 @@
   - 用户角色（user_roles）
   - 用户数据（users）
 - **来源**：从生产数据库直接导出
-- **大小**：约 448KB
+- **大小**：约 243KB
 - **行数**：约 35 行（包含大量 INSERT 语句）
+- **执行时机**：MySQL 容器首次启动时自动执行（在 schema.sql 之后）
+
+### 迁移脚本（migrations/）
+
+**作用**：增量数据库迁移脚本，用于在已有数据库上应用变更
+
+**重要迁移脚本**：
+- `create_audit_logs_table.sql` - 创建审计日志表
+- `add_organization_id_to_customers.sql` - 为客户表添加组织ID
+- `create_opportunities_table.sql` - 创建商机表
+- `migrate_to_v1.sql` - 迁移到 v1 版本
+- 其他增量变更脚本
+
+**使用方法**：
+```bash
+# 手动执行迁移脚本
+kubectl exec -i $MYSQL_POD -- mysql -uroot -p$PASSWORD bantu_crm < init-scripts/migrations/create_audit_logs_table.sql
+```
+
+### 工具脚本（tools/）
+
+**作用**：开发工具和辅助脚本
+
+**包含**：
+- `generate_relationships.py` - 生成数据库关系图（Graphviz/Mermaid）
+- `generate_customer_relationships.py` - 生成客户关系图
+- `RELATIONSHIPS.png` / `RELATIONSHIPS.svg` - 生成的关系图
+
+**使用方法**：
+```bash
+# 生成关系图
+cd init-scripts/tools
+python3 generate_relationships.py
+```
+
+### 归档文件（archive/）
+
+**作用**：历史脚本和旧版本备份
+
+**包含**：
+- `archive/schemas/` - 旧版本的 schema 文件
+- `archive/*.sql` - 历史迁移和修复脚本
+
+**注意**：归档文件仅供历史参考，不再使用。
 
 ## 执行顺序
 
@@ -161,12 +219,42 @@ cd /home/bantu/crm-backend-python
 - 字符集：`utf8mb4`
 - 排序规则：`utf8mb4_0900_ai_ci`
 
+## 其他工具
+
+### import_schema_with_charset.sh
+
+**作用**：带字符集设置的 Schema 导入脚本
+
+**使用方法**：
+```bash
+./init-scripts/import_schema_with_charset.sh
+```
+
 ## 归档文件
 
 旧的 SQL 文件已移动到 `archive/` 目录中，包括：
-- 01_schema_unified.sql
-- 02_all_seed_data.sql
-- 07_sync_database_fields.sql
-- 以及其他迁移和修复脚本
+- `archive/schemas/schema_v1.sql` - 旧版本的 schema 文件
+- `archive/*.sql` - 历史迁移和修复脚本（01-31 系列）
 
 如需查看历史文件，请参考 `archive/` 目录。
+
+## 📝 维护说明
+
+### 添加新的迁移脚本
+
+1. 在 `migrations/` 目录创建新的 SQL 文件
+2. 文件名使用描述性名称，如：`add_new_feature_table.sql`
+3. 在脚本开头添加注释说明迁移目的和影响
+4. 测试迁移脚本后再提交
+
+### 更新核心脚本
+
+如果需要更新 `schema.sql` 或 `seed_data.sql`：
+
+```bash
+# 使用导出脚本重新生成
+cd /home/bantu/crm-backend-python
+./scripts/export_schema_and_seed.sh
+```
+
+**注意**：更新核心脚本会影响新环境的初始化，请谨慎操作。

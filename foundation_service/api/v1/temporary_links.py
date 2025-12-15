@@ -7,7 +7,7 @@ from typing import Optional, List
 from datetime import datetime
 
 from foundation_service.dependencies import (
-    get_db,
+    get_database_session,
     get_current_user_id,
 )
 from foundation_service.services.temporary_link_service import TemporaryLinkService

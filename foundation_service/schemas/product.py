@@ -12,6 +12,7 @@ class ProductCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="产品名称")
     code: Optional[str] = Field(None, max_length=100, description="产品编码（唯一）")
     category_id: Optional[str] = Field(None, description="分类ID")
+    service_type_id: Optional[str] = Field(None, description="服务类型ID（用于生成企业服务编码）")
     
     # 服务属性
     service_type: Optional[str] = Field(None, max_length=50, description="服务类型")
@@ -69,6 +70,7 @@ class ProductUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     code: Optional[str] = Field(None, max_length=100)
     category_id: Optional[str] = None
+    service_type_id: Optional[str] = None  # 如果改变，会重新生成企业服务编码
     
     # 服务属性
     service_type: Optional[str] = None
@@ -127,6 +129,7 @@ class ProductResponse(BaseModel):
     id: str
     name: str
     code: Optional[str]
+    enterprise_service_code: Optional[str] = None  # 企业服务编码（系统自动生成，只读）
     category_id: Optional[str]
     category_name: Optional[str] = None  # 分类名称（需要关联查询）
     service_type_id: Optional[str] = None

@@ -1,6 +1,6 @@
 """
-Foundation Service - 统一 ERP 服务
-合并了所有微服务：基础服务、服务管理、订单工作流、数据分析监控
+Foundation Service - 单体服务
+合并了所有微服务的功能：用户、组织、角色、订单、工作流、服务管理等
 """
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,10 +14,31 @@ import logging
 from common.schemas.response import Result
 from common.exceptions import BusinessException
 from common.utils.logger import Logger, get_logger
-from common.redis_client import init_redis
+from common.redis_client import init_redis, get_redis
 from common.mongodb_client import init_mongodb
+from foundation_service.api.v1 import (
+    auth, users, organizations, roles, organization_domains, permissions, menus,
+    orders, order_items, order_comments, order_files, leads, collection_tasks,
+    temporary_links, notifications, opportunities, product_dependencies,
+    product_categories, products, service_types, customers, contacts,
+    service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers
+)
+from foundation_service.api.v1.customer_levels import router as customer_levels_router
 from foundation_service.config import settings
 from foundation_service.utils.jwt import verify_token
+
+# 导入所有模型，确保它们被注册到 SQLAlchemy metadata 中
+from common.models import (
+    User, Organization, Role, OrganizationEmployee, UserRole,
+    OrganizationDomain, OrganizationDomainRelation, Permission, RolePermission, Menu, MenuPermission,
+    Order, OrderItem, OrderComment, OrderFile, Lead, LeadFollowUp, LeadNote,
+    LeadPool, Notification, Opportunity, OpportunityProduct, OpportunityPaymentStage,
+    CollectionTask, TemporaryLink, CustomerLevel, FollowUpStatus,
+    WorkflowDefinition, WorkflowInstance, WorkflowTask, WorkflowTransition,
+    ProductDependency, Customer, CustomerSource, CustomerChannel,
+    ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
+    VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog
+)
 
 # 初始化日志
 Logger.initialize(
@@ -37,6 +58,32 @@ Logger.initialize(
 # 获取 logger
 logger = get_logger(__name__)
 
+# 配置 Uvicorn 访问日志过滤器（过滤健康检查日志）
+import logging
+
+class HealthCheckFilter(logging.Filter):
+    """过滤健康检查访问日志"""
+    def filter(self, record):
+        """过滤包含 /health 的访问日志"""
+        # 检查日志消息
+        if hasattr(record, "msg"):
+            msg = str(record.msg)
+            # 过滤健康检查路径（检查 GET /health 请求）
+            if "/health" in msg and "GET" in msg:
+                return False
+        
+        # 检查日志参数（Uvicorn 可能使用参数记录）
+        if hasattr(record, "args") and record.args:
+            for arg in record.args:
+                if isinstance(arg, str) and "/health" in arg:
+                    return False
+        
+        return True
+
+# 为 uvicorn.access 记录器添加过滤器
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addFilter(HealthCheckFilter())
+
 
 class UTF8JSONResponse(JSONResponse):
     """自定义 JSON 响应，确保中文正确编码"""
@@ -54,7 +101,7 @@ class UTF8JSONResponse(JSONResponse):
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
-    logger.info("🚀 Foundation Service (统一 ERP 服务) 启动中...")
+    logger.info("🚀 Foundation Service (单体服务) 启动中...")
     logger.info(f"服务版本: {settings.APP_VERSION}")
     logger.info(f"调试模式: {settings.DEBUG}")
     logger.info(f"数据库: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
@@ -93,8 +140,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="BANTU CRM Foundation Service",
-    description="统一 ERP 服务 - 合并了基础服务、服务管理、订单工作流、数据分析监控",
+    title="BANTU CRM Foundation Service (单体服务)",
+    description="单体服务 - 合并了所有微服务功能：用户、组织、角色、订单、工作流、服务管理、数据分析等",
     version="1.0.0",
     lifespan=lifespan,
     # 使用自定义 JSON 响应，确保中文正确编码
@@ -184,28 +231,9 @@ class CharsetMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(CharsetMiddleware)
 
-# 配置 uvicorn 访问日志过滤器，过滤掉 /health 路径
-class HealthCheckAccessLogFilter(logging.Filter):
-    """过滤 uvicorn 访问日志中的 /health 请求"""
-    def filter(self, record):
-        # 检查日志消息中是否包含 /health 路径
-        # uvicorn 访问日志格式: "GET /health HTTP/1.1" 200 OK
-        message = record.getMessage() if hasattr(record, 'getMessage') else str(record.msg)
-        # 匹配包含 "/health" 的访问日志
-        if '/health' in message:
-            # 进一步确认是 GET /health 请求
-            if 'GET /health' in message or '"GET /health' in message:
-                return False
-        return True
-
-# 在应用启动时配置访问日志过滤器
-def configure_access_log_filter():
-    """配置访问日志过滤器"""
-    access_logger = logging.getLogger("uvicorn.access")
-    access_logger.addFilter(HealthCheckAccessLogFilter())
-
-# 立即配置访问日志过滤器（应用启动时）
-configure_access_log_filter()
+# 审计中间件（记录所有 HTTP 请求）
+from foundation_service.middleware.audit_middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
 
 # CORS 配置
 # 临时允许所有域名访问（开发环境）
@@ -299,10 +327,6 @@ from foundation_service.models import (
 
 # 注册路由
 # Foundation Service 路由
-from foundation_service.api.v1 import (
-    auth, users, organizations, roles, organization_domains, permissions, menus
-)
-
 app.include_router(auth.router, prefix="/api/foundation/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/foundation/users", tags=["用户管理"])
 app.include_router(organizations.router, prefix="/api/foundation/organizations", tags=["组织管理"])
@@ -311,143 +335,37 @@ app.include_router(organization_domains.router, prefix="/api/foundation/organiza
 app.include_router(permissions.router, prefix="/api/foundation", tags=["权限管理"])
 app.include_router(menus.router, prefix="/api/foundation", tags=["菜单管理"])
 
-# Service Management 路由
-from foundation_service.api.v1 import (
-    product_categories, products, service_types, customers, contacts, 
-    service_records, industries, customer_sources
-)
-
-app.include_router(
-    product_categories.router,
-    prefix="/api/service-management/categories",
-    tags=["产品分类"]
-)
-app.include_router(
-    products.router,
-    prefix="/api/service-management/products",
-    tags=["产品/服务"]
-)
-app.include_router(
-    service_types.router,
-    prefix="/api/service-management/service-types",
-    tags=["服务类型"]
-)
-app.include_router(
-    customers.router,
-    prefix="/api/service-management/customers",
-    tags=["客户管理"]
-)
-app.include_router(
-    contacts.router,
-    prefix="/api/service-management/contacts",
-    tags=["联系人管理"]
-)
-app.include_router(
-    service_records.router,
-    prefix="/api/service-management/service-records",
-    tags=["服务记录"]
-)
-app.include_router(
-    industries.router,
-    prefix="/api/service-management/industries",
-    tags=["行业管理"]
-)
-app.include_router(
-    customer_sources.router,
-    prefix="/api/service-management/customer-sources",
-    tags=["客户来源管理"]
-)
-
 # Order Workflow Service 路由
-from foundation_service.api.v1 import (
-    orders, order_items, order_comments, order_files, leads, collection_tasks,
-    temporary_links, notifications, opportunities, product_dependencies
-)
-from foundation_service.api.v1.customer_levels import router as customer_levels_router
+app.include_router(orders.router, prefix="/api/order-workflow/orders", tags=["订单管理"])
+app.include_router(order_items.router, prefix="/api/order-workflow/order-items", tags=["订单项"])
+app.include_router(order_comments.router, prefix="/api/order-workflow/order-comments", tags=["订单评论"])
+app.include_router(order_files.router, prefix="/api/order-workflow/order-files", tags=["订单文件"])
+app.include_router(leads.router, prefix="/api/order-workflow/leads", tags=["线索管理"])
+app.include_router(collection_tasks.router, prefix="/api/order-workflow/collection-tasks", tags=["催款任务"])
+app.include_router(temporary_links.router, prefix="/api/order-workflow/temporary-links", tags=["临时链接"])
+app.include_router(notifications.router, prefix="/api/order-workflow/notifications", tags=["通知系统"])
+app.include_router(customer_levels_router, prefix="/api/order-workflow", tags=["选项配置"])
+app.include_router(opportunities.router, prefix="/api/order-workflow/opportunities", tags=["商机管理"])
+app.include_router(product_dependencies.router, prefix="/api/order-workflow/product-dependencies", tags=["产品依赖关系"])
 
-app.include_router(
-    orders.router,
-    prefix="/api/order-workflow/orders",
-    tags=["订单管理"]
-)
-app.include_router(
-    order_items.router,
-    prefix="/api/order-workflow/order-items",
-    tags=["订单项"]
-)
-app.include_router(
-    order_comments.router,
-    prefix="/api/order-workflow/order-comments",
-    tags=["订单评论"]
-)
-app.include_router(
-    order_files.router,
-    prefix="/api/order-workflow/order-files",
-    tags=["订单文件"]
-)
-app.include_router(
-    leads.router,
-    prefix="/api/order-workflow/leads",
-    tags=["线索管理"]
-)
-app.include_router(
-    collection_tasks.router,
-    prefix="/api/order-workflow/collection-tasks",
-    tags=["催款任务"]
-)
-app.include_router(
-    temporary_links.router,
-    prefix="/api/order-workflow/temporary-links",
-    tags=["临时链接"]
-)
-app.include_router(
-    notifications.router,
-    prefix="/api/order-workflow/notifications",
-    tags=["通知系统"]
-)
-app.include_router(
-    customer_levels_router,
-    prefix="/api/order-workflow",
-    tags=["选项配置"]
-)
-app.include_router(
-    opportunities.router,
-    prefix="/api/order-workflow/opportunities",
-    tags=["商机管理"]
-)
-app.include_router(
-    product_dependencies.router,
-    prefix="/api/order-workflow/product-dependencies",
-    tags=["产品依赖关系"]
-)
+# Service Management 路由
+app.include_router(product_categories.router, prefix="/api/service-management/categories", tags=["产品分类"])
+app.include_router(products.router, prefix="/api/service-management/products", tags=["产品/服务"])
+app.include_router(suppliers.router, prefix="/api/service-management/suppliers", tags=["企服供应商"])
+app.include_router(service_types.router, prefix="/api/service-management/service-types", tags=["服务类型"])
+app.include_router(customers.router, prefix="/api/service-management/customers", tags=["客户管理"])
+app.include_router(contacts.router, prefix="/api/service-management/contacts", tags=["联系人管理"])
+app.include_router(service_records.router, prefix="/api/service-management/service-records", tags=["服务记录"])
+app.include_router(industries.router, prefix="/api/service-management/industries", tags=["行业管理"])
+app.include_router(customer_sources.router, prefix="/api/service-management/customer-sources", tags=["客户来源管理"])
 
 # Analytics and Monitoring Service 路由
-from foundation_service.api.v1 import analytics, monitoring, logs
+app.include_router(analytics.router, prefix="/api/analytics-monitoring/analytics", tags=["数据分析"])
+app.include_router(monitoring.router, prefix="/api/analytics-monitoring/monitoring", tags=["系统监控"])
+app.include_router(logs.router, prefix="/api/analytics-monitoring/logs", tags=["日志查询"])
 
-app.include_router(
-    analytics.router,
-    prefix="/api/analytics-monitoring/analytics",
-    tags=["数据分析"]
-)
-app.include_router(
-    monitoring.router,
-    prefix="/api/analytics-monitoring/monitoring",
-    tags=["系统监控"]
-)
-app.include_router(
-    logs.router,
-    prefix="/api/analytics-monitoring/logs",
-    tags=["日志查询"]
-)
-
-# 操作审计日志路由
-from foundation_service.api.v1 import audit_logs
-
-app.include_router(
-    audit_logs.router,
-    prefix="/api/foundation/audit-logs",
-    tags=["操作审计"]
-)
+# Audit Service 路由
+app.include_router(audit.router, prefix="/api/foundation/audit-logs", tags=["审计日志"])
 
 
 @app.get("/health")
@@ -459,7 +377,7 @@ async def health_check():
 @app.get("/")
 async def root():
     """根路径"""
-    return Result.success(data={"message": "BANTU CRM Foundation Service - 统一 ERP 服务"})
+    return Result.success(data={"message": "BANTU CRM Foundation Service (单体服务)"})
 
 
 if __name__ == "__main__":

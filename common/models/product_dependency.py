@@ -29,8 +29,8 @@ class ProductDependency(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
     # 关系
-    product = relationship("Product", foreign_keys=[product_id], backref="dependencies")
-    depends_on_product = relationship("Product", foreign_keys=[depends_on_product_id], backref="dependents")
+    product = relationship("Product", foreign_keys=[product_id], primaryjoin="ProductDependency.product_id == Product.id", backref="dependencies")
+    depends_on_product = relationship("Product", foreign_keys=[depends_on_product_id], primaryjoin="ProductDependency.depends_on_product_id == Product.id", backref="dependents")
     
     # 约束
     __table_args__ = (

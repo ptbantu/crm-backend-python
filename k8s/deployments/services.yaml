@@ -1,5 +1,9 @@
-# Foundation Service (统一 ERP 服务)
-# 合并了所有微服务：基础服务、服务管理、订单工作流、数据分析监控
+# ============================================================
+# CRM Python 单体服务 Kubernetes Service 配置
+# 所有微服务已合并到 foundation_service，只需要一个 Service
+# ============================================================
+
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -18,5 +22,3 @@ spec:
     name: http
   selector:
     app: crm-foundation-service
-
-

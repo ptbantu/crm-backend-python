@@ -6,6 +6,16 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 
 
+class LeadActionButton(BaseModel):
+    """线索操作按钮配置"""
+    action: str = Field(..., description="操作类型：follow_up, edit, delete, assign, move_to_pool 等")
+    label_zh: str = Field(..., description="按钮标签（中文）")
+    label_id: str = Field(..., description="按钮标签（印尼语）")
+    icon: Optional[str] = Field(None, description="图标名称（可选，如果为 None 则不显示图标）")
+    permission_code: Optional[str] = Field(None, description="所需权限编码（可选）")
+    visible: bool = Field(True, description="是否可见")
+
+
 class LeadCreateRequest(BaseModel):
     """创建线索请求"""
     name: str = Field(..., max_length=255, description="线索名称")
@@ -67,6 +77,9 @@ class LeadResponse(BaseModel):
     # 客户等级双语名称（从数据库填充）
     level_name_zh: Optional[str] = None
     level_name_id: Optional[str] = None
+    
+    # 操作按钮配置（可选，前端可以根据此配置渲染操作按钮）
+    action_buttons: Optional[List[LeadActionButton]] = Field(None, description="操作按钮配置列表")
 
     class Config:
         from_attributes = True

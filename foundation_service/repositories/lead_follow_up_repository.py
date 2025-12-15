@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
 from sqlalchemy.orm import joinedload
-from common.models.lead_follow_up import LeadFollowUp
+from common.models import LeadFollowUp
 from common.models import User
 from common.utils.repository import BaseRepository
 

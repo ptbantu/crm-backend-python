@@ -231,6 +231,8 @@ class OrganizationService:
             organization.is_locked = request.is_locked
         
         organization = await self.org_repo.update(organization)
+        # 确保提交事务
+        await self.db.commit()
         logger.info(f"组织更新成功: id={organization.id}, name={organization.name}")
         return await self._to_response(organization)
     
@@ -251,6 +253,8 @@ class OrganizationService:
         # 设置 is_locked = True（锁定，断开合作）
         organization.is_locked = True
         await self.org_repo.update(organization)
+        # 确保提交事务
+        await self.db.commit()
         logger.info(f"组织锁定成功: id={organization.id}, name={organization.name}, is_locked=True")
         return await self._to_response(organization)
     
@@ -265,7 +269,47 @@ class OrganizationService:
         # 设置 is_locked = False（合作，默认状态）
         organization.is_locked = False
         await self.org_repo.update(organization)
+        # 确保提交事务
+        await self.db.commit()
         logger.info(f"组织解锁成功: id={organization.id}, name={organization.name}, is_locked=False")
+        return await self._to_response(organization)
+    
+    async def enable_organization(self, organization_id: str) -> OrganizationResponse:
+        """启用组织"""
+        logger.info(f"开始启用组织: organization_id={organization_id}")
+        organization = await self.org_repo.get_by_id(organization_id)
+        if not organization:
+            logger.warning(f"组织不存在: organization_id={organization_id}")
+            raise OrganizationNotFoundError()
+        
+        # 设置 is_active = True
+        organization.is_active = True
+        await self.org_repo.update(organization)
+        # 确保提交事务
+        await self.db.commit()
+        logger.info(f"组织启用成功: id={organization.id}, name={organization.name}, is_active=True")
+        return await self._to_response(organization)
+    
+    async def disable_organization(self, organization_id: str) -> OrganizationResponse:
+        """禁用组织"""
+        logger.info(f"开始禁用组织: organization_id={organization_id}")
+        organization = await self.org_repo.get_by_id(organization_id)
+        if not organization:
+            logger.warning(f"组织不存在: organization_id={organization_id}")
+            raise OrganizationNotFoundError()
+        
+        # 不能禁用 BANTU 内部组织
+        bantu_org = await self.org_repo.get_bantu_organization()
+        if bantu_org and organization.id == bantu_org.id:
+            logger.warning(f"不能禁用 BANTU 内部组织: organization_id={organization_id}")
+            raise BusinessException(detail="不能禁用 BANTU 内部组织")
+        
+        # 设置 is_active = False
+        organization.is_active = False
+        await self.org_repo.update(organization)
+        # 确保提交事务
+        await self.db.commit()
+        logger.info(f"组织禁用成功: id={organization.id}, name={organization.name}, is_active=False")
         return await self._to_response(organization)
     
     async def get_organization_list(

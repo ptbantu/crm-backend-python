@@ -21,10 +21,10 @@ class VendorProduct(Base):
     is_primary = Column(Boolean, default=False, nullable=False, index=True)  # 是否主要供应商
     priority = Column(Integer, default=0, nullable=False)  # 优先级（数字越小优先级越高）
     
-    # 该组织提供该服务的成本价（多货币）
-    cost_price_idr = Column(Numeric(18, 2), nullable=True)
-    cost_price_cny = Column(Numeric(18, 2), nullable=True)
-    exchange_rate = Column(Numeric(18, 9), default=2000, nullable=True)
+    # 该组织提供该服务的成本价（双价格）
+    cost_price_cny = Column(Numeric(18, 2), nullable=True)  # 成本价（人民币）
+    cost_price_idr = Column(Numeric(18, 2), nullable=True)  # 成本价（印尼盾）
+    exchange_rate = Column(Numeric(18, 9), default=2000, nullable=True)  # 汇率（用于转换）
     
     # 订购限制
     min_quantity = Column(Integer, default=1, nullable=False)  # 最小订购量

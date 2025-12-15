@@ -153,12 +153,15 @@ class ProductPriceService:
         # 1. 自动判断交付类型
         if not delivery_type:
             org_result = await self.db.execute(
-                select(Organization).where(Organization.id == supplier_id)
+                select(Organization).where(
+                    Organization.id == supplier_id,
+                    Organization.is_active == True  # 只查询启用的供应商
+                )
             )
             supplier = org_result.scalar_one_or_none()
             
             if not supplier:
-                raise NotFoundError(f"服务提供方 {supplier_id} 不存在")
+                raise NotFoundError(f"服务提供方 {supplier_id} 不存在或已禁用")
             
             if supplier.organization_type == 'internal':
                 delivery_type = 'INTERNAL'
@@ -263,6 +266,7 @@ class ProductPriceService:
               AND sch.is_current = 1
               AND sch.effective_start_at <= :now
               AND (sch.effective_end_at IS NULL OR sch.effective_end_at > :now)
+              AND o.is_active = 1
             ORDER BY sch.cost_cny ASC
         """)
         

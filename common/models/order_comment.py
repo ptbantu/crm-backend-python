@@ -41,7 +41,7 @@ class OrderComment(Base):
     
     # 关系
     order = relationship("Order", back_populates="order_comments")
-    creator = relationship(User, foreign_keys=[created_by], backref="created_order_comments")
+    creator = relationship("User", foreign_keys=[created_by], primaryjoin="OrderComment.created_by == User.id", backref="created_order_comments")
     
     # 检查约束
     __table_args__ = (

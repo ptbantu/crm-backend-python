@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 
 from foundation_service.dependencies import (
-    get_db,
+    get_database_session,
     get_current_user_id,
     get_current_user_roles,
     get_current_organization_id,

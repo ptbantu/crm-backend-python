@@ -1,7 +1,7 @@
 """
 产品分类管理 API
 """
-from typing import Optional
+from typing import Optional, Dict
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,25 @@ async def create_category(
     service = ProductCategoryService(db)
     category = await service.create_category(request)
     return Result.success(data=category, message="产品分类创建成功")
+
+
+@router.get("/tree", response_model=Result[Dict])
+async def get_category_tree(
+    include_products: bool = Query(True, description="是否包含产品列表"),
+    is_active: Optional[bool] = Query(True, description="是否只查询激活的分类"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    获取分类树（包含产品列表）
+    
+    GET /api/service-management/categories/tree
+    """
+    service = ProductCategoryService(db)
+    tree = await service.get_category_tree_with_products(
+        include_products=include_products,
+        is_active=is_active,
+    )
+    return Result.success(data={'categories': tree})
 
 
 @router.get("/{category_id}", response_model=Result[ProductCategoryResponse])

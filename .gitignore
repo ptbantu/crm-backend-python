@@ -1,5 +1,7 @@
 # Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -66,12 +68,5 @@ site/
 *.crt
 !certs/README.md
 
-# OSS credentials (keep example file)
-config/oss.json
-!config/oss.json.example
-
-# Temporary files
-*.tmp
-*.bak
-*.swp
-
+*.py.bak
+config/*

@@ -1,7 +1,8 @@
 # ============================================================
-# CRM Python 统一 ERP 服务生产环境 Ingress 配置
+# CRM Python 单体服务生产环境 Ingress 配置
 # 使用 www.bantuqifu.xin 作为访问域名
-# 所有路由直接指向 foundation_service（统一 ERP 服务）
+# 所有微服务已合并到 foundation_service，所有路径都路由到 foundation_service
+# 保持前端访问路径不变
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
@@ -25,7 +26,41 @@ spec:
     - host: www.bantuqifu.xin
       http:
         paths:
-          # 所有请求路由到 Foundation Service (统一 ERP 服务)
+          # 所有 API 路径都路由到 Foundation Service（单体服务）
+          # 注意: 更具体的路径必须放在通用路径之前
+          # Foundation Service API
+          - path: /api/foundation
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-foundation-service
+                port:
+                  number: 8081
+          # Service Management API（已合并到 foundation_service）
+          - path: /api/service-management
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-foundation-service
+                port:
+                  number: 8081
+          # Analytics and Monitoring API（已合并到 foundation_service）
+          - path: /api/analytics-monitoring
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-foundation-service
+                port:
+                  number: 8081
+          # Order and Workflow API（已合并到 foundation_service）
+          - path: /api/order-workflow
+            pathType: Prefix
+            backend:
+              service:
+                name: crm-foundation-service
+                port:
+                  number: 8081
+          # 所有其他请求也路由到 Foundation Service
           - path: /
             pathType: Prefix
             backend:

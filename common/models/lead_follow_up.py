@@ -24,6 +24,10 @@ class LeadFollowUp(Base):
     content = Column(Text, nullable=True, comment="跟进内容")
     follow_up_date = Column(DateTime, nullable=False, index=True, comment="跟进日期")
     
+    # 状态变化记录
+    status_before = Column(String(50), nullable=True, index=True, comment="跟进前线索状态")
+    status_after = Column(String(50), nullable=True, index=True, comment="跟进后线索状态")
+    
     # 审计字段
     created_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="创建人ID")
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
@@ -31,13 +35,21 @@ class LeadFollowUp(Base):
     # 关系
     lead = relationship("Lead", back_populates="follow_ups")
     # users 表现在在本地定义，可以使用 relationship
-    creator = relationship(User, foreign_keys=[created_by], backref="created_lead_follow_ups")
+    creator = relationship(User, foreign_keys=[created_by], primaryjoin="LeadFollowUp.created_by == User.id", backref="created_lead_follow_ups")
     
     # 检查约束
     __table_args__ = (
         CheckConstraint(
             "follow_up_type IN ('call', 'meeting', 'email', 'note')",
             name="chk_lead_follow_ups_type"
+        ),
+        CheckConstraint(
+            "status_before IS NULL OR status_before IN ('new', 'contacted', 'qualified', 'converted', 'lost')",
+            name="chk_lead_follow_ups_status_before"
+        ),
+        CheckConstraint(
+            "status_after IS NULL OR status_after IN ('new', 'contacted', 'qualified', 'converted', 'lost')",
+            name="chk_lead_follow_ups_status_after"
         ),
     )
 

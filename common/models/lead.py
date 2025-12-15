@@ -37,7 +37,7 @@ class Lead(Base):
     # 状态管理
     status = Column(String(50), default="new", nullable=False, index=True, comment="状态：new(新建), contacted(已联系), qualified(已确认), converted(已转化), lost(已丢失)")
     # 客户分级（通过外键关联到 customer_levels.code）
-    level = Column(String(50), nullable=True, index=True, comment="客户分级代码（关联到 customer_levels.code）")
+    level = Column(String(50), ForeignKey("customer_levels.code", ondelete="SET NULL"), nullable=True, index=True, comment="客户分级代码（外键关联到 customer_levels.code）")
     
     # 公海池
     is_in_public_pool = Column(Boolean, default=False, nullable=False, index=True, comment="是否在公海池")
@@ -60,11 +60,32 @@ class Lead(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
     # 关系（从共享模型导入，支持 relationship）
-    customer = relationship(Customer, foreign_keys=[customer_id], backref="leads")
+    # 明确指定 primaryjoin 确保 SQLAlchemy 能正确识别外键关系
+    customer = relationship(
+        Customer,
+        foreign_keys=[customer_id],
+        primaryjoin="Lead.customer_id == Customer.id",
+        backref="leads"
+    )
     # organization = relationship("Organization", foreign_keys=[organization_id])  # 跨服务引用，不使用 relationship
-    owner = relationship(User, foreign_keys=[owner_user_id], backref="owned_leads")
-    creator = relationship(User, foreign_keys=[created_by], backref="created_leads")
-    updater = relationship(User, foreign_keys=[updated_by], backref="updated_leads")
+    owner = relationship(
+        User,
+        foreign_keys=[owner_user_id],
+        primaryjoin="Lead.owner_user_id == User.id",
+        backref="owned_leads"
+    )
+    creator = relationship(
+        User,
+        foreign_keys=[created_by],
+        primaryjoin="Lead.created_by == User.id",
+        backref="created_leads"
+    )
+    updater = relationship(
+        User,
+        foreign_keys=[updated_by],
+        primaryjoin="Lead.updated_by == User.id",
+        backref="updated_leads"
+    )
     # 客户分级关系（通过 code 关联）
     customer_level = relationship(
         "CustomerLevel",

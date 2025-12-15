@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Text, Integer, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
+from common.models import User
 import uuid
 
 
@@ -39,12 +40,9 @@ class CollectionTask(Base):
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
     # 关系
-    order = relationship("Order", foreign_keys=[order_id])
-    # payment_stage 关系暂时注释，因为PaymentStage模型可能不在当前服务中
-    # payment_stage = relationship("PaymentStage", foreign_keys=[payment_stage_id])
-    # assigned_to和creator关系暂时注释，因为User模型可能不在当前服务中
-    # assigned_to = relationship("User", foreign_keys=[assigned_to_user_id])
-    # creator = relationship("User", foreign_keys=[created_by])
+    order = relationship("Order", foreign_keys=[order_id], primaryjoin="CollectionTask.order_id == Order.id")
+    assigned_to = relationship("User", foreign_keys=[assigned_to_user_id], primaryjoin="CollectionTask.assigned_to_user_id == User.id", backref="assigned_collection_tasks")
+    creator = relationship("User", foreign_keys=[created_by], primaryjoin="CollectionTask.created_by == User.id", backref="created_collection_tasks")
     
     # 检查约束
     __table_args__ = (

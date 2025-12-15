@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import joinedload
 from datetime import datetime
-from foundation_service.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
+from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
 from common.utils.repository import BaseRepository
 
 
@@ -86,7 +86,9 @@ class OpportunityRepository(BaseRepository[Opportunity]):
             .options(
                 joinedload(Opportunity.customer),
                 joinedload(Opportunity.owner),
-                joinedload(Opportunity.products).joinedload(OpportunityProduct.product)
+                joinedload(Opportunity.lead),
+                joinedload(Opportunity.products).joinedload(OpportunityProduct.product),
+                joinedload(Opportunity.payment_stages)
             )
             .where(and_(*conditions))
             .order_by(Opportunity.created_at.desc())

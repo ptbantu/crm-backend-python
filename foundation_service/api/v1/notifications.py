@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from foundation_service.dependencies import (
-    get_db,
+    get_database_session,
     get_current_user_id,
 )
 from foundation_service.services.notification_service import NotificationService

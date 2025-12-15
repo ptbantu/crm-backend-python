@@ -36,7 +36,7 @@ class Notification(Base):
     created_at = Column(DateTime, nullable=False, server_default=func.now(), index=True, comment="创建时间")
     
     # 关系（users 表现在在本地定义，可以使用 relationship）
-    user = relationship(User, foreign_keys=[user_id], backref="notifications")
+    user = relationship(User, foreign_keys=[user_id], primaryjoin="Notification.user_id == User.id", backref="notifications")
     
     # 检查约束
     __table_args__ = (

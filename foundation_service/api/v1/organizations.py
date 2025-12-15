@@ -70,21 +70,28 @@ async def get_organization_list(
     - 其他组织用户查询时，默认只展示自己的组织
     """
     from foundation_service.dependencies import get_current_user_id
+    from common.utils.logger import get_logger
     
-    # 获取当前用户ID
-    current_user_id = get_current_user_id(request_obj)
+    logger = get_logger(__name__)
     
-    service = OrganizationService(db)
-    result = await service.get_organization_list(
-        page=page,
-        size=size,
-        name=name,
-        code=code,
-        organization_type=organization_type,
-        is_active=is_active,
-        current_user_id=current_user_id
-    )
-    return Result.success(data=result)
+    try:
+        # 获取当前用户ID
+        current_user_id = get_current_user_id(request_obj)
+        
+        service = OrganizationService(db)
+        result = await service.get_organization_list(
+            page=page,
+            size=size,
+            name=name,
+            code=code,
+            organization_type=organization_type,
+            is_active=is_active,
+            current_user_id=current_user_id
+        )
+        return Result.success(data=result)
+    except Exception as e:
+        logger.error(f"查询组织列表失败: {str(e)}", exc_info=True)
+        raise
 
 
 @router.post("/{organization_id}/lock", response_model=Result[OrganizationResponse])
@@ -107,4 +114,26 @@ async def unlock_organization(
     service = OrganizationService(db)
     organization = await service.unlock_organization(organization_id)
     return Result.success(data=organization, message="组织已解锁，该组织用户可以正常登录")
+
+
+@router.post("/{organization_id}/enable", response_model=Result[OrganizationResponse])
+async def enable_organization(
+    organization_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """启用组织"""
+    service = OrganizationService(db)
+    organization = await service.enable_organization(organization_id)
+    return Result.success(data=organization, message="组织已启用")
+
+
+@router.post("/{organization_id}/disable", response_model=Result[OrganizationResponse])
+async def disable_organization(
+    organization_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """禁用组织"""
+    service = OrganizationService(db)
+    organization = await service.disable_organization(organization_id)
+    return Result.success(data=organization, message="组织已禁用")
 

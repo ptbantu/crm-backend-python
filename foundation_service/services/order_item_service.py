@@ -127,9 +127,12 @@ class OrderItemService:
                             selected_supplier_id,
                             delivery_type
                         )
-                        # 验证交付类型
+                        # 验证交付类型（只查询启用的供应商）
                         org_result = await self.db.execute(
-                            select(Organization).where(Organization.id == selected_supplier_id)
+                            select(Organization).where(
+                                Organization.id == selected_supplier_id,
+                                Organization.is_active == True  # 只查询启用的供应商
+                            )
                         )
                         supplier = org_result.scalar_one_or_none()
                         if supplier:

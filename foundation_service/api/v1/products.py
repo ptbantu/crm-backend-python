@@ -2,7 +2,7 @@
 产品/服务管理 API
 """
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.response import Result
@@ -14,7 +14,6 @@ from foundation_service.schemas.product import (
 )
 from foundation_service.services.product_service import ProductService
 from foundation_service.dependencies import get_db
-from foundation_service.utils import log_audit_operation
 
 router = APIRouter()
 
@@ -22,38 +21,12 @@ router = APIRouter()
 @router.post("", response_model=Result[ProductResponse])
 async def create_product(
     request: ProductCreateRequest,
-    http_request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """创建产品/服务"""
-    try:
-        service = ProductService(db)
-        product = await service.create_product(request)
-        
-        # 记录审计日志
-        await log_audit_operation(
-            db=db,
-            request=http_request,
-            operation_type="CREATE",
-            entity_type="products",
-            entity_id=product.id,
-            data_after=product.dict() if hasattr(product, 'dict') else None,
-            status="SUCCESS"
-        )
-        
-        return Result.success(data=product, message="产品/服务创建成功")
-    except Exception as e:
-        # 记录失败审计日志
-        await log_audit_operation(
-            db=db,
-            request=http_request,
-            operation_type="CREATE",
-            entity_type="products",
-            status="FAILURE",
-            error_message=str(e),
-            error_code=type(e).__name__
-        )
-        raise
+    service = ProductService(db)
+    product = await service.create_product(request)
+    return Result.success(data=product, message="产品/服务创建成功")
 
 
 @router.get("/{product_id}", response_model=Result[ProductResponse])
@@ -71,96 +44,23 @@ async def get_product(
 async def update_product(
     product_id: str,
     request: ProductUpdateRequest,
-    http_request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """更新产品/服务"""
-    try:
-        service = ProductService(db)
-        
-        # 查询更新前的数据
-        old_product = await service.get_product_by_id(product_id)
-        
-        # 执行更新
-        new_product = await service.update_product(product_id, request)
-        
-        # 计算变更字段
-        changed_fields = []
-        if old_product and new_product:
-            old_dict = old_product.dict() if hasattr(old_product, 'dict') else {}
-            new_dict = new_product.dict() if hasattr(new_product, 'dict') else {}
-            changed_fields = [k for k in new_dict.keys() if old_dict.get(k) != new_dict.get(k)]
-        
-        # 记录审计日志
-        await log_audit_operation(
-            db=db,
-            request=http_request,
-            operation_type="UPDATE",
-            entity_type="products",
-            entity_id=product_id,
-            data_before=old_product.dict() if old_product and hasattr(old_product, 'dict') else None,
-            data_after=new_product.dict() if hasattr(new_product, 'dict') else None,
-            changed_fields=changed_fields,
-            status="SUCCESS"
-        )
-        
-        return Result.success(data=new_product, message="产品/服务更新成功")
-    except Exception as e:
-        # 记录失败审计日志
-        await log_audit_operation(
-            db=db,
-            request=http_request,
-            operation_type="UPDATE",
-            entity_type="products",
-            entity_id=product_id,
-            status="FAILURE",
-            error_message=str(e),
-            error_code=type(e).__name__
-        )
-        raise
+    service = ProductService(db)
+    product = await service.update_product(product_id, request)
+    return Result.success(data=product, message="产品/服务更新成功")
 
 
 @router.delete("/{product_id}", response_model=Result[None])
 async def delete_product(
     product_id: str,
-    http_request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """删除产品/服务"""
-    try:
-        service = ProductService(db)
-        
-        # 查询删除前的数据
-        product = await service.get_product_by_id(product_id)
-        
-        # 执行删除
-        await service.delete_product(product_id)
-        
-        # 记录审计日志
-        await log_audit_operation(
-            db=db,
-            request=http_request,
-            operation_type="DELETE",
-            entity_type="products",
-            entity_id=product_id,
-            data_before=product.dict() if product and hasattr(product, 'dict') else None,
-            status="SUCCESS"
-        )
-        
-        return Result.success(message="产品/服务删除成功")
-    except Exception as e:
-        # 记录失败审计日志
-        await log_audit_operation(
-            db=db,
-            request=http_request,
-            operation_type="DELETE",
-            entity_type="products",
-            entity_id=product_id,
-            status="FAILURE",
-            error_message=str(e),
-            error_code=type(e).__name__
-        )
-        raise
+    service = ProductService(db)
+    await service.delete_product(product_id)
+    return Result.success(message="产品/服务删除成功")
 
 
 @router.get("", response_model=Result[ProductListResponse])

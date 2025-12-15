@@ -3,7 +3,8 @@ set -e
 
 # ============================================================
 # 生产环境 Docker 镜像构建脚本
-# 用法: ./scripts/build-prod.sh [service_name] [--deploy]
+# 所有微服务已合并到 foundation_service（单体服务）
+# 用法: ./scripts/build-prod.sh [--deploy] [--tag TAG]
 # ============================================================
 
 # 颜色输出
@@ -12,82 +13,53 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 服务配置
-declare -A SERVICES
-SERVICES[foundation]="8081"
-SERVICES[gateway]="8080"
-SERVICES[service-management]="8082"
-SERVICES[analytics-monitoring]="8083"
-SERVICES[order-workflow]="8084"
+# 服务配置（单体服务）
+SERVICE_NAME="foundation"
+SERVICE_DIR="foundation_service"
+SERVICE_PORT="8081"
 
-# 镜像名称前缀
+# 镜像名称
 IMAGE_PREFIX="bantu-crm"
+IMAGE_NAME="${IMAGE_PREFIX}-${SERVICE_NAME}-service"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
+FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
 
 # 显示帮助信息
 show_help() {
-    echo "用法: $0 [选项] [服务名称]"
+    echo "用法: $0 [选项]"
     echo ""
     echo "选项:"
-    echo "  --all          构建所有服务"
     echo "  --deploy       构建后自动部署到 Kubernetes"
+    echo "  --tag TAG      指定镜像标签（默认: latest）"
     echo "  --help         显示此帮助信息"
     echo ""
-    echo "服务名称:"
-    for service in "${!SERVICES[@]}"; do
-        echo "  $service (端口: ${SERVICES[$service]})"
-    done
-    echo ""
     echo "示例:"
-    echo "  $0 foundation              # 只构建 foundation 服务"
-    echo "  $0 --all                   # 构建所有服务"
-    echo "  $0 foundation --deploy     # 构建并部署 foundation 服务"
-    echo "  $0 --all --deploy          # 构建所有服务并部署"
+    echo "  $0                    # 构建 foundation 服务镜像"
+    echo "  $0 --deploy           # 构建并部署到 Kubernetes"
+    echo "  $0 --tag v1.0.0       # 使用指定标签构建镜像"
+    echo "  $0 --tag v1.0.0 --deploy  # 构建指定标签并部署"
 }
 
-# 构建单个服务
+# 构建服务
 build_service() {
-    local service_name=$1
-    local service_port=${SERVICES[$service_name]}
+    echo -e "${GREEN}========================================${NC}"
+    echo -e "${GREEN}构建单体服务: ${SERVICE_NAME}${NC}"
+    echo -e "${GREEN}端口: ${SERVICE_PORT}${NC}"
+    echo -e "${GREEN}服务目录: ${SERVICE_DIR}${NC}"
+    echo -e "${GREEN}镜像名称: ${FULL_IMAGE_NAME}${NC}"
+    echo -e "${GREEN}========================================${NC}"
     
-    if [ -z "$service_port" ]; then
-        echo -e "${RED}错误: 未知的服务名称: $service_name${NC}"
-        echo "可用的服务: ${!SERVICES[@]}"
-        exit 1
+    # 检查服务目录是否存在
+    if [ ! -d "$SERVICE_DIR" ]; then
+        echo -e "${RED}错误: 服务目录不存在: ${SERVICE_DIR}${NC}"
+        return 1
     fi
     
-    # 转换服务名称（将连字符转换为下划线，用于 Python 模块路径）
-    local python_module=$(echo "$service_name" | tr '-' '_')
-    
-    # 服务目录名称映射（实际目录名可能包含 _service 后缀）
-    local service_dir="$python_module"
-    case "$service_name" in
-        foundation)
-            service_dir="foundation_service"
-            ;;
-        gateway)
-            service_dir="gateway_service"
-            ;;
-        analytics-monitoring)
-            service_dir="analytics_monitoring_service"
-            ;;
-        order-workflow)
-            service_dir="order_workflow_service"
-            ;;
-        service-management)
-            service_dir="service_management"
-            ;;
-    esac
-    
-    # 镜像名称
-    local image_name="${IMAGE_PREFIX}-${service_name}-service:${IMAGE_TAG}"
-    
-    echo -e "${GREEN}========================================${NC}"
-    echo -e "${GREEN}构建服务: $service_name${NC}"
-    echo -e "${GREEN}端口: $service_port${NC}"
-    echo -e "${GREEN}Python 模块: $python_module${NC}"
-    echo -e "${GREEN}镜像名称: $image_name${NC}"
-    echo -e "${GREEN}========================================${NC}"
+    # 检查 Dockerfile.prod 是否存在
+    if [ ! -f "Dockerfile.prod" ]; then
+        echo -e "${RED}错误: Dockerfile.prod 不存在${NC}"
+        return 1
+    fi
     
     # 检查服务目录是否存在
     if [ ! -d "$service_dir" ]; then
@@ -97,29 +69,27 @@ build_service() {
     
     # 构建 Docker 镜像
     docker build \
-        --build-arg SERVICE_NAME="$python_module" \
-        --build-arg SERVICE_DIR="$service_dir" \
-        --build-arg SERVICE_PORT="$service_port" \
+        --build-arg SERVICE_NAME="${SERVICE_NAME}" \
+        --build-arg SERVICE_DIR="${SERVICE_DIR}" \
+        --build-arg SERVICE_PORT="${SERVICE_PORT}" \
         -f Dockerfile.prod \
-        -t "$image_name" \
+        -t "${FULL_IMAGE_NAME}" \
         .
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓ 服务 $service_name 构建成功${NC}"
-        echo -e "${GREEN}  镜像: $image_name${NC}"
+        echo -e "${GREEN}✓ 服务 ${SERVICE_NAME} 构建成功${NC}"
+        echo -e "${GREEN}  镜像: ${FULL_IMAGE_NAME}${NC}"
         return 0
     else
-        echo -e "${RED}✗ 服务 $service_name 构建失败${NC}"
+        echo -e "${RED}✗ 服务 ${SERVICE_NAME} 构建失败${NC}"
         return 1
     fi
 }
 
 # 部署到 Kubernetes
 deploy_to_k8s() {
-    local service_name=$1
-    
-    echo -e "${YELLOW}========================================${YELLOW}"
-    echo -e "${YELLOW}部署服务到 Kubernetes: $service_name${NC}"
+    echo -e "${YELLOW}========================================${NC}"
+    echo -e "${YELLOW}部署服务到 Kubernetes: ${SERVICE_NAME}${NC}"
     echo -e "${YELLOW}========================================${NC}"
     
     # 检查 k8s 配置文件是否存在
@@ -128,23 +98,34 @@ deploy_to_k8s() {
         return 1
     fi
     
+    # 先部署 ConfigMap 和 Secret（如果存在）
+    if [ -f "k8s/prod/configmap.yaml" ]; then
+        echo -e "${YELLOW}部署 ConfigMap...${NC}"
+        kubectl apply -f k8s/prod/configmap.yaml
+    fi
+    
+    if [ -f "k8s/prod/secret.yaml" ]; then
+        echo -e "${YELLOW}部署 Secret...${NC}"
+        kubectl apply -f k8s/prod/secret.yaml
+    fi
+    
     # 应用 Kubernetes 配置
     kubectl apply -f k8s/prod/all-services.yaml
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓ 服务 $service_name 部署成功${NC}"
+        echo -e "${GREEN}✓ 服务 ${SERVICE_NAME} 部署成功${NC}"
         
         # 等待 Pod 就绪
         echo -e "${YELLOW}等待 Pod 就绪...${NC}"
         kubectl wait --for=condition=ready pod \
-            -l app=crm-${service_name}-service \
+            -l app=crm-${SERVICE_NAME}-service \
             --timeout=300s || true
         
         # 显示 Pod 状态
-        kubectl get pods -l app=crm-${service_name}-service
+        kubectl get pods -l app=crm-${SERVICE_NAME}-service
         return 0
     else
-        echo -e "${RED}✗ 服务 $service_name 部署失败${NC}"
+        echo -e "${RED}✗ 服务 ${SERVICE_NAME} 部署失败${NC}"
         return 1
     fi
 }
@@ -152,8 +133,6 @@ deploy_to_k8s() {
 # 主函数
 main() {
     local deploy=false
-    local build_all=false
-    local services_to_build=()
     
     # 解析参数
     while [[ $# -gt 0 ]]; do
@@ -162,55 +141,26 @@ main() {
                 show_help
                 exit 0
                 ;;
-            --all)
-                build_all=true
-                shift
-                ;;
             --deploy)
                 deploy=true
                 shift
                 ;;
             --tag)
                 IMAGE_TAG="$2"
+                FULL_IMAGE_NAME="${IMAGE_NAME}:${IMAGE_TAG}"
                 shift 2
                 ;;
             *)
-                if [ -n "$1" ]; then
-                    services_to_build+=("$1")
-                fi
-                shift
+                echo -e "${RED}未知参数: $1${NC}"
+                show_help
+                exit 1
                 ;;
         esac
     done
     
-    # 如果指定了 --all，构建所有服务
-    if [ "$build_all" = true ]; then
-        services_to_build=("${!SERVICES[@]}")
-    fi
-    
-    # 如果没有指定服务，显示帮助
-    if [ ${#services_to_build[@]} -eq 0 ]; then
-        echo -e "${YELLOW}未指定要构建的服务${NC}"
-        show_help
-        exit 1
-    fi
-    
     # 构建服务
-    local failed_services=()
-    for service in "${services_to_build[@]}"; do
-        if ! build_service "$service"; then
-            failed_services+=("$service")
-        fi
-    done
-    
-    # 如果有构建失败的服务，显示错误
-    if [ ${#failed_services[@]} -gt 0 ]; then
-        echo -e "${RED}========================================${NC}"
-        echo -e "${RED}以下服务构建失败:${NC}"
-        for service in "${failed_services[@]}"; do
-            echo -e "${RED}  - $service${NC}"
-        done
-        echo -e "${RED}========================================${NC}"
+    if ! build_service; then
+        echo -e "${RED}构建失败，退出${NC}"
         exit 1
     fi
     
@@ -220,19 +170,7 @@ main() {
         echo -e "${GREEN}开始部署到 Kubernetes...${NC}"
         echo -e "${GREEN}========================================${NC}"
         
-        # 先部署 ConfigMap 和 Secret（如果存在）
-        if [ -f "k8s/prod/configmap.yaml" ]; then
-            echo -e "${YELLOW}部署 ConfigMap...${NC}"
-            kubectl apply -f k8s/prod/configmap.yaml
-        fi
-        
-        if [ -f "k8s/prod/secret.yaml" ]; then
-            echo -e "${YELLOW}部署 Secret...${NC}"
-            kubectl apply -f k8s/prod/secret.yaml
-        fi
-        
-        # 部署所有服务
-        deploy_to_k8s "all"
+        deploy_to_k8s
         
         # 部署 Ingress（如果存在）
         if [ -f "k8s/prod/ingress.yaml" ]; then
@@ -244,9 +182,9 @@ main() {
         echo -e "${GREEN}部署完成！${NC}"
         echo -e "${GREEN}========================================${NC}"
         
-        # 显示所有服务状态
+        # 显示服务状态
         echo -e "${YELLOW}服务状态:${NC}"
-        kubectl get deployments,services -l environment=production
+        kubectl get deployments,services -l app=crm-${SERVICE_NAME}-service
     else
         echo -e "${GREEN}========================================${NC}"
         echo -e "${GREEN}构建完成！${NC}"
@@ -257,4 +195,3 @@ main() {
 
 # 运行主函数
 main "$@"
-

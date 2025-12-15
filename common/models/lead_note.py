@@ -31,7 +31,7 @@ class LeadNote(Base):
     # 关系
     lead = relationship("Lead", back_populates="notes")
     # users 表现在在本地定义，可以使用 relationship
-    creator = relationship(User, foreign_keys=[created_by], backref="created_lead_notes")
+    creator = relationship(User, foreign_keys=[created_by], primaryjoin="LeadNote.created_by == User.id", backref="created_lead_notes")
     
     # 检查约束
     __table_args__ = (

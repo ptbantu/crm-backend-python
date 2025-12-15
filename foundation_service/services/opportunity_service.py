@@ -7,7 +7,7 @@ from datetime import datetime, date
 from decimal import Decimal
 import uuid
 
-from foundation_service.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
+from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
 from foundation_service.repositories.opportunity_repository import (
     OpportunityRepository,
     OpportunityProductRepository,
@@ -440,7 +440,7 @@ class OpportunityService:
             try:
                 from sqlalchemy.orm import selectinload
                 from sqlalchemy import select
-                from foundation_service.models.opportunity import Opportunity
+                from common.models.opportunity import Opportunity
                 
                 query = (
                     select(Opportunity)

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 
 from foundation_service.dependencies import (
-    get_db,
+    get_database_session,
     get_current_user_id,
 )
 from foundation_service.services.collection_task_service import CollectionTaskService

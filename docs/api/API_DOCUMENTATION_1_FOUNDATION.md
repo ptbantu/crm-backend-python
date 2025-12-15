@@ -23,10 +23,11 @@
 5. [权限管理接口](#5-权限管理接口)
 6. [菜单管理接口](#6-菜单管理接口)
 7. [组织领域管理接口](#7-组织领域管理接口)
-8. [统一响应格式](#8-统一响应格式)
-9. [错误码说明](#9-错误码说明)
-10. [认证说明](#10-认证说明)
-11. [快速开始](#11-快速开始)
+8. [审计日志接口](#8-审计日志接口)
+9. [统一响应格式](#9-统一响应格式)
+10. [错误码说明](#10-错误码说明)
+11. [认证说明](#11-认证说明)
+12. [快速开始](#12-快速开始)
 
 ---
 
@@ -1461,7 +1462,436 @@ Authorization: Bearer <token>
 
 ---
 
-## 8. 统一响应格式
+## 8. 审计日志接口
+
+审计日志功能用于记录系统中所有用户操作和系统事件，支持操作追踪、合规审计和安全监控。
+
+### 8.1 查询审计日志列表
+
+**接口地址**: `GET /api/foundation/audit-logs`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/foundation/audit-logs`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**查询参数**:
+- `page` (可选): 页码（默认: 1，最小: 1）
+- `size` (可选): 每页数量（默认: 10，最小: 1，最大: 100）
+- `organization_id` (可选): 组织ID
+- `user_id` (可选): 用户ID
+- `action` (可选): 操作类型（CREATE, UPDATE, DELETE, VIEW, LOGIN, LOGOUT 等）
+- `resource_type` (可选): 资源类型（user, organization, order, lead, customer 等）
+- `resource_id` (可选): 资源ID
+- `category` (可选): 操作分类（user_management, order_management, customer_management 等）
+- `status` (可选): 操作状态（success, failed）
+- `start_time` (可选): 开始时间（ISO 8601 格式，如：2024-01-01T00:00:00）
+- `end_time` (可选): 结束时间（ISO 8601 格式，如：2024-12-31T23:59:59）
+- `order_by` (可选): 排序字段（默认: created_at）
+- `order_desc` (可选): 是否降序（默认: true）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "uuid",
+        "organization_id": "uuid",
+        "user_id": "uuid",
+        "user_name": "管理员",
+        "action": "CREATE",
+        "resource_type": "user",
+        "resource_id": "uuid",
+        "resource_name": "新用户",
+        "category": "user_management",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0...",
+        "request_method": "POST",
+        "request_path": "/api/foundation/users",
+        "request_params": {
+          "email": "user@example.com",
+          "username": "newuser"
+        },
+        "old_values": null,
+        "new_values": {
+          "id": "uuid",
+          "email": "user@example.com",
+          "username": "newuser"
+        },
+        "status": "success",
+        "error_message": null,
+        "duration_ms": 150,
+        "created_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 100,
+    "size": 10,
+    "page": 1,
+    "pages": 10
+  }
+}
+```
+
+**cURL 示例**:
+```bash
+# 查询所有审计日志
+curl -k "https://www.bantu.sbs/api/foundation/audit-logs?page=1&size=10" \
+  -H "Authorization: Bearer <token>"
+
+# 查询指定用户的审计日志
+curl -k "https://www.bantu.sbs/api/foundation/audit-logs?user_id=uuid&start_time=2024-01-01T00:00:00" \
+  -H "Authorization: Bearer <token>"
+
+# 查询指定资源的审计日志
+curl -k "https://www.bantu.sbs/api/foundation/audit-logs?resource_type=user&resource_id=uuid" \
+  -H "Authorization: Bearer <token>"
+```
+
+### 8.2 查询审计日志详情
+
+**接口地址**: `GET /api/foundation/audit-logs/{audit_log_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/foundation/audit-logs/{audit_log_id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `audit_log_id`: 审计日志ID
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": "uuid",
+    "organization_id": "uuid",
+    "user_id": "uuid",
+    "user_name": "管理员",
+    "action": "UPDATE",
+    "resource_type": "user",
+    "resource_id": "uuid",
+    "resource_name": "用户名称",
+    "category": "user_management",
+    "ip_address": "192.168.1.100",
+    "user_agent": "Mozilla/5.0...",
+    "request_method": "PUT",
+    "request_path": "/api/foundation/users/uuid",
+    "request_params": {
+      "display_name": "新名称"
+    },
+    "old_values": {
+      "display_name": "旧名称"
+    },
+    "new_values": {
+      "display_name": "新名称"
+    },
+    "status": "success",
+    "error_message": null,
+    "duration_ms": 120,
+    "created_at": "2024-11-10T05:00:00"
+  }
+}
+```
+
+### 8.3 查询用户审计日志
+
+**接口地址**: `GET /api/foundation/audit-logs/users/{user_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/foundation/audit-logs/users/{user_id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `user_id`: 用户ID
+
+**查询参数**:
+- `page` (可选): 页码（默认: 1）
+- `size` (可选): 每页数量（默认: 10，最大: 100）
+- `start_time` (可选): 开始时间（ISO 8601 格式）
+- `end_time` (可选): 结束时间（ISO 8601 格式）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "uuid",
+        "action": "CREATE",
+        "resource_type": "order",
+        "status": "success",
+        "created_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 50,
+    "size": 10,
+    "page": 1,
+    "pages": 5
+  }
+}
+```
+
+**cURL 示例**:
+```bash
+curl -k "https://www.bantu.sbs/api/foundation/audit-logs/users/uuid?page=1&size=20" \
+  -H "Authorization: Bearer <token>"
+```
+
+### 8.4 查询资源审计日志
+
+**接口地址**: `GET /api/foundation/audit-logs/resources/{resource_type}/{resource_id}`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/foundation/audit-logs/resources/{resource_type}/{resource_id}`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `resource_type`: 资源类型（user, organization, order, lead, customer 等）
+- `resource_id`: 资源ID
+
+**查询参数**:
+- `page` (可选): 页码（默认: 1）
+- `size` (可选): 每页数量（默认: 10，最大: 100）
+- `start_time` (可选): 开始时间（ISO 8601 格式）
+- `end_time` (可选): 结束时间（ISO 8601 格式）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "uuid",
+        "action": "UPDATE",
+        "user_id": "uuid",
+        "user_name": "管理员",
+        "old_values": {
+          "status": "pending"
+        },
+        "new_values": {
+          "status": "completed"
+        },
+        "status": "success",
+        "created_at": "2024-11-10T05:00:00"
+      }
+    ],
+    "total": 10,
+    "size": 10,
+    "page": 1,
+    "pages": 1
+  }
+}
+```
+
+**cURL 示例**:
+```bash
+# 查询订单的所有操作记录
+curl -k "https://www.bantu.sbs/api/foundation/audit-logs/resources/order/uuid" \
+  -H "Authorization: Bearer <token>"
+
+# 查询用户的所有操作记录
+curl -k "https://www.bantu.sbs/api/foundation/audit-logs/resources/user/uuid" \
+  -H "Authorization: Bearer <token>"
+```
+
+### 8.5 导出审计日志
+
+**接口地址**: `POST /api/foundation/audit-logs/export`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/foundation/audit-logs/export`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "organization_id": "uuid",
+  "user_id": "uuid",
+  "action": "CREATE",
+  "resource_type": "user",
+  "resource_id": "uuid",
+  "category": "user_management",
+  "status": "success",
+  "start_time": "2024-01-01T00:00:00",
+  "end_time": "2024-12-31T23:59:59",
+  "format": "json"
+}
+```
+
+**字段说明**:
+- `organization_id` (可选): 组织ID
+- `user_id` (可选): 用户ID
+- `action` (可选): 操作类型
+- `resource_type` (可选): 资源类型
+- `resource_id` (可选): 资源ID
+- `category` (可选): 操作分类
+- `status` (可选): 操作状态（success, failed）
+- `start_time` (可选): 开始时间（ISO 8601 格式）
+- `end_time` (可选): 结束时间（ISO 8601 格式）
+- `format` (可选): 导出格式（json 或 csv，默认: json）
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "content": "[{\"id\":\"uuid\",\"action\":\"CREATE\",...}]",
+    "mime_type": "application/json",
+    "format": "json"
+  }
+}
+```
+
+**cURL 示例**:
+```bash
+# 导出 JSON 格式
+curl -k -X POST "https://www.bantu.sbs/api/foundation/audit-logs/export" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "start_time": "2024-01-01T00:00:00",
+    "end_time": "2024-12-31T23:59:59",
+    "format": "json"
+  }'
+
+# 导出 CSV 格式
+curl -k -X POST "https://www.bantu.sbs/api/foundation/audit-logs/export" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "start_time": "2024-01-01T00:00:00",
+    "end_time": "2024-12-31T23:59:59",
+    "format": "csv"
+  }'
+```
+
+**前端使用示例**:
+```typescript
+// 查询审计日志列表
+const getAuditLogs = async (params: {
+  page?: number;
+  size?: number;
+  user_id?: string;
+  action?: string;
+  start_time?: string;
+  end_time?: string;
+}) => {
+  const queryParams = new URLSearchParams();
+  if (params.page) queryParams.append('page', params.page.toString());
+  if (params.size) queryParams.append('size', params.size.toString());
+  if (params.user_id) queryParams.append('user_id', params.user_id);
+  if (params.action) queryParams.append('action', params.action);
+  if (params.start_time) queryParams.append('start_time', params.start_time);
+  if (params.end_time) queryParams.append('end_time', params.end_time);
+  
+  const response = await fetch(
+    `https://www.bantu.sbs/api/foundation/audit-logs?${queryParams}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+    }
+  );
+  
+  return await response.json();
+};
+
+// 导出审计日志
+const exportAuditLogs = async (params: {
+  start_time?: string;
+  end_time?: string;
+  format?: 'json' | 'csv';
+}) => {
+  const response = await fetch(
+    'https://www.bantu.sbs/api/foundation/audit-logs/export',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+      body: JSON.stringify(params),
+    }
+  );
+  
+  const result = await response.json();
+  
+  if (result.code === 200) {
+    // 下载文件
+    const blob = new Blob([result.data.content], {
+      type: result.data.mime_type,
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit_logs_${new Date().toISOString()}.${result.data.format}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+  
+  return result;
+};
+```
+
+**字段说明**:
+- `action`: 操作类型
+  - `CREATE`: 创建操作
+  - `UPDATE`: 更新操作
+  - `DELETE`: 删除操作
+  - `VIEW`: 查看操作
+  - `LOGIN`: 登录操作
+  - `LOGOUT`: 登出操作
+- `resource_type`: 资源类型
+  - `user`: 用户
+  - `organization`: 组织
+  - `order`: 订单
+  - `lead`: 线索
+  - `customer`: 客户
+- `category`: 操作分类
+  - `user_management`: 用户管理
+  - `organization_management`: 组织管理
+  - `order_management`: 订单管理
+  - `lead_management`: 线索管理
+  - `customer_management`: 客户管理
+  - `authentication`: 认证相关
+- `status`: 操作状态
+  - `success`: 成功
+  - `failed`: 失败
+
+---
+
+## 9. 统一响应格式
 
 所有 API 响应都遵循以下格式：
 
@@ -1482,7 +1912,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 9. 错误码说明
+## 10. 错误码说明
 
 | 错误码 | 说明 |
 |--------|------|
@@ -1500,9 +1930,9 @@ Authorization: Bearer <token>
 
 ---
 
-## 10. 认证说明
+## 11. 认证说明
 
-### 7.1 获取 Token
+### 11.1 获取 Token
 
 通过登录接口获取 JWT Token：
 
@@ -1510,7 +1940,7 @@ Authorization: Bearer <token>
 POST /api/foundation/auth/login
 ```
 
-### 7.2 使用 Token
+### 11.2 使用 Token
 
 在需要认证的接口请求头中添加：
 
@@ -1518,16 +1948,16 @@ POST /api/foundation/auth/login
 Authorization: Bearer <token>
 ```
 
-### 7.3 Token 有效期
+### 11.3 Token 有效期
 
 - Access Token: 24 小时
 - Refresh Token: 7 天
 
 ---
 
-## 11. 快速开始
+## 12. 快速开始
 
-### 8.1 生产环境测试
+### 12.1 生产环境测试
 
 ```bash
 # 1. 测试登录
@@ -1540,7 +1970,7 @@ curl -k https://www.bantu.sbs/api/foundation/roles \
   -H "Authorization: Bearer <token>"
 ```
 
-### 8.2 本地开发测试 (端口转发)
+### 12.2 本地开发测试 (端口转发)
 
 ```bash
 # 1. 启动端口转发

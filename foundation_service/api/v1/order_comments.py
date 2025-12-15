@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from foundation_service.dependencies import get_db as get_db
+from foundation_service.dependencies import get_database_session
 from foundation_service.services.order_comment_service import OrderCommentService
 from foundation_service.schemas.order_comment import (
     OrderCommentCreateRequest,

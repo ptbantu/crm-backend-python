@@ -1,11 +1,7 @@
 # ============================================================
-# CRM Python 统一 ERP 服务生产环境配置
-# 合并了所有微服务到 foundation_service
+# CRM Python 单体服务生产环境配置
+# 所有微服务已合并到 foundation_service
 # 使用 Docker 镜像启动，无热重载，无代码挂载
-# ============================================================
-
-# ============================================================
-# Foundation Service (统一 ERP 服务)
 # ============================================================
 
 ---
@@ -20,7 +16,7 @@ metadata:
     version: python
     environment: production
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: crm-foundation-service
@@ -35,7 +31,7 @@ spec:
       containers:
       - name: foundation
         image: bantu-crm-foundation-service:latest
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8081
@@ -92,6 +88,7 @@ spec:
             configMapKeyRef:
               name: crm-python-config
               key: FOUNDATION_DEBUG
+        # Redis 配置（用于缓存和会话管理）
         - name: REDIS_HOST
           valueFrom:
             configMapKeyRef:
@@ -105,13 +102,14 @@ spec:
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: crm-python-secret
+              name: redis-secret
               key: REDIS_PASSWORD
         - name: REDIS_DB
           valueFrom:
             configMapKeyRef:
               name: crm-python-config
               key: REDIS_DB
+        # MongoDB 配置（用于日志和监控）
         - name: MONGO_HOST
           valueFrom:
             configMapKeyRef:
@@ -122,26 +120,78 @@ spec:
             configMapKeyRef:
               name: crm-python-config
               key: MONGO_PORT
-        - name: MONGO_DATABASE
+        - name: MONGO_DB
           valueFrom:
             configMapKeyRef:
               name: crm-python-config
-              key: MONGO_DATABASE
-        - name: MONGO_USERNAME
+              key: MONGO_DB
+        - name: MONGO_USER
           valueFrom:
             secretKeyRef:
-              name: crm-python-secret
-              key: MONGO_USERNAME
+              name: mongo-secret
+              key: MONGO_USER
         - name: MONGO_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: crm-python-secret
+              name: mongo-secret
               key: MONGO_PASSWORD
-        - name: MONGO_AUTH_SOURCE
+        # MinIO 配置（用于文件存储）
+        - name: MINIO_ENDPOINT
           valueFrom:
             configMapKeyRef:
               name: crm-python-config
-              key: MONGO_AUTH_SOURCE
+              key: MINIO_ENDPOINT
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: MINIO_ROOT_USER
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secret
+              key: MINIO_ROOT_PASSWORD
+        # Analytics 配置（已合并到 foundation_service）
+        - name: METRICS_COLLECTION_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_METRICS_COLLECTION_INTERVAL
+        - name: ALERT_CHECK_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_CHECK_INTERVAL
+        - name: CPU_THRESHOLD_WARNING
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_CPU_THRESHOLD_WARNING
+        - name: CPU_THRESHOLD_CRITICAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_CPU_THRESHOLD_CRITICAL
+        - name: MEMORY_THRESHOLD_WARNING
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_MEMORY_THRESHOLD_WARNING
+        - name: MEMORY_THRESHOLD_CRITICAL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_MEMORY_THRESHOLD_CRITICAL
+        - name: ALERT_EMAIL_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_EMAIL_ENABLED
+        - name: ALERT_EMAIL_RECIPIENTS
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: ANALYTICS_ALERT_EMAIL_RECIPIENTS
         resources:
           requests:
             memory: "1Gi"

@@ -3,7 +3,7 @@
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from foundation_service.dependencies import get_db as get_db
+from foundation_service.dependencies import get_database_session
 from foundation_service.services.customer_level_service import CustomerLevelService
 from foundation_service.services.follow_up_status_service import FollowUpStatusService
 from common.schemas.response import Result

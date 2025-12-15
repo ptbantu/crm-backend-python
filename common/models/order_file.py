@@ -5,7 +5,7 @@ from sqlalchemy import Column, String, Text, BigInteger, Boolean, DateTime, Fore
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
-from common.models import User
+from common.models.user import User
 import uuid
 
 
@@ -56,8 +56,8 @@ class OrderFile(Base):
     
     # 关系
     order = relationship("Order", back_populates="order_files")
-    uploader = relationship(User, foreign_keys=[uploaded_by], backref="uploaded_order_files")
-    verifier = relationship(User, foreign_keys=[verified_by], backref="verified_order_files")
+    uploader = relationship(User, foreign_keys=[uploaded_by], primaryjoin="OrderFile.uploaded_by == User.id", backref="uploaded_order_files")
+    verifier = relationship(User, foreign_keys=[verified_by], primaryjoin="OrderFile.verified_by == User.id", backref="verified_order_files")
     
     # 检查约束
     __table_args__ = (
@@ -66,4 +66,3 @@ class OrderFile(Base):
             name="chk_order_files_file_size_nonneg"
         ),
     )
-

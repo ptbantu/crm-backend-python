@@ -24,9 +24,9 @@ class Order(Base):
     
     # 关联
     customer_id = Column(String(36), ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True, comment="客户ID")
-    service_record_id = Column(String(36), nullable=True, index=True, comment="服务记录ID（跨服务引用）")
+    service_record_id = Column(String(36), ForeignKey("service_records.id", ondelete="SET NULL"), nullable=True, index=True, comment="服务记录ID")
     workflow_instance_id = Column(String(36), ForeignKey("workflow_instances.id", ondelete="SET NULL"), nullable=True, index=True, comment="工作流实例ID")
-    product_id = Column(String(36), nullable=True, index=True, comment="产品ID（向后兼容，跨服务引用）")
+    product_id = Column(String(36), ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True, comment="产品ID（向后兼容）")
     sales_user_id = Column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True, comment="销售用户ID")
     
     # EVOA 字段
@@ -69,10 +69,10 @@ class Order(Base):
     updated_at = Column(DATETIME, nullable=False, server_default=func.now(), onupdate=func.now(), comment="更新时间")
     
     # 关系
-    customer = relationship(Customer, foreign_keys=[customer_id], backref="orders")
-    sales_user = relationship(User, foreign_keys=[sales_user_id], backref="sales_orders")
-    creator = relationship(User, foreign_keys=[created_by], backref="created_orders")
-    updater = relationship(User, foreign_keys=[updated_by], backref="updated_orders")
+    customer = relationship("Customer", foreign_keys=[customer_id], primaryjoin="Order.customer_id == Customer.id", backref="orders")
+    sales_user = relationship("User", foreign_keys=[sales_user_id], primaryjoin="Order.sales_user_id == User.id", backref="sales_orders")
+    creator = relationship("User", foreign_keys=[created_by], primaryjoin="Order.created_by == User.id", backref="created_orders")
+    updater = relationship("User", foreign_keys=[updated_by], primaryjoin="Order.updated_by == User.id", backref="updated_orders")
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     order_comments = relationship("OrderComment", back_populates="order", cascade="all, delete-orphan")
     order_files = relationship("OrderFile", back_populates="order", cascade="all, delete-orphan")
