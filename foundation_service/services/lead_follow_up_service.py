@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
-from common.models import LeadFollowUp
+from common.models.lead_follow_up import LeadFollowUp
 from foundation_service.repositories.lead_follow_up_repository import LeadFollowUpRepository
 from foundation_service.repositories.lead_repository import LeadRepository
 from foundation_service.schemas.lead_follow_up import (
@@ -41,7 +41,7 @@ class LeadFollowUpService:
         """创建跟进记录"""
         # 验证线索存在
         from sqlalchemy import select
-        from common.models import Lead
+        from common.models.lead import Lead
         result = await self.db.execute(select(Lead).where(Lead.id == lead_id))
         lead = result.scalar_one_or_none()
         if not lead:
