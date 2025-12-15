@@ -13,6 +13,7 @@ from foundation_service.repositories.product_repository import ProductRepository
 from foundation_service.repositories.product_category_repository import ProductCategoryRepository
 from foundation_service.repositories.vendor_product_repository import VendorProductRepository
 from foundation_service.repositories.service_type_repository import ServiceTypeRepository
+from foundation_service.services.enterprise_service_code_service import EnterpriseServiceCodeService
 from common.models.product import Product
 from common.exceptions import BusinessException
 
@@ -26,6 +27,7 @@ class ProductService:
         self.category_repo = ProductCategoryRepository(db)
         self.service_type_repo = ServiceTypeRepository(db)
         self.vendor_product_repo = VendorProductRepository(db)
+        self.code_service = EnterpriseServiceCodeService(db)
     
     async def create_product(self, request: ProductCreateRequest) -> ProductResponse:
         """创建产品/服务"""
@@ -43,11 +45,26 @@ class ProductService:
             if not category.is_active:
                 raise BusinessException(detail="分类未激活")
         
+        # 如果提供了 category_id 和 service_type_id，自动生成企业服务编码
+        enterprise_service_code = None
+        if request.category_id and request.service_type_id:
+            try:
+                enterprise_service_code = await self.code_service.generate_code(
+                    category_id=request.category_id,
+                    service_type_id=request.service_type_id,
+                )
+            except BusinessException as e:
+                # 如果编码生成失败，记录错误但不阻止产品创建
+                # 编码字段可以为空
+                pass
+        
         # 创建产品
         product = Product(
             name=request.name,
             code=request.code,
+            enterprise_service_code=enterprise_service_code,
             category_id=request.category_id,
+            service_type_id=request.service_type_id,
             service_type=request.service_type,
             service_subtype=request.service_subtype,
             validity_period=request.validity_period,
@@ -112,14 +129,32 @@ class ProductService:
         if not product:
             raise BusinessException(detail="产品不存在", status_code=404)
         
-        # 如果更新分类，验证分类是否存在且激活
-        if request.category_id is not None and request.category_id != product.category_id:
-            if request.category_id:
-                category = await self.category_repo.get_by_id(request.category_id)
+        # 如果更新分类或服务类型，验证并重新生成编码
+        category_changed = request.category_id is not None and request.category_id != product.category_id
+        service_type_changed = request.service_type_id is not None and request.service_type_id != product.service_type_id
+        
+        if category_changed or service_type_changed:
+            # 验证分类
+            new_category_id = request.category_id if category_changed else product.category_id
+            if new_category_id:
+                category = await self.category_repo.get_by_id(new_category_id)
                 if not category:
                     raise BusinessException(detail="分类不存在")
                 if not category.is_active:
                     raise BusinessException(detail="分类未激活")
+            
+            # 如果分类或服务类型改变，重新生成编码
+            new_service_type_id = request.service_type_id if service_type_changed else product.service_type_id
+            if new_category_id and new_service_type_id:
+                try:
+                    enterprise_service_code = await self.code_service.generate_code(
+                        category_id=new_category_id,
+                        service_type_id=new_service_type_id,
+                    )
+                    product.enterprise_service_code = enterprise_service_code
+                except BusinessException as e:
+                    # 如果编码生成失败，记录错误但不阻止更新
+                    pass
         
         # 更新字段
         if request.name is not None:
@@ -133,6 +168,8 @@ class ProductService:
             product.code = request.code
         if request.category_id is not None:
             product.category_id = request.category_id
+        if request.service_type_id is not None:
+            product.service_type_id = request.service_type_id
         
         # 更新服务属性
         if request.service_type is not None:
@@ -337,6 +374,7 @@ class ProductService:
             id=product.id,
             name=product.name,
             code=product.code,
+            enterprise_service_code=product.enterprise_service_code,
             category_id=product.category_id,
             category_name=category_name,
             service_type_id=product.service_type_id,
