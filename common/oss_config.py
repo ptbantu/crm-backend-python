@@ -1,8 +1,7 @@
 """
 OSS 存储配置
-敏感信息（access_key_id 和 access_key_secret）从环境变量读取
+敏感信息（access_key_id 和 access_key_secret）硬编码在代码中
 """
-import os
 from typing import Dict, List
 
 
@@ -13,9 +12,9 @@ class OSSConfig:
     ENDPOINT: str = "oss-ap-southeast-5.aliyuncs.com"
     REGION: str = "ap-southeast-5"
     
-    # 敏感信息：从环境变量读取，如果未设置则使用硬编码值（仅用于开发环境）
-    ACCESS_KEY_ID: str = os.getenv("OSS_ACCESS_KEY_ID", "PLACEHOLDER_ACCESS_KEY_ID")
-    ACCESS_KEY_SECRET: str = os.getenv("OSS_ACCESS_KEY_SECRET", "PLACEHOLDER_ACCESS_KEY_SECRET")
+    # 敏感信息：从环境变量读取（必须设置）
+    ACCESS_KEY_ID: str = os.getenv("OSS_ACCESS_KEY_ID", "")
+    ACCESS_KEY_SECRET: str = os.getenv("OSS_ACCESS_KEY_SECRET", "")
     
     # OSS 连接配置
     USE_HTTPS: bool = True
