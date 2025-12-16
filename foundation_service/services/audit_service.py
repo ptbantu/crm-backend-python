@@ -151,6 +151,9 @@ class AuditService:
                 duration_ms=duration_ms,
             )
             
+            # 提交事务，确保审计日志被写入数据库
+            await self.db.commit()
+            
             logger.debug(
                 f"审计日志已记录 | "
                 f"operation_type={operation_type}, "
