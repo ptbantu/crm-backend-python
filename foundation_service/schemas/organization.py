@@ -92,20 +92,72 @@ class OrganizationResponse(BaseModel):
     """组织响应"""
     id: str
     name: str
-    code: Optional[str]
+    code: Optional[str] = None
+    external_id: Optional[str] = None
     organization_type: str
     is_locked: bool = Field(False, description="是否锁定：False=合作（默认），True=锁定（断开合作）")
     domains: Optional[List[OrganizationDomainInfo]] = Field(default_factory=list, description="组织领域列表")
+    
+    # 基本信息
     email: Optional[str] = None
     phone: Optional[str] = None
     website: Optional[str] = None
     logo_url: Optional[str] = None
     description: Optional[str] = None
+    
+    # 地址信息
+    street: Optional[str] = None
+    city: Optional[str] = None
+    state_province: Optional[str] = None
+    postal_code: Optional[str] = None
+    country_region: Optional[str] = None
+    country: Optional[str] = None
+    country_code: Optional[str] = None
+    
+    # 公司属性
+    company_size: Optional[str] = None
+    company_nature: Optional[str] = None
+    company_type: Optional[str] = None
+    industry: Optional[str] = None
+    industry_code: Optional[str] = None
+    sub_industry: Optional[str] = None
+    business_scope: Optional[str] = None
+    
+    # 工商信息
+    registration_number: Optional[str] = None
+    tax_id: Optional[str] = None
+    legal_representative: Optional[str] = None
+    established_date: Optional[date] = None
+    registered_capital: Optional[Decimal] = None
+    registered_capital_currency: Optional[str] = Field(default="CNY")
+    company_status: Optional[str] = None
+    
+    # 财务信息
+    annual_revenue: Optional[Decimal] = None
+    annual_revenue_currency: Optional[str] = Field(default="CNY")
+    employee_count: Optional[int] = None
+    revenue_year: Optional[int] = None
+    
+    # 认证信息
+    certifications: Optional[List[str]] = Field(default_factory=list)
+    business_license_url: Optional[str] = None
+    tax_certificate_url: Optional[str] = None
+    
+    # 状态控制
     is_active: bool = True
     is_verified: bool = False
+    verified_at: Optional[datetime] = None
+    verified_by: Optional[str] = None
+    
+    # 统计信息
     employees_count: int = 0
+    
+    # 时间字段
     created_at: datetime
     updated_at: datetime
+    
+    class Config:
+        from_attributes = True
 
 
 class OrganizationListResponse(BaseModel):

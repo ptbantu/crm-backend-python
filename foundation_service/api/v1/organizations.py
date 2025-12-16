@@ -54,7 +54,7 @@ async def update_organization(
 @router.get("", response_model=Result[OrganizationListResponse])
 async def get_organization_list(
     page: int = Query(1, ge=1),
-    size: int = Query(10, ge=1, le=100),
+    size: int = Query(10, ge=1, le=1000),
     name: Optional[str] = None,
     code: Optional[str] = None,
     organization_type: Optional[str] = None,

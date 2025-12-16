@@ -2,7 +2,8 @@
 组织服务
 """
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from foundation_service.schemas.organization import (
     OrganizationCreateRequest, OrganizationUpdateRequest, OrganizationResponse
@@ -430,17 +431,48 @@ class OrganizationService:
             id=organization.id,
             name=organization.name,
             code=organization.code,
+            external_id=organization.external_id,
             organization_type=organization.organization_type,
             is_locked=organization.is_locked or False,
+            domains=domain_infos,
             email=organization.email,
             phone=organization.phone,
             website=organization.website,
             logo_url=organization.logo_url,
             description=organization.description,
+            street=organization.street,
+            city=organization.city,
+            state_province=organization.state_province,
+            postal_code=organization.postal_code,
+            country_region=organization.country_region,
+            country=organization.country,
+            country_code=organization.country_code,
+            company_size=organization.company_size,
+            company_nature=organization.company_nature,
+            company_type=organization.company_type,
+            industry=organization.industry,
+            industry_code=organization.industry_code,
+            sub_industry=organization.sub_industry,
+            business_scope=organization.business_scope,
+            registration_number=organization.registration_number,
+            tax_id=organization.tax_id,
+            legal_representative=organization.legal_representative,
+            established_date=organization.established_date,
+            registered_capital=organization.registered_capital,
+            registered_capital_currency=organization.registered_capital_currency or "CNY",
+            company_status=organization.company_status,
+            annual_revenue=organization.annual_revenue,
+            annual_revenue_currency=organization.annual_revenue_currency or "CNY",
+            employee_count=organization.employee_count,
+            revenue_year=organization.revenue_year,
+            certifications=organization.certifications if organization.certifications else [],
+            business_license_url=organization.business_license_url,
+            tax_certificate_url=organization.tax_certificate_url,
             is_active=organization.is_active,
             is_verified=organization.is_verified or False,
+            verified_at=organization.verified_at,
+            verified_by=organization.verified_by,
             employees_count=employees_count,
-            domains=domain_infos,
             created_at=organization.created_at,
             updated_at=organization.updated_at
         )
