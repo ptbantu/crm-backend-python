@@ -10,6 +10,7 @@ from foundation_service.dependencies import (
     get_database_session,
     get_current_user_id,
 )
+from foundation_service.database import get_db
 from foundation_service.services.temporary_link_service import TemporaryLinkService
 from foundation_service.schemas.temporary_link import (
     TemporaryLinkCreateRequest,

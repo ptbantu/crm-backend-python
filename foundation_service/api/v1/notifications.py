@@ -9,6 +9,7 @@ from foundation_service.dependencies import (
     get_database_session,
     get_current_user_id,
 )
+from foundation_service.database import get_db
 from foundation_service.services.notification_service import NotificationService
 from foundation_service.schemas.notification import (
     NotificationResponse,

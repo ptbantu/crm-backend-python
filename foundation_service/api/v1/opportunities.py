@@ -12,6 +12,7 @@ from foundation_service.dependencies import (
     get_current_user_roles,
     get_current_organization_id,
 )
+from foundation_service.database import get_db
 from common.auth import (
     get_current_user_id_from_request as get_user_id_from_token,
     get_current_user_roles_from_request as get_user_roles_from_token,
