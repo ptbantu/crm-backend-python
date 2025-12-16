@@ -75,6 +75,7 @@ async def get_product_list(
     service_subtype: Optional[str] = None,
     status: Optional[str] = None,
     is_active: Optional[bool] = None,
+    group_by_category: bool = Query(False, description="是否按分类分组展示"),
     db: AsyncSession = Depends(get_db)
 ):
     """分页查询产品/服务列表"""
@@ -90,6 +91,7 @@ async def get_product_list(
         service_subtype=service_subtype,
         status=status,
         is_active=is_active,
+        group_by_category=group_by_category,
     )
     return Result.success(data=result)
 

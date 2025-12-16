@@ -73,4 +73,65 @@ class ProductRepository(BaseRepository[Product]):
         items = result.scalars().all()
         
         return list(items), total
+    
+    async def get_list_grouped_by_category(
+        self,
+        name: Optional[str] = None,
+        code: Optional[str] = None,
+        category_id: Optional[str] = None,
+        service_type_id: Optional[str] = None,
+        service_type: Optional[str] = None,
+        service_subtype: Optional[str] = None,
+        status: Optional[str] = None,
+        is_active: Optional[bool] = None,
+    ) -> tuple[List[Product], int]:
+        """查询所有产品并按分类分组，组内按code排序"""
+        # 使用 left join 关联分类表，以便按分类名称排序
+        query = select(Product).outerjoin(
+            ProductCategory, Product.category_id == ProductCategory.id
+        )
+        
+        # 构建查询条件
+        conditions = []
+        if name:
+            conditions.append(Product.name.ilike(f"%{name}%"))
+        if code:
+            conditions.append(Product.code.ilike(f"%{code}%"))
+        if category_id:
+            conditions.append(Product.category_id == category_id)
+        if service_type_id:
+            conditions.append(Product.service_type_id == service_type_id)
+        if service_type:
+            conditions.append(Product.service_type == service_type)
+        if service_subtype:
+            conditions.append(Product.service_subtype == service_subtype)
+        if status:
+            conditions.append(Product.status == status)
+        if is_active is not None:
+            conditions.append(Product.is_active == is_active)
+        
+        if conditions:
+            query = query.where(or_(*conditions))
+        
+        # 先按分类名称排序（NULL值排在最后），然后按code排序（英文字母排序，NULL值排在最后）
+        # MySQL 不支持 NULLS LAST，使用 COALESCE 或 ISNULL 让 NULL 值排在最后
+        # 使用 COALESCE 将 NULL 转换为一个很大的字符串，确保 NULL 值排在最后
+        from sqlalchemy import func
+        query = query.order_by(
+            func.coalesce(ProductCategory.name, 'zzzzzzzzzz').asc(),  # NULL 值转换为 'zzzzzzzzzz' 排在最后
+            func.coalesce(Product.code, 'zzzzzzzzzz').asc()  # NULL 值转换为 'zzzzzzzzzz' 排在最后
+        )
+        
+        # 计算总数
+        count_query = select(func.count()).select_from(Product)
+        if conditions:
+            count_query = count_query.where(or_(*conditions))
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar() or 0
+        
+        # 执行查询（不分页，获取所有数据）
+        result = await self.db.execute(query)
+        items = result.scalars().all()
+        
+        return list(items), total
 

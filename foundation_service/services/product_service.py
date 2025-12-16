@@ -282,20 +282,35 @@ class ProductService:
         service_subtype: str = None,
         status: str = None,
         is_active: bool = None,
+        group_by_category: bool = False,
     ) -> ProductListResponse:
         """分页查询产品列表"""
-        items, total = await self.product_repo.get_list(
-            page=page,
-            size=size,
-            name=name,
-            code=code,
-            category_id=category_id,
-            service_type_id=service_type_id,
-            service_type=service_type,
-            service_subtype=service_subtype,
-            status=status,
-            is_active=is_active,
-        )
+        if group_by_category:
+            # 按分类分组时，获取所有数据（不分页）
+            items, total = await self.product_repo.get_list_grouped_by_category(
+                name=name,
+                code=code,
+                category_id=category_id,
+                service_type_id=service_type_id,
+                service_type=service_type,
+                service_subtype=service_subtype,
+                status=status,
+                is_active=is_active,
+            )
+        else:
+            # 普通分页查询
+            items, total = await self.product_repo.get_list(
+                page=page,
+                size=size,
+                name=name,
+                code=code,
+                category_id=category_id,
+                service_type_id=service_type_id,
+                service_type=service_type,
+                service_subtype=service_subtype,
+                status=status,
+                is_active=is_active,
+            )
         
         # 转换为响应格式
         product_responses = []
@@ -312,8 +327,8 @@ class ProductService:
         return ProductListResponse(
             items=product_responses,
             total=total,
-            page=page,
-            size=size,
+            page=page if not group_by_category else 1,
+            size=size if not group_by_category else total,
         )
     
     async def get_products_by_vendor(
