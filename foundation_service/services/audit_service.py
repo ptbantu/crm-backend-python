@@ -219,11 +219,15 @@ class AuditService:
             order_desc=True,
         )
         
+        # 计算总页数
+        pages = (total + size - 1) // size if total > 0 else 0
+        
         return {
-            "items": [self._to_dict(log) for log in logs],
+            "records": [self._to_dict(log) for log in logs],
             "total": total,
             "page": page,
-            "size": size
+            "size": size,
+            "pages": pages
         }
     
     async def get_entity_history(
@@ -253,30 +257,26 @@ class AuditService:
         )
     
     def _to_dict(self, log: AuditLog) -> Dict:
-        """转换为字典"""
+        """转换为字典，符合 AuditLogResponse 模型"""
         return {
             "id": log.id,
-            "operation_type": log.action,  # action 对应 operation_type
-            "entity_type": log.resource_type,  # resource_type 对应 entity_type
-            "entity_id": log.resource_id,  # resource_id 对应 entity_id
-            "user_id": log.user_id,
-            "username": log.user_name,  # user_name 对应 username
             "organization_id": log.organization_id,
-            "operated_at": log.created_at.isoformat() if log.created_at else None,
-            "data_before": log.old_values,  # old_values 对应 data_before
-            "data_after": log.new_values,  # new_values 对应 data_after
-            "changed_fields": None,  # AuditLog 没有 changed_fields，可以从 old_values 和 new_values 计算
+            "user_id": log.user_id,
+            "user_name": log.user_name,
+            "action": log.action,
+            "resource_type": log.resource_type,
+            "resource_id": log.resource_id,
+            "resource_name": log.resource_name,
+            "category": log.category,
             "ip_address": log.ip_address,
             "user_agent": log.user_agent,
-            "request_path": log.request_path,
             "request_method": log.request_method,
+            "request_path": log.request_path,
             "request_params": log.request_params,
-            "status": log.status.upper() if log.status else "SUCCESS",  # 转换为大写
+            "old_values": log.old_values,
+            "new_values": log.new_values,
+            "status": log.status,
             "error_message": log.error_message,
-            "error_code": None,  # AuditLog 没有 error_code
-            "operation_source": "API",  # 默认值
-            "batch_id": None,  # AuditLog 没有 batch_id
             "duration_ms": log.duration_ms,
-            "notes": None,  # AuditLog 没有 notes 字段
-            "created_at": log.created_at.isoformat() if log.created_at else None
+            "created_at": log.created_at
         }

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from common.schemas.response import Result
 from foundation_service.services.audit_service import AuditService
 from foundation_service.dependencies import get_db
+from foundation_service.schemas.audit import AuditLogListResponse
 from common.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +17,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.get("", response_model=Result[dict])
+@router.get("", response_model=Result[AuditLogListResponse])
 async def get_audit_logs(
     http_request: Request,
     user_id: Optional[str] = Query(None, description="用户ID（可选）"),
