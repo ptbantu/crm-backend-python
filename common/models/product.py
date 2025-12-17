@@ -45,6 +45,9 @@ class Product(Base):
     # 多货币价格字段（IDR/CNY）
     price_cost_idr = Column(Numeric(18, 2), nullable=True)
     price_cost_cny = Column(Numeric(18, 2), nullable=True)
+    # 预估成本（用于供应商关联产品时的默认成本价）
+    estimated_cost_idr = Column(Numeric(18, 2), nullable=True, comment="预估成本-IDR（供应商关联产品时的默认成本价）")
+    estimated_cost_cny = Column(Numeric(18, 2), nullable=True, comment="预估成本-CNY（供应商关联产品时的默认成本价）")
     price_channel_idr = Column(Numeric(18, 2), nullable=True)
     price_channel_cny = Column(Numeric(18, 2), nullable=True)
     price_direct_idr = Column(Numeric(18, 2), nullable=True)

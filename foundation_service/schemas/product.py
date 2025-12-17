@@ -32,6 +32,8 @@ class ProductCreateRequest(BaseModel):
     # 多货币价格（IDR/CNY）
     price_cost_idr: Optional[Decimal] = Field(None, ge=0, description="成本价（IDR）")
     price_cost_cny: Optional[Decimal] = Field(None, ge=0, description="成本价（CNY）")
+    estimated_cost_idr: Optional[Decimal] = Field(None, ge=0, description="预估成本-IDR（供应商关联产品时的默认成本价）")
+    estimated_cost_cny: Optional[Decimal] = Field(None, ge=0, description="预估成本-CNY（供应商关联产品时的默认成本价）")
     price_channel_idr: Optional[Decimal] = Field(None, ge=0, description="渠道价（IDR）")
     price_channel_cny: Optional[Decimal] = Field(None, ge=0, description="渠道价（CNY）")
     price_direct_idr: Optional[Decimal] = Field(None, ge=0, description="直客价（IDR）")
@@ -90,6 +92,8 @@ class ProductUpdateRequest(BaseModel):
     # 多货币价格
     price_cost_idr: Optional[Decimal] = Field(None, ge=0)
     price_cost_cny: Optional[Decimal] = Field(None, ge=0)
+    estimated_cost_idr: Optional[Decimal] = Field(None, ge=0, description="预估成本-IDR（供应商关联产品时的默认成本价）")
+    estimated_cost_cny: Optional[Decimal] = Field(None, ge=0, description="预估成本-CNY（供应商关联产品时的默认成本价）")
     price_channel_idr: Optional[Decimal] = Field(None, ge=0)
     price_channel_cny: Optional[Decimal] = Field(None, ge=0)
     price_direct_idr: Optional[Decimal] = Field(None, ge=0)
@@ -153,6 +157,8 @@ class ProductResponse(BaseModel):
     # 多货币价格
     price_cost_idr: Optional[Decimal]
     price_cost_cny: Optional[Decimal]
+    estimated_cost_idr: Optional[Decimal] = None
+    estimated_cost_cny: Optional[Decimal] = None
     price_channel_idr: Optional[Decimal]
     price_channel_cny: Optional[Decimal]
     price_direct_idr: Optional[Decimal]
