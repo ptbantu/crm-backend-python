@@ -26,19 +26,15 @@ router = APIRouter()
 @router.get("", response_model=Result[ProductPriceListResponse])
 async def get_product_prices(
     product_id: Optional[str] = Query(None, description="产品ID"),
-    price_type: Optional[str] = Query(None, description="价格类型：cost, channel, direct, list"),
-    currency: Optional[str] = Query(None, description="货币：IDR, CNY, USD, EUR"),
-    organization_id: Optional[str] = Query(None, description="组织ID"),
+    organization_id: Optional[str] = Query(None, description="组织ID（NULL表示通用价格）"),
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    """获取产品价格列表（支持筛选、分页）"""
+    """获取产品价格列表（列格式：一条记录包含所有价格类型和货币）"""
     service = ProductPriceManagementService(db)
     result = await service.get_product_prices(
         product_id=product_id,
-        price_type=price_type,
-        currency=currency,
         organization_id=organization_id,
         page=page,
         size=size
@@ -60,18 +56,16 @@ async def get_product_price(
 @router.get("/products/{product_id}/history", response_model=Result[ProductPriceListResponse])
 async def get_product_price_history(
     product_id: str,
-    price_type: Optional[str] = Query(None, description="价格类型"),
-    currency: Optional[str] = Query(None, description="货币"),
+    organization_id: Optional[str] = Query(None, description="组织ID（NULL表示通用价格）"),
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     db: AsyncSession = Depends(get_db)
 ):
-    """获取价格历史记录"""
+    """获取价格历史记录（列格式：一条记录包含所有价格类型和货币）"""
     service = ProductPriceManagementService(db)
     result = await service.get_product_price_history(
         product_id=product_id,
-        price_type=price_type,
-        currency=currency,
+        organization_id=organization_id,
         page=page,
         size=size
     )
@@ -84,7 +78,7 @@ async def create_price(
     request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    """创建新价格（立即生效或未来生效）"""
+    """创建新价格（列格式：一条记录包含所有价格类型和货币，立即生效或未来生效）"""
     current_user_id = get_current_user_id(request_obj)
     service = ProductPriceManagementService(db)
     price = await service.create_price(request, changed_by=current_user_id)
@@ -98,7 +92,7 @@ async def update_price(
     request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    """更新价格"""
+    """更新价格（列格式：一条记录包含所有价格类型和货币）"""
     current_user_id = get_current_user_id(request_obj)
     service = ProductPriceManagementService(db)
     price = await service.update_price(price_id, request, changed_by=current_user_id)
@@ -111,7 +105,7 @@ async def delete_price(
     request_obj: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    """删除/取消未来生效的价格"""
+    """删除/取消未来生效的价格（列格式：一条记录包含所有价格类型和货币）"""
     current_user_id = get_current_user_id(request_obj)
     service = ProductPriceManagementService(db)
     await service.cancel_future_price(price_id, changed_by=current_user_id)
@@ -124,7 +118,7 @@ async def get_upcoming_price_changes(
     hours_ahead: int = Query(24, ge=1, le=168, description="未来多少小时内"),
     db: AsyncSession = Depends(get_db)
 ):
-    """获取即将生效的价格变更"""
+    """获取即将生效的价格变更（列格式：一条记录包含所有价格类型和货币）"""
     service = ProductPriceManagementService(db)
     changes = await service.get_upcoming_price_changes(
         product_id=product_id,

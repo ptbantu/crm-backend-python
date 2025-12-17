@@ -29,21 +29,22 @@ class ProductCreateRequest(BaseModel):
     allow_multi_vendor: bool = Field(default=True, description="是否允许多供应商接单（1=允许，0=单一供应商）")
     default_supplier_id: Optional[str] = Field(None, description="默认供应商ID（当allow_multi_vendor=0时使用）")
     
-    # 多货币价格（IDR/CNY）
-    price_cost_idr: Optional[Decimal] = Field(None, ge=0, description="成本价（IDR）")
-    price_cost_cny: Optional[Decimal] = Field(None, ge=0, description="成本价（CNY）")
-    estimated_cost_idr: Optional[Decimal] = Field(None, ge=0, description="预估成本-IDR（供应商关联产品时的默认成本价）")
-    estimated_cost_cny: Optional[Decimal] = Field(None, ge=0, description="预估成本-CNY（供应商关联产品时的默认成本价）")
-    price_channel_idr: Optional[Decimal] = Field(None, ge=0, description="渠道价（IDR）")
-    price_channel_cny: Optional[Decimal] = Field(None, ge=0, description="渠道价（CNY）")
-    price_direct_idr: Optional[Decimal] = Field(None, ge=0, description="直客价（IDR）")
-    price_direct_cny: Optional[Decimal] = Field(None, ge=0, description="直客价（CNY）")
-    price_list_idr: Optional[Decimal] = Field(None, ge=0, description="列表价（IDR）")
-    price_list_cny: Optional[Decimal] = Field(None, ge=0, description="列表价（CNY）")
+    # 注意：成本价和预估成本字段已删除
+    # - price_cost_idr, price_cost_cny（已迁移到 product_prices 表，请使用产品价格管理API）
+    # - estimated_cost_idr, estimated_cost_cny（已删除，不再使用）
     
-    # 汇率相关
-    default_currency: str = Field(default="IDR", max_length=10, description="默认货币")
-    exchange_rate: Optional[Decimal] = Field(None, gt=0, description="汇率（IDR/CNY）")
+    # 注意：销售价格（渠道价、直客价、列表价）已迁移到 product_prices 表
+    # 如需设置销售价格，请使用产品价格管理API
+    price_channel_idr: Optional[Decimal] = Field(None, ge=0, description="渠道价-IDR（已废弃，请使用产品价格管理API）")
+    price_channel_cny: Optional[Decimal] = Field(None, ge=0, description="渠道价-CNY（已废弃，请使用产品价格管理API）")
+    price_direct_idr: Optional[Decimal] = Field(None, ge=0, description="直客价-IDR（已废弃，请使用产品价格管理API）")
+    price_direct_cny: Optional[Decimal] = Field(None, ge=0, description="直客价-CNY（已废弃，请使用产品价格管理API）")
+    price_list_idr: Optional[Decimal] = Field(None, ge=0, description="列表价-IDR（已废弃，请使用产品价格管理API）")
+    price_list_cny: Optional[Decimal] = Field(None, ge=0, description="列表价-CNY（已废弃，请使用产品价格管理API）")
+    
+    # 汇率相关（已废弃，请使用产品价格管理API）
+    default_currency: Optional[str] = Field(None, max_length=10, description="默认货币（已废弃）")
+    exchange_rate: Optional[Decimal] = Field(None, gt=0, description="汇率（已废弃，请使用产品价格管理API）")
     
     # 业务属性
     commission_rate: Optional[Decimal] = Field(None, ge=0, le=1, description="提成比例")
@@ -89,19 +90,20 @@ class ProductUpdateRequest(BaseModel):
     allow_multi_vendor: Optional[bool] = None
     default_supplier_id: Optional[str] = None
     
-    # 多货币价格
-    price_cost_idr: Optional[Decimal] = Field(None, ge=0)
-    price_cost_cny: Optional[Decimal] = Field(None, ge=0)
-    estimated_cost_idr: Optional[Decimal] = Field(None, ge=0, description="预估成本-IDR（供应商关联产品时的默认成本价）")
-    estimated_cost_cny: Optional[Decimal] = Field(None, ge=0, description="预估成本-CNY（供应商关联产品时的默认成本价）")
-    price_channel_idr: Optional[Decimal] = Field(None, ge=0)
-    price_channel_cny: Optional[Decimal] = Field(None, ge=0)
-    price_direct_idr: Optional[Decimal] = Field(None, ge=0)
-    price_direct_cny: Optional[Decimal] = Field(None, ge=0)
-    price_list_idr: Optional[Decimal] = Field(None, ge=0)
-    price_list_cny: Optional[Decimal] = Field(None, ge=0)
+    # 注意：成本价和预估成本字段已删除
+    # - price_cost_idr, price_cost_cny（已迁移到 product_prices 表，请使用产品价格管理API）
+    # - estimated_cost_cny（已删除，不再使用）
     
-    # 汇率相关
+    # 注意：销售价格（渠道价、直客价、列表价）已迁移到 product_prices 表
+    # 如需设置销售价格，请使用产品价格管理API
+    price_channel_idr: Optional[Decimal] = Field(None, ge=0, description="渠道价-IDR（已废弃，请使用产品价格管理API）")
+    price_channel_cny: Optional[Decimal] = Field(None, ge=0, description="渠道价-CNY（已废弃，请使用产品价格管理API）")
+    price_direct_idr: Optional[Decimal] = Field(None, ge=0, description="直客价-IDR（已废弃，请使用产品价格管理API）")
+    price_direct_cny: Optional[Decimal] = Field(None, ge=0, description="直客价-CNY（已废弃，请使用产品价格管理API）")
+    price_list_idr: Optional[Decimal] = Field(None, ge=0, description="列表价-IDR（已废弃，请使用产品价格管理API）")
+    price_list_cny: Optional[Decimal] = Field(None, ge=0, description="列表价-CNY（已废弃，请使用产品价格管理API）")
+    
+    # 汇率相关（已废弃，请使用产品价格管理API）
     default_currency: Optional[str] = None
     exchange_rate: Optional[Decimal] = Field(None, gt=0)
     
@@ -154,21 +156,25 @@ class ProductResponse(BaseModel):
     allow_multi_vendor: bool = True
     default_supplier_id: Optional[str] = None
     
-    # 多货币价格
-    price_cost_idr: Optional[Decimal]
-    price_cost_cny: Optional[Decimal]
+    # 注意：成本价已迁移到 product_prices 表，从 product_prices 表查询
+    price_cost_idr: Optional[Decimal] = None  # 从 product_prices 表查询
+    price_cost_cny: Optional[Decimal] = None  # 从 product_prices 表查询
+    # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
     estimated_cost_idr: Optional[Decimal] = None
     estimated_cost_cny: Optional[Decimal] = None
-    price_channel_idr: Optional[Decimal]
-    price_channel_cny: Optional[Decimal]
-    price_direct_idr: Optional[Decimal]
-    price_direct_cny: Optional[Decimal]
-    price_list_idr: Optional[Decimal]
-    price_list_cny: Optional[Decimal]
     
-    # 汇率相关
-    default_currency: str
-    exchange_rate: Optional[Decimal]
+    # 注意：销售价格（渠道价、直客价、列表价）已迁移到 product_prices 表
+    # 价格信息从 product_prices 表查询，见下面的 prices 字段
+    price_channel_idr: Optional[Decimal] = None  # 已废弃，从 prices 字段获取
+    price_channel_cny: Optional[Decimal] = None  # 已废弃，从 prices 字段获取
+    price_direct_idr: Optional[Decimal] = None  # 已废弃，从 prices 字段获取
+    price_direct_cny: Optional[Decimal] = None  # 已废弃，从 prices 字段获取
+    price_list_idr: Optional[Decimal] = None  # 已废弃，从 prices 字段获取
+    price_list_cny: Optional[Decimal] = None  # 已废弃，从 prices 字段获取
+    
+    # 汇率相关（已废弃，从 prices 字段获取）
+    default_currency: Optional[str] = None  # 已废弃
+    exchange_rate: Optional[Decimal] = None  # 已废弃
     
     # 利润计算字段
     channel_profit: Optional[Decimal]

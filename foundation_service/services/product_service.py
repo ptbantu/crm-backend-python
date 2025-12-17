@@ -24,20 +24,25 @@ from foundation_service.repositories.product_category_repository import ProductC
 from foundation_service.repositories.vendor_product_repository import VendorProductRepository
 from foundation_service.repositories.service_type_repository import ServiceTypeRepository
 from foundation_service.services.enterprise_service_code_service import EnterpriseServiceCodeService
+from foundation_service.services.product_price_sync_service import ProductPriceSyncService
 from common.models.product import Product
+from common.models.product_price import ProductPrice
 from common.exceptions import BusinessException
+from datetime import datetime
 
 
 class ProductService:
     """产品/服务服务"""
     
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, user_id: Optional[str] = None):
         self.db = db
+        self.user_id = user_id
         self.product_repo = ProductRepository(db)
         self.category_repo = ProductCategoryRepository(db)
         self.service_type_repo = ServiceTypeRepository(db)
         self.vendor_product_repo = VendorProductRepository(db)
         self.code_service = EnterpriseServiceCodeService(db)
+        self.price_sync_service = ProductPriceSyncService(db, user_id=user_id)
     
     async def create_product(self, request: ProductCreateRequest) -> ProductResponse:
         """创建产品/服务"""
@@ -83,16 +88,10 @@ class ProductService:
             is_urgent_available=request.is_urgent_available,
             urgent_processing_days=request.urgent_processing_days,
             urgent_price_surcharge=request.urgent_price_surcharge,
-            price_cost_idr=request.price_cost_idr,
-            price_cost_cny=request.price_cost_cny,
-            price_channel_idr=request.price_channel_idr,
-            price_channel_cny=request.price_channel_cny,
-            price_direct_idr=request.price_direct_idr,
-            price_direct_cny=request.price_direct_cny,
-            price_list_idr=request.price_list_idr,
-            price_list_cny=request.price_list_cny,
-            default_currency=request.default_currency,
-            exchange_rate=request.exchange_rate,
+            # 注意：price_cost_idr 和 price_cost_cny 已迁移到 product_prices 表
+            # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
+            # 注意：销售价格（渠道价、直客价、列表价）已迁移到 product_prices 表
+            # 不再在 products 表中设置这些字段
             commission_rate=request.commission_rate,
             commission_amount=request.commission_amount,
             equivalent_cny=request.equivalent_cny,
@@ -109,6 +108,27 @@ class ProductService:
         )
         product = await self.product_repo.create(product)
         
+        # 同步价格到 product_prices 表（如果提供了价格）
+        try:
+            await self.price_sync_service.sync_product_prices(
+                product_id=product.id,
+                price_channel_idr=request.price_channel_idr,
+                price_channel_cny=request.price_channel_cny,
+                price_direct_idr=request.price_direct_idr,
+                price_direct_cny=request.price_direct_cny,
+                price_list_idr=request.price_list_idr,
+                price_list_cny=request.price_list_cny,
+                price_cost_idr=request.price_cost_idr,  # 成本价同步到 product_prices 表
+                price_cost_cny=request.price_cost_cny,  # 成本价同步到 product_prices 表
+                exchange_rate=request.exchange_rate,
+                change_reason="产品创建时设置价格"
+            )
+        except Exception as e:
+            # 价格同步失败不影响产品创建，只记录日志
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"同步产品价格失败: {e}", exc_info=True)
+        
         # 获取分类名称
         category_name = None
         if product.category_id:
@@ -116,7 +136,7 @@ class ProductService:
             if category:
                 category_name = category.name
         
-        return self._to_response(product, category_name)
+        return await self._to_response(product, category_name)
     
     async def get_product_by_id(self, product_id: str) -> ProductResponse:
         """查询产品详情"""
@@ -131,7 +151,7 @@ class ProductService:
             if category:
                 category_name = category.name
         
-        return self._to_response(product, category_name)
+        return await self._to_response(product, category_name)
     
     async def update_product(self, product_id: str, request: ProductUpdateRequest) -> ProductResponse:
         """更新产品"""
@@ -199,29 +219,44 @@ class ProductService:
         if request.urgent_price_surcharge is not None:
             product.urgent_price_surcharge = request.urgent_price_surcharge
         
-        # 更新价格字段
-        if request.price_cost_idr is not None:
-            product.price_cost_idr = request.price_cost_idr
-        if request.price_cost_cny is not None:
-            product.price_cost_cny = request.price_cost_cny
-        if request.price_channel_idr is not None:
-            product.price_channel_idr = request.price_channel_idr
-        if request.price_channel_cny is not None:
-            product.price_channel_cny = request.price_channel_cny
-        if request.price_direct_idr is not None:
-            product.price_direct_idr = request.price_direct_idr
-        if request.price_direct_cny is not None:
-            product.price_direct_cny = request.price_direct_cny
-        if request.price_list_idr is not None:
-            product.price_list_idr = request.price_list_idr
-        if request.price_list_cny is not None:
-            product.price_list_cny = request.price_list_cny
+        # 注意：成本价已迁移到 product_prices 表，不再直接更新 products 表
+        # 成本价通过 ProductPriceSyncService 同步到 product_prices 表
+        # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
         
-        # 更新汇率
-        if request.default_currency is not None:
-            product.default_currency = request.default_currency
-        if request.exchange_rate is not None:
-            product.exchange_rate = request.exchange_rate
+        # 同步价格到 product_prices 表（如果请求中包含价格字段）
+        # 注意：销售价格和成本价字段已从 products 表移除，现在只通过 product_prices 表管理
+        price_updated = any([
+            request.price_channel_idr is not None,
+            request.price_channel_cny is not None,
+            request.price_direct_idr is not None,
+            request.price_direct_cny is not None,
+            request.price_list_idr is not None,
+            request.price_list_cny is not None,
+            request.price_cost_idr is not None,  # 成本价也同步到 product_prices 表
+            request.price_cost_cny is not None,  # 成本价也同步到 product_prices 表
+        ])
+        
+        if price_updated:
+            try:
+                # 同步价格到 product_prices 表（只使用请求中的值）
+                await self.price_sync_service.sync_product_prices(
+                    product_id=product.id,
+                    price_channel_idr=request.price_channel_idr,
+                    price_channel_cny=request.price_channel_cny,
+                    price_direct_idr=request.price_direct_idr,
+                    price_direct_cny=request.price_direct_cny,
+                    price_list_idr=request.price_list_idr,
+                    price_list_cny=request.price_list_cny,
+                    price_cost_idr=request.price_cost_idr,  # 成本价同步到 product_prices 表
+                    price_cost_cny=request.price_cost_cny,  # 成本价同步到 product_prices 表
+                    exchange_rate=request.exchange_rate,
+                    change_reason="产品更新时修改价格"
+                )
+            except Exception as e:
+                # 价格同步失败不影响产品更新，只记录日志
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"同步产品价格失败: {e}", exc_info=True)
         
         # 更新业务属性
         if request.commission_rate is not None:
@@ -268,7 +303,7 @@ class ProductService:
             if category:
                 category_name = category.name
         
-        return self._to_response(product, category_name)
+        return await self._to_response(product, category_name)
     
     async def get_product_detail_aggregated(self, product_id: str) -> ProductDetailAggregatedResponse:
         """获取产品详情聚合数据（包含价格、供应商、统计等信息）"""
@@ -289,7 +324,7 @@ class ProductService:
             except Exception as e:
                 logger.warning(f"获取分类信息失败: {e}")
         
-        overview = self._to_response(product, category_name)
+        overview = await self._to_response(product, category_name)
         
         # 初始化结果
         result = ProductDetailAggregatedResponse(
@@ -313,27 +348,91 @@ class ProductService:
             now = datetime.now()
             prices, _ = await price_repo.get_by_product_id(product_id, page=1, size=100)
             
-            price_list = []
+            # 列格式：一条记录包含所有价格类型和货币
+            # 只返回当前有效的价格记录
+            current_price = None
             for price in prices:
                 # 判断价格状态
                 if price.effective_from and price.effective_from > now:
-                    status = "upcoming"
+                    continue  # 跳过未来价格
                 elif price.effective_to and price.effective_to < now:
-                    status = "expired"
+                    continue  # 跳过已失效价格
                 else:
-                    status = "active"
-                
-                price_list.append(PriceInfo(
-                    price_type=price.price_type or "unknown",
-                    currency=price.currency or "CNY",
-                    price=price.price,
-                    effective_from=price.effective_from,
-                    effective_to=price.effective_to,
-                    updated_at=price.updated_at,
-                    status=status
-                ))
+                    # 当前有效价格
+                    current_price = price
+                    break
             
-            result.prices = price_list
+            # 如果有当前有效价格，转换为 PriceInfo 列表（为了兼容前端）
+            # 注意：PriceInfo 仍使用旧的结构，但这里我们只返回一条记录的所有价格字段
+            if current_price:
+                # 创建一个包含所有价格信息的 PriceInfo
+                # 由于 PriceInfo 仍使用旧结构，这里暂时只返回主要价格
+                # TODO: 更新 PriceInfo Schema 以适配列格式
+                price_list = []
+                if current_price.price_channel_idr is not None:
+                    price_list.append(PriceInfo(
+                        price_type="channel",
+                        currency="IDR",
+                        price=current_price.price_channel_idr,
+                        effective_from=current_price.effective_from,
+                        effective_to=current_price.effective_to,
+                        updated_at=current_price.updated_at,
+                        status="active"
+                    ))
+                if current_price.price_channel_cny is not None:
+                    price_list.append(PriceInfo(
+                        price_type="channel",
+                        currency="CNY",
+                        price=current_price.price_channel_cny,
+                        effective_from=current_price.effective_from,
+                        effective_to=current_price.effective_to,
+                        updated_at=current_price.updated_at,
+                        status="active"
+                    ))
+                if current_price.price_direct_idr is not None:
+                    price_list.append(PriceInfo(
+                        price_type="direct",
+                        currency="IDR",
+                        price=current_price.price_direct_idr,
+                        effective_from=current_price.effective_from,
+                        effective_to=current_price.effective_to,
+                        updated_at=current_price.updated_at,
+                        status="active"
+                    ))
+                if current_price.price_direct_cny is not None:
+                    price_list.append(PriceInfo(
+                        price_type="direct",
+                        currency="CNY",
+                        price=current_price.price_direct_cny,
+                        effective_from=current_price.effective_from,
+                        effective_to=current_price.effective_to,
+                        updated_at=current_price.updated_at,
+                        status="active"
+                    ))
+                if current_price.price_list_idr is not None:
+                    price_list.append(PriceInfo(
+                        price_type="list",
+                        currency="IDR",
+                        price=current_price.price_list_idr,
+                        effective_from=current_price.effective_from,
+                        effective_to=current_price.effective_to,
+                        updated_at=current_price.updated_at,
+                        status="active"
+                    ))
+                if current_price.price_list_cny is not None:
+                    price_list.append(PriceInfo(
+                        price_type="list",
+                        currency="CNY",
+                        price=current_price.price_list_cny,
+                        effective_from=current_price.effective_from,
+                        effective_to=current_price.effective_to,
+                        updated_at=current_price.updated_at,
+                        status="active"
+                    ))
+                
+                result.prices = price_list
+            else:
+                result.prices = []
         except Exception as e:
             logger.warning(f"获取产品价格信息失败: {e}", exc_info=True)
         
@@ -562,7 +661,7 @@ class ProductService:
                 if category:
                     category_name = category.name
             
-            product_responses.append(self._to_response(product, category_name))
+            product_responses.append(await self._to_response(product, category_name))
         
         return ProductListResponse(
             items=product_responses,
@@ -614,7 +713,7 @@ class ProductService:
                 if category:
                     category_name = category.name
             
-            product_responses.append(self._to_response(product, category_name))
+            product_responses.append(await self._to_response(product, category_name))
         
         return ProductListResponse(
             items=product_responses,
@@ -623,8 +722,29 @@ class ProductService:
             size=size,
         )
     
-    def _to_response(self, product: Product, category_name: str = None, service_type_name: str = None) -> ProductResponse:
+    async def _get_current_price(self, product_id: str) -> Optional[ProductPrice]:
+        """从 product_prices 表获取当前有效的价格记录（包含所有价格类型）"""
+        now = datetime.now()
+        query = select(ProductPrice).where(
+            and_(
+                ProductPrice.product_id == product_id,
+                ProductPrice.organization_id.is_(None),  # 通用价格
+                ProductPrice.effective_from <= now,
+                or_(
+                    ProductPrice.effective_to.is_(None),
+                    ProductPrice.effective_to >= now
+                )
+            )
+        ).order_by(ProductPrice.effective_from.desc()).limit(1)
+        
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+    
+    async def _to_response(self, product: Product, category_name: str = None, service_type_name: str = None) -> ProductResponse:
         """转换为响应格式"""
+        # 从 product_prices 表查询当前有效的价格记录（包含所有价格类型）
+        price_record = await self._get_current_price(product.id)
+        
         return ProductResponse(
             id=product.id,
             name=product.name,
@@ -642,16 +762,22 @@ class ProductService:
             is_urgent_available=product.is_urgent_available,
             urgent_processing_days=product.urgent_processing_days,
             urgent_price_surcharge=product.urgent_price_surcharge,
-            price_cost_idr=product.price_cost_idr,
-            price_cost_cny=product.price_cost_cny,
-            price_channel_idr=product.price_channel_idr,
-            price_channel_cny=product.price_channel_cny,
-            price_direct_idr=product.price_direct_idr,
-            price_direct_cny=product.price_direct_cny,
-            price_list_idr=product.price_list_idr,
-            price_list_cny=product.price_list_cny,
-            default_currency=product.default_currency,
-            exchange_rate=product.exchange_rate,
+            # 注意：所有价格字段已迁移到 product_prices 表
+            # 从 product_prices 表查询当前有效的价格（如果存在）
+            price_cost_idr=price_record.price_cost_idr if price_record else None,
+            price_cost_cny=price_record.price_cost_cny if price_record else None,
+            price_channel_idr=price_record.price_channel_idr if price_record else None,
+            price_channel_cny=price_record.price_channel_cny if price_record else None,
+            price_direct_idr=price_record.price_direct_idr if price_record else None,
+            price_direct_cny=price_record.price_direct_cny if price_record else None,
+            price_list_idr=price_record.price_list_idr if price_record else None,
+            price_list_cny=price_record.price_list_cny if price_record else None,
+            exchange_rate=price_record.exchange_rate if price_record else None,
+            # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
+            estimated_cost_idr=None,
+            estimated_cost_cny=None,
+            # 注意：default_currency 已废弃
+            default_currency=None,
             channel_profit=product.channel_profit,
             channel_profit_rate=product.channel_profit_rate,
             channel_customer_profit=product.channel_customer_profit,

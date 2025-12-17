@@ -11,6 +11,37 @@ SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 -- 禁用外键检查（创建表时）
 SET FOREIGN_KEY_CHECKS = 0;
 
+CREATE TABLE IF NOT EXISTS `_migration_product_prices_log` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_id` char(36) NOT NULL,
+  `price_type` varchar(50) NOT NULL,
+  `currency` varchar(10) NOT NULL,
+  `migrated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `migration_status` varchar(50) NOT NULL DEFAULT 'success',
+  `error_message` text,
+  PRIMARY KEY (`id`),
+  KEY `idx_product_id` (`product_id`),
+  KEY `idx_migration_status` (`migration_status`)
+) ENGINE=InnoDB AUTO_INCREMENT=379 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品价格迁移日志表';
+CREATE TABLE IF NOT EXISTS `_product_prices_backup` (
+  `id` char(36) NOT NULL,
+  `product_id` char(36) NOT NULL COMMENT '产品ID（外键 → products.id）',
+  `organization_id` char(36) DEFAULT NULL COMMENT '组织ID（NULL表示通用价格，跨服务无外键）',
+  `price_type` varchar(50) NOT NULL COMMENT '价格类型：cost, channel, direct, list',
+  `currency` varchar(10) NOT NULL COMMENT '货币：IDR, CNY, USD, EUR',
+  `amount` decimal(18,2) NOT NULL COMMENT '价格金额',
+  `exchange_rate` decimal(18,9) DEFAULT NULL COMMENT '汇率（用于计算）',
+  `effective_from` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '生效时间',
+  `effective_to` datetime DEFAULT NULL COMMENT '失效时间（NULL表示当前有效）',
+  `source` varchar(50) DEFAULT NULL COMMENT '价格来源：manual, import, contract',
+  `is_approved` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否已审核',
+  `approved_by` char(36) DEFAULT NULL COMMENT '审核人ID',
+  `approved_at` datetime DEFAULT NULL COMMENT '审核时间',
+  `change_reason` text COMMENT '变更原因',
+  `changed_by` char(36) DEFAULT NULL COMMENT '变更人ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE TABLE IF NOT EXISTS `agent_extensions` (
   `organization_id` char(36) NOT NULL,
   `account_group` varchar(255) DEFAULT NULL,
@@ -1605,9 +1636,12 @@ CREATE TABLE IF NOT EXISTS `product_prices` (
   `id` char(36) NOT NULL,
   `product_id` char(36) NOT NULL COMMENT '产品ID（外键 → products.id）',
   `organization_id` char(36) DEFAULT NULL COMMENT '组织ID（NULL表示通用价格，跨服务无外键）',
-  `price_type` varchar(50) NOT NULL COMMENT '价格类型：cost, channel, direct, list',
-  `currency` varchar(10) NOT NULL COMMENT '货币：IDR, CNY, USD, EUR',
-  `amount` decimal(18,2) NOT NULL COMMENT '价格金额',
+  `price_channel_idr` decimal(18,2) DEFAULT NULL COMMENT '渠道价-IDR',
+  `price_channel_cny` decimal(18,2) DEFAULT NULL COMMENT '渠道价-CNY',
+  `price_direct_idr` decimal(18,2) DEFAULT NULL COMMENT '直客价-IDR',
+  `price_direct_cny` decimal(18,2) DEFAULT NULL COMMENT '直客价-CNY',
+  `price_list_idr` decimal(18,2) DEFAULT NULL COMMENT '列表价-IDR',
+  `price_list_cny` decimal(18,2) DEFAULT NULL COMMENT '列表价-CNY',
   `exchange_rate` decimal(18,9) DEFAULT NULL COMMENT '汇率（用于计算）',
   `effective_from` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '生效时间',
   `effective_to` datetime DEFAULT NULL COMMENT '失效时间（NULL表示当前有效）',
@@ -1622,8 +1656,6 @@ CREATE TABLE IF NOT EXISTS `product_prices` (
   PRIMARY KEY (`id`),
   KEY `idx_product_id` (`product_id`),
   KEY `idx_organization_id` (`organization_id`),
-  KEY `idx_price_type` (`price_type`),
-  KEY `idx_currency` (`currency`),
   KEY `idx_effective_from` (`effective_from`),
   KEY `idx_effective_to` (`effective_to`),
   KEY `fk_product_prices_approved_by` (`approved_by`),
@@ -1631,54 +1663,13 @@ CREATE TABLE IF NOT EXISTS `product_prices` (
   CONSTRAINT `fk_product_prices_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_product_prices_changed_by` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_product_prices_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `chk_product_prices_amount_nonneg` CHECK ((`amount` >= 0)),
-  CONSTRAINT `chk_product_prices_currency` CHECK ((`currency` in (_utf8mb4'IDR',_utf8mb4'CNY',_utf8mb4'USD',_utf8mb4'EUR'))),
-  CONSTRAINT `chk_product_prices_price_type` CHECK ((`price_type` in (_utf8mb4'cost',_utf8mb4'channel',_utf8mb4'direct',_utf8mb4'list')))
+  CONSTRAINT `chk_product_prices_channel_cny_nonneg` CHECK (((`price_channel_cny` is null) or (`price_channel_cny` >= 0))),
+  CONSTRAINT `chk_product_prices_channel_idr_nonneg` CHECK (((`price_channel_idr` is null) or (`price_channel_idr` >= 0))),
+  CONSTRAINT `chk_product_prices_direct_cny_nonneg` CHECK (((`price_direct_cny` is null) or (`price_direct_cny` >= 0))),
+  CONSTRAINT `chk_product_prices_direct_idr_nonneg` CHECK (((`price_direct_idr` is null) or (`price_direct_idr` >= 0))),
+  CONSTRAINT `chk_product_prices_list_cny_nonneg` CHECK (((`price_list_cny` is null) or (`price_list_cny` >= 0))),
+  CONSTRAINT `chk_product_prices_list_idr_nonneg` CHECK (((`price_list_idr` is null) or (`price_list_idr` >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品价格表';
-  INSERT INTO price_change_logs (
-    id, product_id, price_id, change_type, price_type, currency,
-    old_price, new_price, price_change_amount,
-    old_effective_from, new_effective_from,
-    old_effective_to, new_effective_to,
-    change_reason, changed_by, changed_at
-  ) VALUES (
-    UUID(), NEW.product_id, NEW.id, 'create', NEW.price_type, NEW.currency,
-    NULL, NEW.amount, NULL,
-    NULL, NEW.effective_from,
-    NULL, NEW.effective_to,
-    NEW.change_reason, NEW.changed_by, NOW()
-  );
-END */;;
-  DECLARE v_price_change_amount DECIMAL(18, 2);
-  DECLARE v_price_change_percentage DECIMAL(5, 2);
-  
-  
-  IF OLD.amount != NEW.amount THEN
-    SET v_price_change_amount = NEW.amount - OLD.amount;
-    IF OLD.amount > 0 THEN
-      SET v_price_change_percentage = (v_price_change_amount / OLD.amount) * 100;
-    ELSE
-      SET v_price_change_percentage = NULL;
-    END IF;
-  ELSE
-    SET v_price_change_amount = NULL;
-    SET v_price_change_percentage = NULL;
-  END IF;
-  
-  INSERT INTO price_change_logs (
-    id, product_id, price_id, change_type, price_type, currency,
-    old_price, new_price, price_change_amount, price_change_percentage,
-    old_effective_from, new_effective_from,
-    old_effective_to, new_effective_to,
-    change_reason, changed_by, changed_at
-  ) VALUES (
-    UUID(), NEW.product_id, NEW.id, 'update', NEW.price_type, NEW.currency,
-    OLD.amount, NEW.amount, v_price_change_amount, v_price_change_percentage,
-    OLD.effective_from, NEW.effective_from,
-    OLD.effective_to, NEW.effective_to,
-    NEW.change_reason, NEW.changed_by, NOW()
-  );
-END */;;
 CREATE TABLE IF NOT EXISTS `products` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `id_external` varchar(255) DEFAULT NULL,
@@ -1720,6 +1711,8 @@ CREATE TABLE IF NOT EXISTS `products` (
   `price_cost_idr_test` decimal(18,2) DEFAULT NULL COMMENT 'æµ‹è¯•å­—æ®µ',
   `price_cost_idr` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆIDRï¼‰',
   `price_cost_cny` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆCNYï¼‰',
+  `estimated_cost_idr` decimal(18,2) DEFAULT NULL COMMENT '预估成本-IDR（供应商关联产品时的默认成本价）',
+  `estimated_cost_cny` decimal(18,2) DEFAULT NULL COMMENT '预估成本-CNY（供应商关联产品时的默认成本价）',
   `price_channel_idr` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“ä»·ï¼ˆIDRï¼‰',
   `price_channel_cny` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“ä»·ï¼ˆCNYï¼‰',
   `price_direct_idr` decimal(18,2) DEFAULT NULL COMMENT 'ç›´å®¢ä»·ï¼ˆIDRï¼‰',
@@ -2012,7 +2005,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `phone` varchar(50) DEFAULT NULL,
+  `phone` vamysqldump: Couldn't execute 'SHOW FIELDS FROM `v_current_product_prices`': View 'bantu_crm.v_current_product_prices' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them (1356)
+rchar(50) DEFAULT NULL,
   `display_name` varchar(255) DEFAULT NULL,
   `password_hash` varchar(255) DEFAULT NULL,
   `avatar_url` varchar(500) DEFAULT NULL,
@@ -2055,256 +2049,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `created_at`,
  1 AS `updated_at`*/;
 SET character_set_client = @saved_cs_client;
-SET @saved_cs_client     = @@character_set_client;
- 1 AS `id`,
- 1 AS `product_id`,
- 1 AS `organization_id`,
- 1 AS `price_type`,
- 1 AS `currency`,
- 1 AS `amount`,
- 1 AS `exchange_rate`,
- 1 AS `effective_from`,
- 1 AS `effective_to`,
- 1 AS `source`,
- 1 AS `is_approved`,
- 1 AS `approved_by`,
- 1 AS `approved_at`,
- 1 AS `change_reason`,
- 1 AS `changed_by`,
- 1 AS `created_at`,
- 1 AS `updated_at`,
- 1 AS `product_name`,
- 1 AS `product_code`*/;
-SET character_set_client = @saved_cs_client;
-SET @saved_cs_client     = @@character_set_client;
- 1 AS `id`,
- 1 AS `product_id`,
- 1 AS `organization_id`,
- 1 AS `price_type`,
- 1 AS `currency`,
- 1 AS `amount`,
- 1 AS `exchange_rate`,
- 1 AS `effective_from`,
- 1 AS `effective_to`,
- 1 AS `source`,
- 1 AS `is_approved`,
- 1 AS `approved_by`,
- 1 AS `approved_at`,
- 1 AS `change_reason`,
- 1 AS `changed_by`,
- 1 AS `created_at`,
- 1 AS `updated_at`,
- 1 AS `product_name`,
- 1 AS `product_code`,
- 1 AS `hours_until_effective`*/;
-SET character_set_client = @saved_cs_client;
-CREATE TABLE IF NOT EXISTS `vendor_extensions` (
-  `organization_id` char(36) NOT NULL,
-  `account_group` varchar(255) DEFAULT NULL,
-  `category_name` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`organization_id`),
-  CONSTRAINT `vendor_extensions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
-CREATE TABLE IF NOT EXISTS `vendor_product_price_history` (
-  `id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '主键ID',
-  `vendor_product_id` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '供应商产品关联ID',
-  `old_price_cny` decimal(18,2) DEFAULT NULL COMMENT '旧价格（人民币）',
-  `old_price_idr` decimal(18,2) DEFAULT NULL COMMENT '旧价格（印尼盾）',
-  `new_price_cny` decimal(18,2) DEFAULT NULL COMMENT '新价格（人民币）',
-  `new_price_idr` decimal(18,2) DEFAULT NULL COMMENT '新价格（印尼盾）',
-  `old_price` decimal(18,2) DEFAULT NULL COMMENT '旧价格',
-  `new_price` decimal(18,2) NOT NULL COMMENT '新价格',
-  `currency` varchar(3) NOT NULL DEFAULT 'IDR' COMMENT '货币类型：IDR/CNY',
-  `effective_from` datetime NOT NULL COMMENT '生效开始时间',
-  `effective_to` datetime DEFAULT NULL COMMENT '生效结束时间（如果为NULL表示当前有效）',
-  `change_reason` text COMMENT '变更原因',
-  `changed_by` char(36) DEFAULT NULL COMMENT '变更人ID',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_vendor_product_id` (`vendor_product_id`),
-  KEY `idx_effective_from` (`effective_from`),
-  KEY `idx_effective_to` (`effective_to`),
-  KEY `fk_vendor_product_price_history_changed_by` (`changed_by`),
-  CONSTRAINT `fk_vendor_product_price_history_changed_by` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_vendor_product_price_history_vendor_product` FOREIGN KEY (`vendor_product_id`) REFERENCES `vendor_products` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='供应商产品价格历史表';
-CREATE TABLE IF NOT EXISTS `vendor_products` (
-  `id` char(36) NOT NULL,
-  `organization_id` char(36) NOT NULL COMMENT 'ä¾›åº”å•†ç»„ç»‡IDï¼ˆè·¨æœåŠ¡ï¼Œæ— å¤–é”®ï¼‰',
-  `product_id` char(36) NOT NULL COMMENT 'äº§å“ID',
-  `is_primary` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'æ˜¯å¦ä¸»è¦ä¾›åº”å•†',
-  `priority` int NOT NULL DEFAULT '0' COMMENT 'ä¼˜å…ˆçº§ï¼ˆæ•°å­—è¶Šå°ä¼˜å…ˆçº§è¶Šé«˜ï¼‰',
-  `cost_price` decimal(18,2) DEFAULT NULL COMMENT '成本价（统一价格）',
-  `currency` varchar(3) DEFAULT 'IDR' COMMENT '货币类型：IDR/CNY',
-  `cost_price_idr` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆIDRï¼‰',
-  `cost_price_cny` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆCNYï¼‰',
-  `exchange_rate` decimal(18,9) DEFAULT '2000.000000000' COMMENT 'æ±‡çŽ‡',
-  `min_quantity` int NOT NULL DEFAULT '1' COMMENT 'æœ€å°è®¢è´­é‡',
-  `max_quantity` int DEFAULT NULL COMMENT 'æœ€å¤§è®¢è´­é‡',
-  `lead_time_days` int DEFAULT NULL COMMENT 'äº¤è´§æœŸï¼ˆå¤©æ•°ï¼‰',
-  `processing_days` int DEFAULT NULL COMMENT 'è¯¥ç»„ç»‡å¤„ç†è¯¥æœåŠ¡çš„å¤©æ•°',
-  `is_available` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'æ˜¯å¦å¯ç”¨',
-  `availability_notes` text COMMENT 'å¯ç”¨æ€§è¯´æ˜Ž',
-  `available_from` datetime DEFAULT NULL COMMENT 'å¯ç”¨å¼€å§‹æ—¶é—´',
-  `available_to` datetime DEFAULT NULL COMMENT 'å¯ç”¨ç»“æŸæ—¶é—´',
-  `account_code` varchar(100) DEFAULT NULL COMMENT 'ä¼šè®¡ç§‘ç›®ä»£ç ',
-  `cost_center` varchar(100) DEFAULT NULL COMMENT 'æˆæœ¬ä¸­å¿ƒ',
-  `expense_category` varchar(100) DEFAULT NULL COMMENT 'è´¹ç”¨ç±»åˆ«',
-  `notes` text COMMENT 'å¤‡æ³¨',
-  `created_by` char(36) DEFAULT NULL COMMENT 'åˆ›å»ºäººID',
-  `updated_by` char(36) DEFAULT NULL COMMENT 'æ›´æ–°äººID',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'åˆ›å»ºæ—¶é—´',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'æ›´æ–°æ—¶é—´',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_organization_product` (`organization_id`,`product_id`),
-  KEY `idx_organization_id` (`organization_id`),
-  KEY `idx_product_id` (`product_id`),
-  KEY `idx_is_primary` (`is_primary`),
-  KEY `idx_is_available` (`is_available`),
-  KEY `fk_vendor_products_created_by` (`created_by`),
-  KEY `fk_vendor_products_updated_by` (`updated_by`),
-  CONSTRAINT `fk_vendor_products_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_vendor_products_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_vendor_products_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='ä¾›åº”å•†äº§å“å…³è”è¡¨';
-CREATE TABLE IF NOT EXISTS `visa_records` (
-  `id` char(36) NOT NULL DEFAULT (uuid()),
-  `id_external` varchar(255) DEFAULT NULL,
-  `owner_id_external` varchar(255) DEFAULT NULL,
-  `owner_name` varchar(255) DEFAULT NULL,
-  `created_by_external` varchar(255) DEFAULT NULL,
-  `created_by_name` varchar(255) DEFAULT NULL,
-  `updated_by_external` varchar(255) DEFAULT NULL,
-  `updated_by_name` varchar(255) DEFAULT NULL,
-  `created_at_src` datetime DEFAULT NULL,
-  `updated_at_src` datetime DEFAULT NULL,
-  `last_action_at_src` datetime DEFAULT NULL,
-  `linked_module` varchar(100) DEFAULT NULL,
-  `linked_id_external` varchar(255) DEFAULT NULL,
-  `customer_name` varchar(255) NOT NULL,
-  `customer_id` char(36) DEFAULT NULL,
-  `passport_id` varchar(100) DEFAULT NULL,
-  `entry_city` varchar(100) DEFAULT NULL,
-  `currency_code` varchar(10) DEFAULT NULL,
-  `fx_rate` decimal(18,9) DEFAULT NULL,
-  `payment_amount` decimal(18,2) DEFAULT NULL,
-  `cancel_method` varchar(50) DEFAULT NULL,
-  `cancel_date_src` text,
-  `is_locked` tinyint(1) DEFAULT NULL,
-  `tags` json DEFAULT NULL,
-  `processor_name` varchar(255) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `id_external` (`id_external`),
-  KEY `customer_id` (`customer_id`),
-  CONSTRAINT `visa_records_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `chk_visa_fx_rate_nonneg` CHECK ((coalesce(`fx_rate`,0) >= 0)),
-  CONSTRAINT `chk_visa_payment_nonneg` CHECK ((coalesce(`payment_amount`,0) >= 0))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-  SET NEW.updated_at = NOW();
-END */;;
-CREATE TABLE IF NOT EXISTS `workflow_definitions` (
-  `id` char(36) NOT NULL DEFAULT (uuid()),
-  `name_zh` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆä¸­æ–‡ï¼‰',
-  `name_id` varchar(255) NOT NULL COMMENT 'å·¥ä½œæµåç§°ï¼ˆå°å°¼è¯­ï¼‰',
-  `code` varchar(100) NOT NULL COMMENT 'å·¥ä½œæµä»£ç ï¼ˆå”¯ä¸€ï¼‰',
-  `description_zh` text COMMENT 'æè¿°ï¼ˆä¸­æ–‡ï¼‰',
-  `description_id` text COMMENT 'æè¿°ï¼ˆå°å°¼è¯­ï¼‰',
-  `workflow_type` varchar(50) DEFAULT NULL COMMENT 'å·¥ä½œæµç±»åž‹',
-  `definition_json` json DEFAULT NULL COMMENT 'å·¥ä½œæµå®šä¹‰ï¼ˆJSON æ ¼å¼ï¼‰',
-  `version` int DEFAULT '1' COMMENT 'ç‰ˆæœ¬å·',
-  `is_active` tinyint(1) DEFAULT '1' COMMENT 'æ˜¯å¦æ¿€æ´»',
-  `created_by` char(36) DEFAULT NULL COMMENT 'åˆ›å»ºäººID',
-  `updated_by` char(36) DEFAULT NULL COMMENT 'æ›´æ–°äººID',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'åˆ›å»ºæ—¶é—´',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'æ›´æ–°æ—¶é—´',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `code` (`code`),
-  UNIQUE KEY `ux_workflow_definitions_code` (`code`),
-  KEY `created_by` (`created_by`),
-  KEY `updated_by` (`updated_by`),
-  KEY `ix_workflow_definitions_type` (`workflow_type`),
-  KEY `ix_workflow_definitions_active` (`is_active`),
-  KEY `ix_workflow_definitions_created_at` (`created_at` DESC),
-  CONSTRAINT `workflow_definitions_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `workflow_definitions_ibfk_2` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='å·¥ä½œæµå®šä¹‰è¡¨ - å­˜å‚¨å·¥ä½œæµçš„é…ç½®ä¿¡æ¯';
-CREATE TABLE IF NOT EXISTS `workflow_instances` (
-  `id` char(36) NOT NULL DEFAULT (uuid()),
-  `workflow_definition_id` char(36) DEFAULT NULL COMMENT '工作流定义ID',
-  `business_type` varchar(50) DEFAULT NULL COMMENT '业务类型：order(订单), service_record(服务记录)',
-  `business_id` char(36) DEFAULT NULL COMMENT '业务对象ID（订单ID或服务记录ID）',
-  `current_stage` varchar(100) DEFAULT NULL COMMENT '当前阶段',
-  `status` varchar(50) DEFAULT 'running' COMMENT '实例状态：running(运行中), completed(已完成), cancelled(已取消), suspended(已暂停)',
-  `started_by` char(36) DEFAULT NULL COMMENT '启动人ID',
-  `started_at` datetime DEFAULT NULL COMMENT '启动时间',
-  `completed_at` datetime DEFAULT NULL COMMENT '完成时间',
-  `variables` json DEFAULT NULL COMMENT '流程变量（JSON 格式）',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  KEY `ix_workflow_instances_definition` (`workflow_definition_id`),
-  KEY `ix_workflow_instances_business` (`business_type`,`business_id`),
-  KEY `ix_workflow_instances_status` (`status`),
-  KEY `ix_workflow_instances_started_by` (`started_by`),
-  KEY `ix_workflow_instances_started_at` (`started_at` DESC),
-  CONSTRAINT `workflow_instances_ibfk_1` FOREIGN KEY (`workflow_definition_id`) REFERENCES `workflow_definitions` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `workflow_instances_ibfk_2` FOREIGN KEY (`started_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `chk_workflow_instances_status` CHECK ((`status` in (_utf8mb4'running',_utf8mb4'completed',_utf8mb4'cancelled',_utf8mb4'suspended')))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流实例表 - 记录工作流的执行情况';
-CREATE TABLE IF NOT EXISTS `workflow_tasks` (
-  `id` char(36) NOT NULL DEFAULT (uuid()),
-  `workflow_instance_id` char(36) NOT NULL COMMENT '工作流实例ID',
-  `task_name_zh` varchar(255) DEFAULT NULL COMMENT '任务名称（中文）',
-  `task_name_id` varchar(255) DEFAULT NULL COMMENT '任务名称（印尼语）',
-  `task_code` varchar(100) DEFAULT NULL COMMENT '任务代码',
-  `task_type` varchar(50) DEFAULT NULL COMMENT '任务类型：user_task(用户任务), service_task(服务任务), script_task(脚本任务)',
-  `assigned_to_user_id` char(36) DEFAULT NULL COMMENT '分配给的用户ID',
-  `assigned_to_role_id` char(36) DEFAULT NULL COMMENT '分配给的角色ID',
-  `status` varchar(50) DEFAULT 'pending' COMMENT '任务状态：pending(待处理), in_progress(进行中), completed(已完成), cancelled(已取消)',
-  `due_date` datetime DEFAULT NULL COMMENT '到期日期',
-  `completed_at` datetime DEFAULT NULL COMMENT '完成时间',
-  `completed_by` char(36) DEFAULT NULL COMMENT '完成人ID',
-  `variables` json DEFAULT NULL COMMENT '任务变量（JSON 格式）',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`),
-  KEY `completed_by` (`completed_by`),
-  KEY `ix_workflow_tasks_instance` (`workflow_instance_id`),
-  KEY `ix_workflow_tasks_assigned_user` (`assigned_to_user_id`),
-  KEY `ix_workflow_tasks_assigned_role` (`assigned_to_role_id`),
-  KEY `ix_workflow_tasks_status` (`status`),
-  KEY `ix_workflow_tasks_due_date` (`due_date`),
-  KEY `ix_workflow_tasks_created_at` (`created_at` DESC),
-  CONSTRAINT `workflow_tasks_ibfk_1` FOREIGN KEY (`workflow_instance_id`) REFERENCES `workflow_instances` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `workflow_tasks_ibfk_2` FOREIGN KEY (`assigned_to_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `workflow_tasks_ibfk_3` FOREIGN KEY (`assigned_to_role_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `workflow_tasks_ibfk_4` FOREIGN KEY (`completed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `chk_workflow_tasks_status` CHECK ((`status` in (_utf8mb4'pending',_utf8mb4'in_progress',_utf8mb4'completed',_utf8mb4'cancelled'))),
-  CONSTRAINT `chk_workflow_tasks_type` CHECK (((`task_type` in (_utf8mb4'user_task',_utf8mb4'service_task',_utf8mb4'script_task')) or (`task_type` is null)))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流任务表 - 记录需要处理的任务';
-CREATE TABLE IF NOT EXISTS `workflow_transitions` (
-  `id` char(36) NOT NULL DEFAULT (uuid()),
-  `workflow_instance_id` char(36) NOT NULL COMMENT '工作流实例ID',
-  `from_stage` varchar(100) DEFAULT NULL COMMENT '源阶段',
-  `to_stage` varchar(100) DEFAULT NULL COMMENT '目标阶段',
-  `transition_condition` text COMMENT '流转条件',
-  `triggered_by` char(36) DEFAULT NULL COMMENT '触发人ID',
-  `triggered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '触发时间',
-  `notes` text COMMENT '备注',
-  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  KEY `ix_workflow_transitions_instance` (`workflow_instance_id`),
-  KEY `ix_workflow_transitions_triggered_by` (`triggered_by`),
-  KEY `ix_workflow_transitions_triggered_at` (`triggered_at` DESC),
-  CONSTRAINT `workflow_transitions_ibfk_1` FOREIGN KEY (`workflow_instance_id`) REFERENCES `workflow_instances` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `workflow_transitions_ibfk_2` FOREIGN KEY (`triggered_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工作流流转记录表 - 记录工作流的流转历史';
+command terminated with exit code 2
 
 -- 重新启用外键检查
 SET FOREIGN_KEY_CHECKS = 1;

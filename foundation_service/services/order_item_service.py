@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from common.models import OrderItem, Customer, Organization
 from common.models.order import Order
+from common.models.order_price_snapshot import OrderPriceSnapshot
 from foundation_service.repositories.order_item_repository import OrderItemRepository
 from foundation_service.services.product_price_service import ProductPriceService
 from foundation_service.schemas.order_item import (
@@ -238,6 +239,32 @@ class OrderItemService:
             
             # 8. 保存到数据库
             order_item = await self.repository.create(order_item)
+            await self.db.flush()  # 先 flush 获取 order_item.id
+            
+            # 9. 保存价格快照到 order_price_snapshots 表
+            try:
+                await self._save_price_snapshot(
+                    order_id=request.order_id,
+                    order_item_id=order_item.id,
+                    product_id=request.product_id,
+                    price_type=self._determine_price_type(order, sales_price),  # 根据订单类型确定价格类型
+                    currency=currency_code,
+                    unit_price=unit_price,
+                    quantity=request.quantity,
+                    discount_amount=request.discount_amount,
+                    item_amount=item_amount,
+                    exchange_rate=None,  # 可以从订单或产品获取
+                    customer_level_code=sales_price.get("customer_level") if sales_price else None,
+                    customer_level_price=unit_price  # 客户等级价格就是单价
+                )
+            except Exception as e:
+                # 价格快照保存失败不影响订单项创建，只记录日志
+                logger.warning(
+                    f"[Service] {method_name} - 保存价格快照失败 | "
+                    f"错误: {str(e)}",
+                    exc_info=True
+                )
+            
             await self.db.commit()
             
             elapsed_time = (time.time() - start_time) * 1000
@@ -606,4 +633,90 @@ class OrderItemService:
             created_at=order_item.created_at.isoformat() if order_item.created_at else "",
             updated_at=order_item.updated_at.isoformat() if order_item.updated_at else "",
         )
+    
+    async def _save_price_snapshot(
+        self,
+        order_id: str,
+        order_item_id: str,
+        product_id: str,
+        price_type: str,
+        currency: str,
+        unit_price: Decimal,
+        quantity: int,
+        discount_amount: Decimal,
+        item_amount: Decimal,
+        exchange_rate: Optional[Decimal] = None,
+        customer_level_code: Optional[str] = None,
+        customer_level_price: Optional[Decimal] = None
+    ) -> None:
+        """
+        保存订单价格快照
+        
+        Args:
+            order_id: 订单ID
+            order_item_id: 订单项ID
+            product_id: 产品ID
+            price_type: 价格类型（channel, direct, list）
+            currency: 货币类型
+            unit_price: 单价
+            quantity: 数量
+            discount_amount: 折扣金额
+            item_amount: 订单项金额
+            exchange_rate: 汇率（可选）
+            customer_level_code: 客户等级代码（可选）
+            customer_level_price: 客户等级价格（可选）
+        """
+        # 确定基准货币和转换后货币
+        base_currency = currency
+        converted_currency = "CNY" if currency == "IDR" else "IDR"
+        
+        snapshot = OrderPriceSnapshot(
+            order_id=order_id,
+            order_item_id=order_item_id,
+            product_id=product_id,
+            price_type=price_type,
+            currency=currency,
+            unit_price=unit_price,
+            quantity=quantity,
+            subtotal=unit_price * quantity,
+            discount_amount=discount_amount,
+            final_amount=item_amount,
+            exchange_rate=exchange_rate,
+            base_currency=base_currency,
+            converted_currency=converted_currency,
+            customer_level_code=customer_level_code,
+            customer_level_price=customer_level_price
+        )
+        
+        self.db.add(snapshot)
+        await self.db.flush()
+        
+        logger.debug(
+            f"保存订单价格快照 | "
+            f"order_id={order_id}, order_item_id={order_item_id}, "
+            f"product_id={product_id}, price_type={price_type}, "
+            f"currency={currency}, unit_price={unit_price}"
+        )
+    
+    def _determine_price_type(self, order: Order, sales_price: Optional[dict]) -> str:
+        """
+        根据订单类型确定价格类型
+        
+        Args:
+            order: 订单对象
+            sales_price: 销售价格信息（可选）
+            
+        Returns:
+            价格类型（channel, direct, list）
+        """
+        # 可以根据订单的渠道类型或其他字段判断
+        # 这里先返回 direct，后续可以根据实际业务逻辑调整
+        # 如果订单有渠道信息，可以判断是 channel 还是 direct
+        if hasattr(order, 'channel_id') and order.channel_id:
+            return 'channel'
+        elif hasattr(order, 'order_type') and order.order_type == 'direct':
+            return 'direct'
+        else:
+            # 默认返回 direct
+            return 'direct'
 

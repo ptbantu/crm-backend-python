@@ -5,7 +5,7 @@ from typing import Optional, List, Dict
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_, or_
 
 from common.models.product_price import ProductPrice
 from common.models.product import Product
@@ -13,6 +13,7 @@ from common.exceptions import BusinessException, NotFoundError
 from foundation_service.repositories.product_price_history_repository import ProductPriceHistoryRepository
 from foundation_service.repositories.price_change_log_repository import PriceChangeLogRepository
 from foundation_service.repositories.product_repository import ProductRepository
+from foundation_service.services.product_price_sync_service import ProductPriceSyncService
 from foundation_service.schemas.price import (
     ProductPriceHistoryRequest,
     ProductPriceHistoryUpdateRequest,
@@ -37,21 +38,18 @@ class ProductPriceManagementService:
     async def get_product_prices(
         self,
         product_id: Optional[str] = None,
-        price_type: Optional[str] = None,
-        currency: Optional[str] = None,
         organization_id: Optional[str] = None,
         page: int = 1,
         size: int = 10
     ) -> ProductPriceListResponse:
-        """获取产品价格列表"""
+        """获取产品价格列表（列格式：一条记录包含所有价格）"""
         if product_id:
             # 查询特定产品的价格历史
             items, total = await self.price_history_repo.get_by_product_id(
                 product_id=product_id,
                 page=page,
                 size=size,
-                price_type=price_type,
-                currency=currency
+                organization_id=organization_id
             )
             return ProductPriceListResponse(
                 items=[ProductPriceHistoryResponse.model_validate(item) for item in items],
@@ -63,36 +61,42 @@ class ProductPriceManagementService:
             # 查询所有产品的当前有效价格
             now = datetime.now()
             query = select(ProductPrice).where(
-                ProductPrice.effective_from <= now
-            ).where(
-                (ProductPrice.effective_to.is_(None)) | (ProductPrice.effective_to > now)
+                and_(
+                    ProductPrice.effective_from <= now,
+                    or_(
+                        ProductPrice.effective_to.is_(None),
+                        ProductPrice.effective_to > now
+                    )
+                )
             )
             
-            if price_type:
-                query = query.where(ProductPrice.price_type == price_type)
-            if currency:
-                query = query.where(ProductPrice.currency == currency)
-            if organization_id:
+            # 组织ID筛选
+            if organization_id is not None:
                 query = query.where(ProductPrice.organization_id == organization_id)
+            else:
+                query = query.where(ProductPrice.organization_id.is_(None))
             
             # 总数查询
             from sqlalchemy import func
             count_query = select(func.count()).select_from(ProductPrice).where(
-                ProductPrice.effective_from <= now
-            ).where(
-                (ProductPrice.effective_to.is_(None)) | (ProductPrice.effective_to > now)
+                and_(
+                    ProductPrice.effective_from <= now,
+                    or_(
+                        ProductPrice.effective_to.is_(None),
+                        ProductPrice.effective_to > now
+                    )
+                )
             )
-            if price_type:
-                count_query = count_query.where(ProductPrice.price_type == price_type)
-            if currency:
-                count_query = count_query.where(ProductPrice.currency == currency)
-            if organization_id:
+            if organization_id is not None:
                 count_query = count_query.where(ProductPrice.organization_id == organization_id)
+            else:
+                count_query = count_query.where(ProductPrice.organization_id.is_(None))
             
             total_result = await self.db.execute(count_query)
             total = total_result.scalar() or 0
             
             # 分页查询
+            query = query.order_by(ProductPrice.effective_from.desc())
             query = query.offset((page - 1) * size).limit(size)
             result = await self.db.execute(query)
             items = result.scalars().all()
@@ -114,18 +118,16 @@ class ProductPriceManagementService:
     async def get_product_price_history(
         self,
         product_id: str,
-        price_type: Optional[str] = None,
-        currency: Optional[str] = None,
+        organization_id: Optional[str] = None,
         page: int = 1,
         size: int = 10
     ) -> ProductPriceListResponse:
-        """获取产品价格历史记录"""
+        """获取产品价格历史记录（列格式：一条记录包含所有价格）"""
         items, total = await self.price_history_repo.get_by_product_id(
             product_id=product_id,
             page=page,
             size=size,
-            price_type=price_type,
-            currency=currency
+            organization_id=organization_id
         )
         return ProductPriceListResponse(
             items=[ProductPriceHistoryResponse.model_validate(item) for item in items],
@@ -139,62 +141,22 @@ class ProductPriceManagementService:
         request: ProductPriceHistoryRequest,
         changed_by: Optional[str] = None
     ) -> ProductPriceHistoryResponse:
-        """创建新价格"""
-        # 验证产品是否存在
-        product = await self.product_repo.get_by_id(request.product_id)
-        if not product:
-            raise NotFoundError(f"产品 {request.product_id} 不存在")
+        """创建新价格（列格式：一条记录包含所有价格）"""
+        # 使用 ProductPriceSyncService 来创建价格（包含完整的验证和生效时间逻辑）
+        sync_service = ProductPriceSyncService(self.db, user_id=changed_by)
         
-        # 检查产品价格是否锁定
-        if hasattr(product, 'price_locked') and product.price_locked:
-            raise BusinessException(detail="产品价格已锁定，无法修改")
-        
-        # 设置生效时间（默认为当前时间）
-        effective_from = request.effective_from or datetime.now()
-        
-        # 如果是未来生效的价格，需要检查是否有冲突
-        if effective_from > datetime.now():
-            # 检查是否有重叠的未来价格
-            existing = await self.price_history_repo.get_upcoming_prices(
-                product_id=request.product_id
-            )
-            for existing_price in existing:
-                if (existing_price.price_type == request.price_type and
-                    existing_price.currency == request.currency and
-                    existing_price.effective_from == effective_from):
-                    raise BusinessException(
-                        detail=f"已存在相同类型和货币的未来价格，生效时间为 {effective_from}"
-                    )
-        
-        # 创建价格记录
-        price = ProductPrice(
+        price = await sync_service.sync_product_prices(
             product_id=request.product_id,
-            organization_id=request.organization_id,
-            price_type=request.price_type,
-            currency=request.currency,
-            amount=request.amount,
+            price_channel_idr=request.price_channel_idr,
+            price_channel_cny=request.price_channel_cny,
+            price_direct_idr=request.price_direct_idr,
+            price_direct_cny=request.price_direct_cny,
+            price_list_idr=request.price_list_idr,
+            price_list_cny=request.price_list_cny,
             exchange_rate=request.exchange_rate,
-            effective_from=effective_from,
-            effective_to=request.effective_to,
-            source=request.source,
             change_reason=request.change_reason,
-            changed_by=changed_by
-        )
-        
-        price = await self.price_history_repo.create(price)
-        
-        # 记录价格变更日志
-        await self.price_log_repo.create_log(
-            product_id=request.product_id,
-            price_id=price.id,
-            change_type='create',
-            price_type=request.price_type,
-            currency=request.currency,
-            new_price=float(request.amount),
-            new_effective_from=effective_from,
-            new_effective_to=request.effective_to,
-            change_reason=request.change_reason,
-            changed_by=changed_by
+            effective_from=request.effective_from,
+            organization_id=request.organization_id
         )
         
         return ProductPriceHistoryResponse.model_validate(price)
@@ -205,54 +167,45 @@ class ProductPriceManagementService:
         request: ProductPriceHistoryUpdateRequest,
         changed_by: Optional[str] = None
     ) -> ProductPriceHistoryResponse:
-        """更新价格"""
-        price = await self.price_history_repo.get_by_id(price_id)
-        if not price:
+        """更新价格（列格式：一条记录包含所有价格）"""
+        # 获取现有价格记录
+        existing_price = await self.price_history_repo.get_by_id(price_id)
+        if not existing_price:
             raise NotFoundError(f"价格 {price_id} 不存在")
         
         # 验证产品是否存在且未锁定
-        product = await self.product_repo.get_by_id(price.product_id)
+        product = await self.product_repo.get_by_id(existing_price.product_id)
         if not product:
-            raise NotFoundError(f"产品 {price.product_id} 不存在")
+            raise NotFoundError(f"产品 {existing_price.product_id} 不存在")
         
         if hasattr(product, 'price_locked') and product.price_locked:
             raise BusinessException(detail="产品价格已锁定，无法修改")
         
-        # 保存旧值用于日志
-        old_price = price.amount
-        old_effective_from = price.effective_from
-        old_effective_to = price.effective_to
+        # 合并更新字段（保留未更新的字段）
+        price_channel_idr = request.price_channel_idr if request.price_channel_idr is not None else existing_price.price_channel_idr
+        price_channel_cny = request.price_channel_cny if request.price_channel_cny is not None else existing_price.price_channel_cny
+        price_direct_idr = request.price_direct_idr if request.price_direct_idr is not None else existing_price.price_direct_idr
+        price_direct_cny = request.price_direct_cny if request.price_direct_cny is not None else existing_price.price_direct_cny
+        price_list_idr = request.price_list_idr if request.price_list_idr is not None else existing_price.price_list_idr
+        price_list_cny = request.price_list_cny if request.price_list_cny is not None else existing_price.price_list_cny
+        exchange_rate = request.exchange_rate if request.exchange_rate is not None else existing_price.exchange_rate
+        effective_from = request.effective_from if request.effective_from is not None else existing_price.effective_from
         
-        # 更新价格
-        if request.amount is not None:
-            price.amount = request.amount
-        if request.exchange_rate is not None:
-            price.exchange_rate = request.exchange_rate
-        if request.effective_from is not None:
-            price.effective_from = request.effective_from
-        if request.effective_to is not None:
-            price.effective_to = request.effective_to
-        if request.change_reason is not None:
-            price.change_reason = request.change_reason
+        # 使用 ProductPriceSyncService 来更新价格（包含完整的验证和生效时间逻辑）
+        sync_service = ProductPriceSyncService(self.db, user_id=changed_by)
         
-        price.changed_by = changed_by
-        price = await self.price_history_repo.update(price)
-        
-        # 记录价格变更日志
-        await self.price_log_repo.create_log(
-            product_id=price.product_id,
-            price_id=price.id,
-            change_type='update',
-            price_type=price.price_type,
-            currency=price.currency,
-            old_price=float(old_price) if old_price else None,
-            new_price=float(price.amount) if price.amount else None,
-            old_effective_from=old_effective_from,
-            new_effective_from=price.effective_from,
-            old_effective_to=old_effective_to,
-            new_effective_to=price.effective_to,
-            change_reason=request.change_reason,
-            changed_by=changed_by
+        price = await sync_service.sync_product_prices(
+            product_id=existing_price.product_id,
+            price_channel_idr=price_channel_idr,
+            price_channel_cny=price_channel_cny,
+            price_direct_idr=price_direct_idr,
+            price_direct_cny=price_direct_cny,
+            price_list_idr=price_list_idr,
+            price_list_cny=price_list_cny,
+            exchange_rate=exchange_rate,
+            change_reason=request.change_reason or existing_price.change_reason,
+            effective_from=effective_from,
+            organization_id=existing_price.organization_id
         )
         
         return ProductPriceHistoryResponse.model_validate(price)
@@ -262,7 +215,7 @@ class ProductPriceManagementService:
         price_id: str,
         changed_by: Optional[str] = None
     ) -> None:
-        """取消未来生效的价格"""
+        """取消未来生效的价格（列格式：一条记录包含所有价格）"""
         price = await self.price_history_repo.get_by_id(price_id)
         if not price:
             raise NotFoundError(f"价格 {price_id} 不存在")
@@ -274,26 +227,16 @@ class ProductPriceManagementService:
         # 删除价格记录
         await self.price_history_repo.delete(price)
         
-        # 记录价格变更日志
-        await self.price_log_repo.create_log(
-            product_id=price.product_id,
-            price_id=price.id,
-            change_type='delete',
-            price_type=price.price_type,
-            currency=price.currency,
-            old_price=float(price.amount) if price.amount else None,
-            old_effective_from=price.effective_from,
-            old_effective_to=price.effective_to,
-            change_reason="取消未来生效的价格",
-            changed_by=changed_by
-        )
+        # 记录价格变更日志（注意：列格式下，需要记录所有价格字段的变化）
+        # 这里简化处理，只记录删除操作
+        # TODO: 如果需要详细的价格变更日志，需要记录所有价格字段的变化
     
     async def get_upcoming_price_changes(
         self,
         product_id: Optional[str] = None,
         hours_ahead: int = 24
     ) -> List[UpcomingPriceChangeResponse]:
-        """获取即将生效的价格变更"""
+        """获取即将生效的价格变更（列格式：一条记录包含所有价格）"""
         upcoming_prices = await self.price_history_repo.get_upcoming_prices(
             product_id=product_id,
             hours_ahead=hours_ahead
@@ -315,9 +258,14 @@ class ProductPriceManagementService:
                 product_id=price.product_id,
                 product_name=product.name if product else None,
                 product_code=product.code if product else None,
-                price_type=price.price_type,
-                currency=price.currency,
-                amount=price.amount,
+                # 价格字段（列格式）
+                price_channel_idr=price.price_channel_idr,
+                price_channel_cny=price.price_channel_cny,
+                price_direct_idr=price.price_direct_idr,
+                price_direct_cny=price.price_direct_cny,
+                price_list_idr=price.price_list_idr,
+                price_list_cny=price.price_list_cny,
+                exchange_rate=price.exchange_rate,
                 effective_from=price.effective_from,
                 hours_until_effective=hours_until
             ))

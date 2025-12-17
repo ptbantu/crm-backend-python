@@ -21,27 +21,28 @@ class ProductPriceHistoryRepository(BaseRepository[ProductPrice]):
         product_id: str,
         page: int = 1,
         size: int = 10,
-        price_type: Optional[str] = None,
-        currency: Optional[str] = None
+        organization_id: Optional[str] = None
     ) -> Tuple[List[ProductPrice], int]:
-        """根据产品ID查询价格历史"""
+        """根据产品ID查询价格历史（列格式：一条记录包含所有价格）"""
         query = select(ProductPrice).where(
             ProductPrice.product_id == product_id
         )
         
-        if price_type:
-            query = query.where(ProductPrice.price_type == price_type)
-        if currency:
-            query = query.where(ProductPrice.currency == currency)
+        # 组织ID筛选
+        if organization_id is not None:
+            query = query.where(ProductPrice.organization_id == organization_id)
+        else:
+            # 如果 organization_id 为 None，查询通用价格（organization_id 为 NULL）
+            query = query.where(ProductPrice.organization_id.is_(None))
         
         # 总数查询
         count_query = select(func.count()).select_from(ProductPrice).where(
             ProductPrice.product_id == product_id
         )
-        if price_type:
-            count_query = count_query.where(ProductPrice.price_type == price_type)
-        if currency:
-            count_query = count_query.where(ProductPrice.currency == currency)
+        if organization_id is not None:
+            count_query = count_query.where(ProductPrice.organization_id == organization_id)
+        else:
+            count_query = count_query.where(ProductPrice.organization_id.is_(None))
         
         total_result = await self.db.execute(count_query)
         total = total_result.scalar() or 0
@@ -58,17 +59,13 @@ class ProductPriceHistoryRepository(BaseRepository[ProductPrice]):
     async def get_current_price(
         self,
         product_id: str,
-        price_type: str,
-        currency: str,
         organization_id: Optional[str] = None
     ) -> Optional[ProductPrice]:
-        """获取当前有效的价格"""
+        """获取当前有效的价格（列格式：一条记录包含所有价格）"""
         now = datetime.now()
         query = select(ProductPrice).where(
             and_(
                 ProductPrice.product_id == product_id,
-                ProductPrice.price_type == price_type,
-                ProductPrice.currency == currency,
                 ProductPrice.effective_from <= now,
                 or_(
                     ProductPrice.effective_to.is_(None),
@@ -77,7 +74,8 @@ class ProductPriceHistoryRepository(BaseRepository[ProductPrice]):
             )
         )
         
-        if organization_id:
+        # 组织ID筛选
+        if organization_id is not None:
             query = query.where(ProductPrice.organization_id == organization_id)
         else:
             query = query.where(ProductPrice.organization_id.is_(None))

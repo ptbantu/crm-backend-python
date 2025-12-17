@@ -50,6 +50,7 @@ from common.models.order_price_snapshot import OrderPriceSnapshot
 from common.models.exchange_rate_history import ExchangeRateHistory
 from common.models.price_change_log import PriceChangeLog
 from common.models.customer_level_price import CustomerLevelPrice
+from common.models.product_price_list import ProductPriceList
 from common.models.operation_audit_log import OperationAuditLog
 from common.models.vendor_product_financial import VendorProductFinancial
 # 导入 Order、Lead、Notification、LeadFollowUp、LeadNote（现在统一使用 common.models 中的版本）
@@ -111,6 +112,7 @@ __all__ = [
     "ExchangeRateHistory",
     "PriceChangeLog",
     "CustomerLevelPrice",
+    "ProductPriceList",
     "VendorProductFinancial",
     "AuditLog",
 ]

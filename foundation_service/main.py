@@ -39,7 +39,7 @@ from common.models import (
     ProductDependency, Customer, CustomerSource, CustomerChannel,
     ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
     OrderPriceSnapshot, ExchangeRateHistory, PriceChangeLog, CustomerLevelPrice,
-    VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog
+    ProductPriceList, VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog
 )
 
 # 初始化日志

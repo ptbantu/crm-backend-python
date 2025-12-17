@@ -5,8 +5,10 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, join, distinct, and_
 from decimal import Decimal
+from datetime import datetime
 from common.models.vendor_product import VendorProduct
 from common.models.product import Product
+from common.models.product_price import ProductPrice
 from common.utils.repository import BaseRepository
 
 
@@ -148,11 +150,44 @@ class VendorProductRepository(BaseRepository[VendorProduct]):
         # 批量创建
         created_items = []
         for product_id in new_product_ids:
+            # 如果没有提供默认成本价，优先从 product_prices 表获取成本价
+            # 如果没有，使用 products.estimated_cost_idr 和 products.estimated_cost_cny
+            cost_price_cny = default_cost_price_cny
+            cost_price_idr = default_cost_price_idr
+            
+            if cost_price_cny is None or cost_price_idr is None:
+                # 从 product_prices 表查询当前有效的成本价
+                now = datetime.now()
+                price_query = select(ProductPrice).where(
+                    and_(
+                        ProductPrice.product_id == product_id,
+                        ProductPrice.organization_id.is_(None),  # 通用价格
+                        ProductPrice.effective_from <= now,
+                        or_(
+                            ProductPrice.effective_to.is_(None),
+                            ProductPrice.effective_to >= now
+                        )
+                    )
+                ).order_by(ProductPrice.effective_from.desc()).limit(1)
+                
+                price_result = await self.db.execute(price_query)
+                price_record = price_result.scalar_one_or_none()
+                
+                if price_record:
+                    # 从 product_prices 表获取成本价
+                    if cost_price_cny is None:
+                        cost_price_cny = price_record.price_cost_cny
+                    if cost_price_idr is None:
+                        cost_price_idr = price_record.price_cost_idr
+                
+                # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
+                # 如果 product_prices 表中没有成本价，则使用 None（需要用户手动设置）
+            
             vendor_product = VendorProduct(
                 organization_id=vendor_id,
                 product_id=product_id,
-                cost_price_cny=default_cost_price_cny,
-                cost_price_idr=default_cost_price_idr,
+                cost_price_cny=cost_price_cny,
+                cost_price_idr=cost_price_idr,
                 is_available=is_available,
                 is_primary=is_primary,
             )

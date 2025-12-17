@@ -37,27 +37,17 @@ class Product(Base):
     linked_module = Column(String(100), nullable=True)
     linked_id_external = Column(String(255), nullable=True)
     
-    # 基础价格字段（向后兼容）
-    price_list = Column(Numeric(18, 2), nullable=True)
-    price_channel = Column(Numeric(18, 2), nullable=True)
-    price_cost = Column(Numeric(18, 2), nullable=True)
+    # 注意：成本价和预估成本字段已删除
+    # - price_cost_idr, price_cost_cny（已迁移到 product_prices 表）
+    # - estimated_cost_idr, estimated_cost_cny（已删除，不再使用）
     
-    # 多货币价格字段（IDR/CNY）
-    price_cost_idr = Column(Numeric(18, 2), nullable=True)
-    price_cost_cny = Column(Numeric(18, 2), nullable=True)
-    # 预估成本（用于供应商关联产品时的默认成本价）
-    estimated_cost_idr = Column(Numeric(18, 2), nullable=True, comment="预估成本-IDR（供应商关联产品时的默认成本价）")
-    estimated_cost_cny = Column(Numeric(18, 2), nullable=True, comment="预估成本-CNY（供应商关联产品时的默认成本价）")
-    price_channel_idr = Column(Numeric(18, 2), nullable=True)
-    price_channel_cny = Column(Numeric(18, 2), nullable=True)
-    price_direct_idr = Column(Numeric(18, 2), nullable=True)
-    price_direct_cny = Column(Numeric(18, 2), nullable=True)
-    price_list_idr = Column(Numeric(18, 2), nullable=True)
-    price_list_cny = Column(Numeric(18, 2), nullable=True)
-    
-    # 汇率相关
-    default_currency = Column(String(10), default="IDR", nullable=False)
-    exchange_rate = Column(Numeric(18, 9), default=2000, nullable=True)
+    # 注意：销售价格（渠道价、直客价、列表价）已迁移到 product_prices 表
+    # 已删除的字段：
+    # - price_list, price_channel, price_cost（旧字段，单货币）
+    # - price_channel_idr, price_channel_cny（渠道价，已迁移到 product_prices）
+    # - price_direct_idr, price_direct_cny（直客价，已迁移到 product_prices）
+    # - price_list_idr, price_list_cny（列表价，已迁移到 product_prices）
+    # - exchange_rate, default_currency（汇率，已迁移到 product_prices）
     
     # 服务属性
     service_type = Column(String(50), nullable=True, index=True)

@@ -13,6 +13,7 @@ from common.models.customer import Customer
 from common.models.organization import Organization
 from common.exceptions import BusinessException, NotFoundError
 from common.utils.logger import get_logger
+from foundation_service.services.sales_price_service import SalesPriceService
 
 logger = get_logger(__name__)
 
@@ -22,6 +23,7 @@ class ProductPriceService:
     
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.sales_price_service = SalesPriceService(db)
     
     async def get_sales_price(
         self,
@@ -63,65 +65,76 @@ class ProductPriceService:
         
         level_code = customer.level_code  # 例如: '2', '3', '4', '5', '6'
         
-        # 2. 查询产品的有效销售价格
-        # 注意：这里需要动态查询 product_price_list 表
-        # 由于表可能还未创建模型，我们使用原生SQL或先创建模型
-        # 暂时使用原生SQL查询
-        from sqlalchemy import text
+        # 2. 优先从 product_price_list 表查询客户等级价格
+        try:
+            price_cny = await self.sales_price_service.get_customer_level_price(
+                product_id=product_id,
+                customer_level_code=level_code,
+                currency="CNY"
+            )
+            price_idr = await self.sales_price_service.get_customer_level_price(
+                product_id=product_id,
+                customer_level_code=level_code,
+                currency="IDR"
+            )
+            
+            # 如果 product_price_list 表中有价格，直接返回
+            if price_cny is not None or price_idr is not None:
+                response = {
+                    "product_id": product_id,
+                    "customer_level": level_code,
+                    "price_cny": price_cny or Decimal('0'),
+                    "price_idr": price_idr or Decimal('0'),
+                    "effective_from": datetime.now(),  # TODO: 从 product_price_list 获取实际生效时间
+                    "effective_to": None
+                }
+                
+                # 如果指定了币种，只返回对应币种
+                if currency == "CNY":
+                    response["price_idr"] = None
+                elif currency == "IDR":
+                    response["price_cny"] = None
+                
+                return response
+        except Exception as e:
+            logger.warning(f"从 product_price_list 表查询价格失败: {e}")
         
-        now = datetime.now()
-        sql = text("""
-            SELECT 
-                id,
-                product_id,
-                price_level2_cny, price_level2_idr,
-                price_level3_cny, price_level3_idr,
-                price_level4_cny, price_level4_idr,
-                price_level5_cny, price_level5_idr,
-                price_level6_cny, price_level6_idr,
-                is_active,
-                effective_from,
-                effective_to
-            FROM product_price_list
-            WHERE product_id = :product_id
-              AND is_active = 1
-              AND effective_from <= :now
-              AND (effective_to IS NULL OR effective_to > :now)
-            LIMIT 1
-        """)
+        # 3. 如果 product_price_list 表中没有，尝试从 product_prices 表查询（根据客户等级推断价格类型）
+        # 这里可以根据业务规则，将客户等级映射到价格类型（channel/direct/list）
+        # 暂时使用 direct 价格作为默认值
+        try:
+            price_cny = await self.sales_price_service.get_product_price(
+                product_id=product_id,
+                price_type="direct",
+                currency="CNY"
+            )
+            price_idr = await self.sales_price_service.get_product_price(
+                product_id=product_id,
+                price_type="direct",
+                currency="IDR"
+            )
+            
+            if price_cny is not None or price_idr is not None:
+                response = {
+                    "product_id": product_id,
+                    "customer_level": level_code,
+                    "price_cny": price_cny or Decimal('0'),
+                    "price_idr": price_idr or Decimal('0'),
+                    "effective_from": datetime.now(),
+                    "effective_to": None
+                }
+                
+                if currency == "CNY":
+                    response["price_idr"] = None
+                elif currency == "IDR":
+                    response["price_cny"] = None
+                
+                return response
+        except Exception as e:
+            logger.warning(f"从 product_prices 表查询价格失败: {e}")
         
-        result = await self.db.execute(
-            sql,
-            {"product_id": product_id, "now": now}
-        )
-        price_record = result.fetchone()
-        
-        if not price_record:
-            raise NotFoundError(f"产品 {product_id} 未设置销售价格")
-        
-        # 3. 根据客户等级和币种返回价格
-        level_field_cny = f"price_level{level_code}_cny"
-        level_field_idr = f"price_level{level_code}_idr"
-        
-        price_cny = getattr(price_record, level_field_cny) or Decimal('0')
-        price_idr = getattr(price_record, level_field_idr) or Decimal('0')
-        
-        response = {
-            "product_id": product_id,
-            "customer_level": level_code,
-            "price_cny": price_cny,
-            "price_idr": price_idr,
-            "effective_from": price_record.effective_from,
-            "effective_to": price_record.effective_to
-        }
-        
-        # 如果指定了币种，只返回对应币种
-        if currency == "CNY":
-            response["price_idr"] = None
-        elif currency == "IDR":
-            response["price_cny"] = None
-        
-        return response
+        # 4. 如果都没有，抛出异常
+        raise NotFoundError(f"产品 {product_id} 未设置销售价格")
     
     async def get_cost_price(
         self,
