@@ -142,3 +142,15 @@ async def get_products_by_vendor(
     )
     return Result.success(data=result)
 
+
+@router.get("/check-code/{code}", response_model=Result[dict])
+async def check_product_code(
+    code: str,
+    exclude_product_id: Optional[str] = Query(None, description="排除的产品ID（用于编辑时检查）"),
+    db: AsyncSession = Depends(get_db)
+):
+    """检查产品编码是否已存在"""
+    service = ProductService(db)
+    exists = await service.check_code_exists(code, exclude_product_id=exclude_product_id)
+    return Result.success(data={"exists": exists, "code": code})
+

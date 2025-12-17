@@ -7,6 +7,8 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc, text
 import logging
+import json
+import re
 from foundation_service.schemas.product import (
     ProductCreateRequest,
     ProductUpdateRequest,
@@ -73,6 +75,16 @@ class ProductService:
                 # 编码字段可以为空
                 pass
         
+        # 处理前端新增字段
+        # 注意：applicable_regions 字段不在 products 表中
+        # 将适用地区存储到 tags 字段（格式：region:地区名）
+        extended_tags = list(request.tags) if request.tags else []
+        if request.applicable_regions:
+            # 将适用地区添加到标签中
+            extended_tags.extend([f"region:{region}" for region in request.applicable_regions])
+        
+        extended_notes = request.notes or ""
+        
         # 创建产品
         product = Product(
             name=request.name,
@@ -88,6 +100,10 @@ class ProductService:
             is_urgent_available=request.is_urgent_available,
             urgent_processing_days=request.urgent_processing_days,
             urgent_price_surcharge=request.urgent_price_surcharge,
+            # 服务与供应商管理字段
+            std_duration_days=request.std_duration_days,
+            allow_multi_vendor=request.allow_multi_vendor,
+            default_supplier_id=default_supplier_id,
             # 注意：price_cost_idr 和 price_cost_cny 已迁移到 product_prices 表
             # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
             # 注意：销售价格（渠道价、直客价、列表价）已迁移到 product_prices 表
@@ -102,14 +118,21 @@ class ProductService:
             status=request.status,
             suspended_reason=request.suspended_reason,
             required_documents=request.required_documents,
-            notes=request.notes,
-            tags=request.tags,
+            notes=extended_notes,
+            tags=extended_tags,
             is_active=request.is_active,
         )
         product = await self.product_repo.create(product)
         
         # 同步价格到 product_prices 表（如果提供了价格）
         try:
+            # 处理价格生效时间
+            effective_from = request.price_effective_from
+            if effective_from is None:
+                # 如果没有指定生效时间，使用当前时间
+                from datetime import datetime
+                effective_from = datetime.now()
+            
             await self.price_sync_service.sync_product_prices(
                 product_id=product.id,
                 price_channel_idr=request.price_channel_idr,
@@ -121,8 +144,12 @@ class ProductService:
                 price_cost_idr=request.price_cost_idr,  # 成本价同步到 product_prices 表
                 price_cost_cny=request.price_cost_cny,  # 成本价同步到 product_prices 表
                 exchange_rate=request.exchange_rate,
+                effective_from=effective_from,  # 使用指定的生效时间
                 change_reason="产品创建时设置价格"
             )
+            
+            # 注意：price_effective_to 在 product_prices 表中由系统自动管理
+            # 当创建新的价格记录时，旧价格的 effective_to 会自动设置
         except Exception as e:
             # 价格同步失败不影响产品创建，只记录日志
             import logging
@@ -219,37 +246,76 @@ class ProductService:
         if request.urgent_price_surcharge is not None:
             product.urgent_price_surcharge = request.urgent_price_surcharge
         
+        # 更新服务与供应商管理字段
+        if request.std_duration_days is not None:
+            product.std_duration_days = request.std_duration_days
+        if request.allow_multi_vendor is not None:
+            product.allow_multi_vendor = request.allow_multi_vendor
+        if request.default_supplier_id is not None:
+            product.default_supplier_id = request.default_supplier_id
+        
+        # 处理前端新增字段（适用地区）
+        if request.applicable_regions is not None:
+            # 移除旧的地区标签
+            if product.tags:
+                product.tags = [tag for tag in product.tags if not tag.startswith("region:")]
+            else:
+                product.tags = []
+            # 添加新的地区标签
+            product.tags.extend([f"region:{region}" for region in request.applicable_regions])
+        
         # 注意：成本价已迁移到 product_prices 表，不再直接更新 products 表
         # 成本价通过 ProductPriceSyncService 同步到 product_prices 表
         # 注意：estimated_cost_idr 和 estimated_cost_cny 已删除
         
         # 同步价格到 product_prices 表（如果请求中包含价格字段）
         # 注意：销售价格和成本价字段已从 products 表移除，现在只通过 product_prices 表管理
+        # 注意：编辑产品时只更新基本信息，不更新价格（价格通过独立的价格管理API管理）
+        # 使用 getattr 安全访问可能不存在的字段（编辑时这些字段不存在）
+        price_channel_idr = getattr(request, 'price_channel_idr', None)
+        price_channel_cny = getattr(request, 'price_channel_cny', None)
+        price_direct_idr = getattr(request, 'price_direct_idr', None)
+        price_direct_cny = getattr(request, 'price_direct_cny', None)
+        price_list_idr = getattr(request, 'price_list_idr', None)
+        price_list_cny = getattr(request, 'price_list_cny', None)
+        price_cost_idr = getattr(request, 'price_cost_idr', None)
+        price_cost_cny = getattr(request, 'price_cost_cny', None)
+        exchange_rate = getattr(request, 'exchange_rate', None)
+        price_effective_from = getattr(request, 'price_effective_from', None)
+        
         price_updated = any([
-            request.price_channel_idr is not None,
-            request.price_channel_cny is not None,
-            request.price_direct_idr is not None,
-            request.price_direct_cny is not None,
-            request.price_list_idr is not None,
-            request.price_list_cny is not None,
-            request.price_cost_idr is not None,  # 成本价也同步到 product_prices 表
-            request.price_cost_cny is not None,  # 成本价也同步到 product_prices 表
+            price_channel_idr is not None,
+            price_channel_cny is not None,
+            price_direct_idr is not None,
+            price_direct_cny is not None,
+            price_list_idr is not None,
+            price_list_cny is not None,
+            price_cost_idr is not None,  # 成本价也同步到 product_prices 表
+            price_cost_cny is not None,  # 成本价也同步到 product_prices 表
         ])
         
         if price_updated:
             try:
+                # 处理价格生效时间
+                effective_from = price_effective_from
+                if effective_from is None:
+                    # 如果没有指定生效时间，使用当前时间
+                    from datetime import datetime
+                    effective_from = datetime.now()
+                
                 # 同步价格到 product_prices 表（只使用请求中的值）
                 await self.price_sync_service.sync_product_prices(
                     product_id=product.id,
-                    price_channel_idr=request.price_channel_idr,
-                    price_channel_cny=request.price_channel_cny,
-                    price_direct_idr=request.price_direct_idr,
-                    price_direct_cny=request.price_direct_cny,
-                    price_list_idr=request.price_list_idr,
-                    price_list_cny=request.price_list_cny,
-                    price_cost_idr=request.price_cost_idr,  # 成本价同步到 product_prices 表
-                    price_cost_cny=request.price_cost_cny,  # 成本价同步到 product_prices 表
-                    exchange_rate=request.exchange_rate,
+                    price_channel_idr=price_channel_idr,
+                    price_channel_cny=price_channel_cny,
+                    price_direct_idr=price_direct_idr,
+                    price_direct_cny=price_direct_cny,
+                    price_list_idr=price_list_idr,
+                    price_list_cny=price_list_cny,
+                    price_cost_idr=price_cost_idr,  # 成本价同步到 product_prices 表
+                    price_cost_cny=price_cost_cny,  # 成本价同步到 product_prices 表
+                    exchange_rate=exchange_rate,
+                    effective_from=effective_from,  # 使用指定的生效时间
                     change_reason="产品更新时修改价格"
                 )
             except Exception as e:
@@ -739,6 +805,16 @@ class ProductService:
         
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+    
+    async def check_code_exists(self, code: str, exclude_product_id: Optional[str] = None) -> bool:
+        """检查产品编码是否已存在"""
+        existing = await self.product_repo.get_by_code(code)
+        if existing is None:
+            return False
+        # 如果提供了排除的产品ID，且找到的产品就是自己，则返回False（不存在冲突）
+        if exclude_product_id and existing.id == exclude_product_id:
+            return False
+        return True
     
     async def _to_response(self, product: Product, category_name: str = None, service_type_name: str = None) -> ProductResponse:
         """转换为响应格式"""

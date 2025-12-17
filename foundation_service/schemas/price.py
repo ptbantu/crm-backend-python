@@ -59,6 +59,10 @@ class ProductPriceHistoryResponse(BaseModel):
     """价格响应（列格式：一条记录包含所有价格类型和货币）"""
     id: str
     product_id: str
+    product_name: Optional[str] = None
+    product_code: Optional[str] = None
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
     organization_id: Optional[str]
     # 渠道价
     price_channel_idr: Optional[Decimal]

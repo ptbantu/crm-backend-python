@@ -218,20 +218,20 @@ class SupplierService:
     ) -> List[Dict[str, Any]]:
         """
         获取产品的销售价格（从 product_prices 表）
+        列格式：一条记录包含所有价格类型和货币
         
         Args:
             product_id: 产品ID
             organization_id: 组织ID（可选，用于查询组织特定价格）
         
         Returns:
-            价格列表
+            价格列表，每个价格类型和货币组合一个字典
         """
-        # 查询当前有效的价格
+        # 查询当前有效的价格（列格式：一条记录包含所有价格）
         now = datetime.now()
         query = select(ProductPrice).where(
             and_(
                 ProductPrice.product_id == product_id,
-                ProductPrice.price_type.in_(['channel', 'direct', 'list']),  # 销售价格类型
                 ProductPrice.effective_from <= now,
                 or_(
                     ProductPrice.effective_to.is_(None),
@@ -248,28 +248,89 @@ class SupplierService:
                     ProductPrice.organization_id.is_(None),  # 通用价格
                 )
             )
+        else:
+            # 如果没有指定组织ID，只查询通用价格
+            query = query.where(ProductPrice.organization_id.is_(None))
         
         query = query.order_by(
             ProductPrice.organization_id.desc(),  # 组织特定价格优先
-            ProductPrice.price_type,
-            ProductPrice.currency,
+            ProductPrice.effective_from.desc(),
         )
         
         result = await self.db.execute(query)
         prices = result.scalars().all()
         
-        # 转换为字典列表
+        # 转换为字典列表（列格式：一条记录转换为多个价格字典）
         price_list = []
         for price in prices:
-            price_list.append({
-                'price_type': price.price_type,
-                'currency': price.currency,
-                'amount': float(price.amount),
-                'exchange_rate': float(price.exchange_rate) if price.exchange_rate else None,
-                'effective_from': price.effective_from,
-                'effective_to': price.effective_to,
-                'is_organization_specific': price.organization_id is not None,
-            })
+            exchange_rate = float(price.exchange_rate) if price.exchange_rate else None
+            is_org_specific = price.organization_id is not None
+            
+            # 渠道价
+            if price.price_channel_idr is not None:
+                price_list.append({
+                    'price_type': 'channel',
+                    'currency': 'IDR',
+                    'amount': float(price.price_channel_idr),
+                    'exchange_rate': exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'is_organization_specific': is_org_specific,
+                })
+            if price.price_channel_cny is not None:
+                price_list.append({
+                    'price_type': 'channel',
+                    'currency': 'CNY',
+                    'amount': float(price.price_channel_cny),
+                    'exchange_rate': exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'is_organization_specific': is_org_specific,
+                })
+            
+            # 直客价
+            if price.price_direct_idr is not None:
+                price_list.append({
+                    'price_type': 'direct',
+                    'currency': 'IDR',
+                    'amount': float(price.price_direct_idr),
+                    'exchange_rate': exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'is_organization_specific': is_org_specific,
+                })
+            if price.price_direct_cny is not None:
+                price_list.append({
+                    'price_type': 'direct',
+                    'currency': 'CNY',
+                    'amount': float(price.price_direct_cny),
+                    'exchange_rate': exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'is_organization_specific': is_org_specific,
+                })
+            
+            # 列表价
+            if price.price_list_idr is not None:
+                price_list.append({
+                    'price_type': 'list',
+                    'currency': 'IDR',
+                    'amount': float(price.price_list_idr),
+                    'exchange_rate': exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'is_organization_specific': is_org_specific,
+                })
+            if price.price_list_cny is not None:
+                price_list.append({
+                    'price_type': 'list',
+                    'currency': 'CNY',
+                    'amount': float(price.price_list_cny),
+                    'exchange_rate': exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'is_organization_specific': is_org_specific,
+                })
         
         return price_list
     

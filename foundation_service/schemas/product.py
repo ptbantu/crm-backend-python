@@ -29,6 +29,15 @@ class ProductCreateRequest(BaseModel):
     allow_multi_vendor: bool = Field(default=True, description="是否允许多供应商接单（1=允许，0=单一供应商）")
     default_supplier_id: Optional[str] = Field(None, description="默认供应商ID（当allow_multi_vendor=0时使用）")
     
+    # 前端新增字段（2024-12-XX）
+    # 注意：以下字段在前端侧边栏中使用，但可能不在 products 表中
+    # 如果需要在数据库中存储，请先添加相应的模型字段
+    applicable_regions: Optional[List[str]] = Field(default_factory=list, description="适用地区（列表）")
+    
+    # 价格时间字段（用于创建价格记录）
+    price_effective_from: Optional[datetime] = Field(None, description="价格生效时间（用于 product_prices 表）")
+    price_effective_to: Optional[datetime] = Field(None, description="价格有效期（用于 product_prices 表）")
+    
     # 注意：成本价和预估成本字段已删除
     # - price_cost_idr, price_cost_cny（已迁移到 product_prices 表，请使用产品价格管理API）
     # - estimated_cost_idr, estimated_cost_cny（已删除，不再使用）
@@ -89,6 +98,13 @@ class ProductUpdateRequest(BaseModel):
     std_duration_days: Optional[int] = Field(None, ge=0)
     allow_multi_vendor: Optional[bool] = None
     default_supplier_id: Optional[str] = None
+    
+    # 前端新增字段（2024-12-XX）
+    applicable_regions: Optional[List[str]] = None
+    
+    # 价格时间字段（用于更新价格记录）
+    price_effective_from: Optional[datetime] = None
+    price_effective_to: Optional[datetime] = None
     
     # 注意：成本价和预估成本字段已删除
     # - price_cost_idr, price_cost_cny（已迁移到 product_prices 表，请使用产品价格管理API）

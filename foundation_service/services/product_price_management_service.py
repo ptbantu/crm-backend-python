@@ -9,6 +9,7 @@ from sqlalchemy import select, and_, or_
 
 from common.models.product_price import ProductPrice
 from common.models.product import Product
+from common.models.product_category import ProductCategory
 from common.exceptions import BusinessException, NotFoundError
 from foundation_service.repositories.product_price_history_repository import ProductPriceHistoryRepository
 from foundation_service.repositories.price_change_log_repository import PriceChangeLogRepository
@@ -44,23 +45,78 @@ class ProductPriceManagementService:
     ) -> ProductPriceListResponse:
         """获取产品价格列表（列格式：一条记录包含所有价格）"""
         if product_id:
-            # 查询特定产品的价格历史
+            # 查询特定产品的价格历史，关联查询产品信息和分类信息
             items, total = await self.price_history_repo.get_by_product_id(
                 product_id=product_id,
                 page=page,
                 size=size,
                 organization_id=organization_id
             )
+            
+            # 获取产品信息
+            product = await self.product_repo.get_by_id(product_id)
+            product_name = product.name if product else None
+            product_code = product.code if product else None
+            category_id = product.category_id if product else None
+            
+            # 获取分类信息
+            category_name = None
+            if category_id:
+                from foundation_service.repositories.product_category_repository import ProductCategoryRepository
+                category_repo = ProductCategoryRepository(self.db)
+                category = await category_repo.get_by_id(category_id)
+                category_name = category.name if category else None
+            
+            # 构建响应对象
+            response_items = []
+            for item in items:
+                price_dict = {
+                    'id': item.id,
+                    'product_id': item.product_id,
+                    'product_name': product_name,
+                    'product_code': product_code,
+                    'category_id': category_id,
+                    'category_name': category_name,
+                    'organization_id': item.organization_id,
+                    'price_channel_idr': item.price_channel_idr,
+                    'price_channel_cny': item.price_channel_cny,
+                    'price_direct_idr': item.price_direct_idr,
+                    'price_direct_cny': item.price_direct_cny,
+                    'price_list_idr': item.price_list_idr,
+                    'price_list_cny': item.price_list_cny,
+                    'price_cost_idr': item.price_cost_idr,
+                    'price_cost_cny': item.price_cost_cny,
+                    'exchange_rate': item.exchange_rate,
+                    'effective_from': item.effective_from,
+                    'effective_to': item.effective_to,
+                    'source': item.source,
+                    'change_reason': item.change_reason,
+                    'changed_by': item.changed_by,
+                    'created_at': item.created_at,
+                    'updated_at': item.updated_at,
+                }
+                response_items.append(ProductPriceHistoryResponse(**price_dict))
+            
             return ProductPriceListResponse(
-                items=[ProductPriceHistoryResponse.model_validate(item) for item in items],
+                items=response_items,
                 total=total,
                 page=page,
                 size=size
             )
         else:
-            # 查询所有产品的当前有效价格
+            # 查询所有产品的当前有效价格，关联查询产品信息和分类信息
             now = datetime.now()
-            query = select(ProductPrice).where(
+            query = select(
+                ProductPrice,
+                Product.name.label('product_name'),
+                Product.code.label('product_code'),
+                Product.category_id.label('category_id'),
+                ProductCategory.name.label('category_name')
+            ).outerjoin(
+                Product, ProductPrice.product_id == Product.id
+            ).outerjoin(
+                ProductCategory, Product.category_id == ProductCategory.id
+            ).where(
                 and_(
                     ProductPrice.effective_from <= now,
                     or_(
@@ -99,10 +155,41 @@ class ProductPriceManagementService:
             query = query.order_by(ProductPrice.effective_from.desc())
             query = query.offset((page - 1) * size).limit(size)
             result = await self.db.execute(query)
-            items = result.scalars().all()
+            rows = result.all()
+            
+            # 构建响应对象
+            items = []
+            for row in rows:
+                price = row[0]  # ProductPrice对象
+                price_dict = {
+                    'id': price.id,
+                    'product_id': price.product_id,
+                    'product_name': row[1],  # product_name
+                    'product_code': row[2],  # product_code
+                    'category_id': row[3],  # category_id
+                    'category_name': row[4],  # category_name
+                    'organization_id': price.organization_id,
+                    'price_channel_idr': price.price_channel_idr,
+                    'price_channel_cny': price.price_channel_cny,
+                    'price_direct_idr': price.price_direct_idr,
+                    'price_direct_cny': price.price_direct_cny,
+                    'price_list_idr': price.price_list_idr,
+                    'price_list_cny': price.price_list_cny,
+                    'price_cost_idr': price.price_cost_idr,
+                    'price_cost_cny': price.price_cost_cny,
+                    'exchange_rate': price.exchange_rate,
+                    'effective_from': price.effective_from,
+                    'effective_to': price.effective_to,
+                    'source': price.source,
+                    'change_reason': price.change_reason,
+                    'changed_by': price.changed_by,
+                    'created_at': price.created_at,
+                    'updated_at': price.updated_at,
+                }
+                items.append(ProductPriceHistoryResponse(**price_dict))
             
             return ProductPriceListResponse(
-                items=[ProductPriceHistoryResponse.model_validate(item) for item in items],
+                items=items,
                 total=total,
                 page=page,
                 size=size
@@ -129,8 +216,53 @@ class ProductPriceManagementService:
             size=size,
             organization_id=organization_id
         )
+        
+        # 获取产品信息
+        product = await self.product_repo.get_by_id(product_id)
+        product_name = product.name if product else None
+        product_code = product.code if product else None
+        category_id = product.category_id if product else None
+        
+        # 获取分类信息
+        category_name = None
+        if category_id:
+            from foundation_service.repositories.product_category_repository import ProductCategoryRepository
+            category_repo = ProductCategoryRepository(self.db)
+            category = await category_repo.get_by_id(category_id)
+            category_name = category.name if category else None
+        
+        # 构建响应对象
+        response_items = []
+        for item in items:
+            price_dict = {
+                'id': item.id,
+                'product_id': item.product_id,
+                'product_name': product_name,
+                'product_code': product_code,
+                'category_id': category_id,
+                'category_name': category_name,
+                'organization_id': item.organization_id,
+                'price_channel_idr': item.price_channel_idr,
+                'price_channel_cny': item.price_channel_cny,
+                'price_direct_idr': item.price_direct_idr,
+                'price_direct_cny': item.price_direct_cny,
+                'price_list_idr': item.price_list_idr,
+                'price_list_cny': item.price_list_cny,
+                'price_cost_idr': item.price_cost_idr,
+                'price_cost_cny': item.price_cost_cny,
+                'exchange_rate': item.exchange_rate,
+                'effective_from': item.effective_from,
+                'effective_to': item.effective_to,
+                'source': item.source,
+                'change_reason': item.change_reason,
+                'changed_by': item.changed_by,
+                'created_at': item.created_at,
+                'updated_at': item.updated_at,
+            }
+            response_items.append(ProductPriceHistoryResponse(**price_dict))
+        
         return ProductPriceListResponse(
-            items=[ProductPriceHistoryResponse.model_validate(item) for item in items],
+            items=response_items,
             total=total,
             page=page,
             size=size

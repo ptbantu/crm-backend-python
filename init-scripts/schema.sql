@@ -1642,6 +1642,8 @@ CREATE TABLE IF NOT EXISTS `product_prices` (
   `price_direct_cny` decimal(18,2) DEFAULT NULL COMMENT '直客价-CNY',
   `price_list_idr` decimal(18,2) DEFAULT NULL COMMENT '列表价-IDR',
   `price_list_cny` decimal(18,2) DEFAULT NULL COMMENT '列表价-CNY',
+  `price_cost_idr` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·-IDR',
+  `price_cost_cny` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·-CNY',
   `exchange_rate` decimal(18,9) DEFAULT NULL COMMENT '汇率（用于计算）',
   `effective_from` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '生效时间',
   `effective_to` datetime DEFAULT NULL COMMENT '失效时间（NULL表示当前有效）',
@@ -1665,6 +1667,8 @@ CREATE TABLE IF NOT EXISTS `product_prices` (
   CONSTRAINT `fk_product_prices_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_product_prices_channel_cny_nonneg` CHECK (((`price_channel_cny` is null) or (`price_channel_cny` >= 0))),
   CONSTRAINT `chk_product_prices_channel_idr_nonneg` CHECK (((`price_channel_idr` is null) or (`price_channel_idr` >= 0))),
+  CONSTRAINT `chk_product_prices_cost_cny_nonneg` CHECK (((`price_cost_cny` is null) or (`price_cost_cny` >= 0))),
+  CONSTRAINT `chk_product_prices_cost_idr_nonneg` CHECK (((`price_cost_idr` is null) or (`price_cost_idr` >= 0))),
   CONSTRAINT `chk_product_prices_direct_cny_nonneg` CHECK (((`price_direct_cny` is null) or (`price_direct_cny` >= 0))),
   CONSTRAINT `chk_product_prices_direct_idr_nonneg` CHECK (((`price_direct_idr` is null) or (`price_direct_idr` >= 0))),
   CONSTRAINT `chk_product_prices_list_cny_nonneg` CHECK (((`price_list_cny` is null) or (`price_list_cny` >= 0))),
@@ -1697,9 +1701,6 @@ CREATE TABLE IF NOT EXISTS `products` (
   `is_taxable` tinyint(1) DEFAULT NULL,
   `tax_rate` decimal(5,2) DEFAULT NULL,
   `tax_code` varchar(50) DEFAULT NULL,
-  `price_list` decimal(18,2) DEFAULT NULL,
-  `price_channel` decimal(18,2) DEFAULT NULL,
-  `price_cost` decimal(18,2) DEFAULT NULL,
   `tags` json DEFAULT (json_array()),
   `is_locked` tinyint(1) DEFAULT NULL,
   `notes` text,
@@ -1709,18 +1710,6 @@ CREATE TABLE IF NOT EXISTS `products` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `price_cost_idr_test` decimal(18,2) DEFAULT NULL COMMENT 'æµ‹è¯•å­—æ®µ',
-  `price_cost_idr` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆIDRï¼‰',
-  `price_cost_cny` decimal(18,2) DEFAULT NULL COMMENT 'æˆæœ¬ä»·ï¼ˆCNYï¼‰',
-  `estimated_cost_idr` decimal(18,2) DEFAULT NULL COMMENT '预估成本-IDR（供应商关联产品时的默认成本价）',
-  `estimated_cost_cny` decimal(18,2) DEFAULT NULL COMMENT '预估成本-CNY（供应商关联产品时的默认成本价）',
-  `price_channel_idr` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“ä»·ï¼ˆIDRï¼‰',
-  `price_channel_cny` decimal(18,2) DEFAULT NULL COMMENT 'æ¸ é“ä»·ï¼ˆCNYï¼‰',
-  `price_direct_idr` decimal(18,2) DEFAULT NULL COMMENT 'ç›´å®¢ä»·ï¼ˆIDRï¼‰',
-  `price_direct_cny` decimal(18,2) DEFAULT NULL COMMENT 'ç›´å®¢ä»·ï¼ˆCNYï¼‰',
-  `price_list_idr` decimal(18,2) DEFAULT NULL COMMENT 'åˆ—è¡¨ä»·ï¼ˆIDRï¼‰',
-  `price_list_cny` decimal(18,2) DEFAULT NULL COMMENT 'åˆ—è¡¨ä»·ï¼ˆCNYï¼‰',
-  `default_currency` varchar(10) DEFAULT 'IDR' COMMENT 'é»˜è®¤è´§å¸',
-  `exchange_rate` decimal(18,9) DEFAULT '2000.000000000' COMMENT 'æ±‡çŽ‡ï¼ˆIDR/CNYï¼‰',
   `service_type` varchar(50) DEFAULT NULL COMMENT 'æœåŠ¡ç±»åž‹',
   `status` varchar(50) DEFAULT 'active' COMMENT 'çŠ¶æ€',
   `price_status` varchar(50) DEFAULT 'active' COMMENT '价格状态：active（生效中）, pending（待生效）, suspended（已暂停）',
@@ -1765,8 +1754,7 @@ CREATE TABLE IF NOT EXISTS `products` (
   KEY `idx_products_price_locked` (`price_locked`),
   KEY `fk_products_price_locked_by` (`price_locked_by`),
   CONSTRAINT `fk_products_default_supplier` FOREIGN KEY (`default_supplier_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_products_price_locked_by` FOREIGN KEY (`price_locked_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `chk_products_prices_nonneg` CHECK (((coalesce(`price_list`,0) >= 0) and (coalesce(`price_channel`,0) >= 0) and (coalesce(`price_cost`,0) >= 0)))
+  CONSTRAINT `fk_products_price_locked_by` FOREIGN KEY (`price_locked_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
   SET NEW.updated_at = NOW();
 END */;;
@@ -2005,8 +1993,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `username` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `phone` vamysqldump: Couldn't execute 'SHOW FIELDS FROM `v_current_product_prices`': View 'bantu_crm.v_current_product_prices' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them (1356)
-rchar(50) DEFAULT NULL,
+  `phone` varchar(50) DEFAULT NULL,
   `display_name` varchar(255) DEFAULT NULL,
   `password_hash` varchar(255) DEFAULT NULL,
   `avatar_url` varchar(500) DEFAULT NULL,
@@ -2029,7 +2016,8 @@ rchar(50) DEFAULT NULL,
   KEY `ix_users_active` (`is_active`),
   KEY `ix_users_wechat` (`wechat`),
   KEY `ix_users_locked` (`is_locked`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=umysqldump: Couldn't execute 'SHOW FIELDS FROM `v_current_product_prices`': View 'bantu_crm.v_current_product_prices' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them (1356)
+tf8mb4 COLLATE=utf8mb4_0900_ai_ci;
   SET NEW.updated_at = NOW();
 END */;;
 SET @saved_cs_client     = @@character_set_client;
