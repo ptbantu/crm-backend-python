@@ -209,3 +209,72 @@ class ProductListResponse(BaseModel):
     page: int
     size: int
 
+
+class PriceInfo(BaseModel):
+    """价格信息"""
+    price_type: str  # channel, direct, list, cost
+    currency: str  # CNY, IDR
+    price: Optional[Decimal]
+    effective_from: Optional[datetime]
+    effective_to: Optional[datetime]
+    updated_at: Optional[datetime]
+    status: str  # active, upcoming, expired
+
+
+class SupplierInfo(BaseModel):
+    """供应商信息"""
+    vendor_id: str
+    vendor_name: Optional[str]
+    is_primary: bool
+    is_available: bool
+    priority: Optional[int]
+    contact_name: Optional[str]
+    contact_phone: Optional[str]
+    contact_email: Optional[str]
+    address: Optional[str]
+    sla_description: Optional[str]
+    contract_start: Optional[datetime]
+    contract_end: Optional[datetime]
+
+
+class ProductStatistics(BaseModel):
+    """产品统计信息"""
+    total_orders: int = 0
+    monthly_orders: int = 0
+    total_revenue: Optional[Decimal] = None
+    monthly_revenue: Optional[Decimal] = None
+    completion_rate: Optional[Decimal] = None  # 完成率 0-100
+    customer_rating: Optional[Decimal] = None  # 客户评分 0-5
+    refund_rate: Optional[Decimal] = None  # 退款率 0-100
+    avg_processing_days: Optional[Decimal] = None  # 平均处理天数
+
+
+class ChangeHistoryItem(BaseModel):
+    """变更历史项"""
+    changed_at: datetime
+    changed_by: Optional[str]
+    changed_by_name: Optional[str]
+    change_type: str  # price, status, supplier, etc.
+    field_name: Optional[str]
+    old_value: Optional[str]
+    new_value: Optional[str]
+    description: Optional[str]
+
+
+class ProductRules(BaseModel):
+    """产品规则与文档"""
+    required_documents: Optional[str] = None
+    notes: Optional[str] = None
+    processing_flow: Optional[str] = None
+    faq: Optional[str] = None
+
+
+class ProductDetailAggregatedResponse(BaseModel):
+    """产品详情聚合响应"""
+    overview: ProductResponse
+    prices: List[PriceInfo] = []
+    suppliers: List[SupplierInfo] = []
+    statistics: ProductStatistics = ProductStatistics()
+    history: List[ChangeHistoryItem] = []
+    rules: ProductRules = ProductRules()
+

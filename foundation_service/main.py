@@ -23,6 +23,7 @@ from foundation_service.api.v1 import (
     product_categories, products, service_types, customers, contacts,
     service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers
 )
+from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
 from foundation_service.config import settings
 from foundation_service.utils.jwt import verify_token
@@ -37,6 +38,7 @@ from common.models import (
     WorkflowDefinition, WorkflowInstance, WorkflowTask, WorkflowTransition,
     ProductDependency, Customer, CustomerSource, CustomerChannel,
     ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
+    OrderPriceSnapshot, ExchangeRateHistory, PriceChangeLog, CustomerLevelPrice,
     VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog
 )
 
@@ -358,6 +360,11 @@ app.include_router(contacts.router, prefix="/api/service-management/contacts", t
 app.include_router(service_records.router, prefix="/api/service-management/service-records", tags=["服务记录"])
 app.include_router(industries.router, prefix="/api/service-management/industries", tags=["行业管理"])
 app.include_router(customer_sources.router, prefix="/api/service-management/customer-sources", tags=["客户来源管理"])
+
+# 价格和汇率管理路由
+app.include_router(product_prices.router, prefix="/api/foundation/product-prices", tags=["价格管理"])
+app.include_router(exchange_rates.router, prefix="/api/foundation/exchange-rates", tags=["汇率管理"])
+app.include_router(price_change_logs.router, prefix="/api/foundation/price-change-logs", tags=["价格变更日志"])
 
 # Analytics and Monitoring Service 路由
 app.include_router(analytics.router, prefix="/api/analytics-monitoring/analytics", tags=["数据分析"])

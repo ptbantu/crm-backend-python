@@ -11,6 +11,7 @@ from foundation_service.schemas.product import (
     ProductCreateRequest,
     ProductUpdateRequest,
     ProductListResponse,
+    ProductDetailAggregatedResponse,
 )
 from foundation_service.services.product_service import ProductService
 from foundation_service.dependencies import get_db
@@ -38,6 +39,23 @@ async def get_product(
     service = ProductService(db)
     product = await service.get_product_by_id(product_id)
     return Result.success(data=product)
+
+
+@router.get("/{product_id}/detail", response_model=Result[ProductDetailAggregatedResponse])
+async def get_product_detail_aggregated(
+    product_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """查询产品/服务详情聚合数据（包含价格、供应商、统计等信息）"""
+    service = ProductService(db)
+    try:
+        detail = await service.get_product_detail_aggregated(product_id)
+        return Result.success(data=detail)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"获取产品详情聚合数据失败: {e}", exc_info=True)
+        return Result.error(code=500, message=f"获取产品详情失败: {str(e)}")
 
 
 @router.put("/{product_id}", response_model=Result[ProductResponse])

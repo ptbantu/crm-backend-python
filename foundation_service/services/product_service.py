@@ -1,13 +1,23 @@
 """
 产品/服务服务
 """
-from typing import List
+from typing import List, Optional
+from datetime import datetime, timedelta
+from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, and_, or_, desc, text
+import logging
 from foundation_service.schemas.product import (
     ProductCreateRequest,
     ProductUpdateRequest,
     ProductResponse,
     ProductListResponse,
+    ProductDetailAggregatedResponse,
+    PriceInfo,
+    SupplierInfo,
+    ProductStatistics,
+    ChangeHistoryItem,
+    ProductRules,
 )
 from foundation_service.repositories.product_repository import ProductRepository
 from foundation_service.repositories.product_category_repository import ProductCategoryRepository
@@ -259,6 +269,236 @@ class ProductService:
                 category_name = category.name
         
         return self._to_response(product, category_name)
+    
+    async def get_product_detail_aggregated(self, product_id: str) -> ProductDetailAggregatedResponse:
+        """获取产品详情聚合数据（包含价格、供应商、统计等信息）"""
+        logger = logging.getLogger(__name__)
+        
+        # 1. 基本信息（必需成功）
+        product = await self.product_repo.get_by_id(product_id)
+        if not product:
+            raise BusinessException(detail="产品不存在", status_code=404)
+        
+        # 获取分类名称
+        category_name = None
+        if product.category_id:
+            try:
+                category = await self.category_repo.get_by_id(product.category_id)
+                if category:
+                    category_name = category.name
+            except Exception as e:
+                logger.warning(f"获取分类信息失败: {e}")
+        
+        overview = self._to_response(product, category_name)
+        
+        # 初始化结果
+        result = ProductDetailAggregatedResponse(
+            overview=overview,
+            prices=[],
+            suppliers=[],
+            statistics=ProductStatistics(),
+            history=[],
+            rules=ProductRules(
+                required_documents=product.required_documents,
+                notes=product.notes
+            )
+        )
+        
+        # 2. 价格信息（可选，失败时返回空列表）
+        try:
+            from foundation_service.repositories.product_price_history_repository import ProductPriceHistoryRepository
+            price_repo = ProductPriceHistoryRepository(self.db)
+            
+            # 查询当前价格和未来价格
+            now = datetime.now()
+            prices, _ = await price_repo.get_by_product_id(product_id, page=1, size=100)
+            
+            price_list = []
+            for price in prices:
+                # 判断价格状态
+                if price.effective_from and price.effective_from > now:
+                    status = "upcoming"
+                elif price.effective_to and price.effective_to < now:
+                    status = "expired"
+                else:
+                    status = "active"
+                
+                price_list.append(PriceInfo(
+                    price_type=price.price_type or "unknown",
+                    currency=price.currency or "CNY",
+                    price=price.price,
+                    effective_from=price.effective_from,
+                    effective_to=price.effective_to,
+                    updated_at=price.updated_at,
+                    status=status
+                ))
+            
+            result.prices = price_list
+        except Exception as e:
+            logger.warning(f"获取产品价格信息失败: {e}", exc_info=True)
+        
+        # 3. 供应商信息（可选，失败时返回空列表）
+        try:
+            # 查询该产品的供应商
+            vendor_products = await self.vendor_product_repo.get_by_product_id(product_id)
+            
+            supplier_list = []
+            for vp in vendor_products:
+                vendor_name = None
+                contact_name = None
+                contact_phone = None
+                contact_email = None
+                address = None
+                
+                # 查询供应商组织信息
+                try:
+                    org_repo = OrganizationRepository(self.db)
+                    org = await org_repo.get_by_id(vp.organization_id)
+                    if org:
+                        vendor_name = org.name
+                        # 可以从组织关联的联系人获取联系信息
+                except Exception as e:
+                    logger.debug(f"获取供应商组织信息失败: {e}")
+                
+                supplier_list.append(SupplierInfo(
+                    vendor_id=vp.organization_id,
+                    vendor_name=vendor_name,
+                    is_primary=vp.is_primary or False,
+                    is_available=vp.is_available if vp.is_available is not None else True,
+                    priority=vp.priority,
+                    contact_name=contact_name,
+                    contact_phone=contact_phone,
+                    contact_email=contact_email,
+                    address=address,
+                    sla_description=None,  # vendor_product表没有这个字段
+                    contract_start=vp.available_from,
+                    contract_end=vp.available_to
+                ))
+            
+            result.suppliers = supplier_list
+        except Exception as e:
+            logger.warning(f"获取供应商信息失败: {e}", exc_info=True)
+        
+        # 4. 统计信息（可选，失败时返回默认值）
+        try:
+            from common.models.service_record import ServiceRecord
+            from common.models.order import Order
+            
+            now = datetime.now()
+            month_start = datetime(now.year, now.month, 1)
+            
+            # 查询服务记录统计
+            sr_query = select(
+                func.count(ServiceRecord.id).label('total'),
+                func.sum(ServiceRecord.final_price).label('total_revenue')
+            ).where(ServiceRecord.product_id == product_id)
+            
+            sr_result = await self.db.execute(sr_query)
+            sr_row = sr_result.first()
+            total_orders = sr_row.total or 0 if sr_row else 0
+            total_revenue = sr_row.total_revenue if sr_row and sr_row.total_revenue else Decimal('0')
+            
+            # 本月订单
+            sr_month_query = select(
+                func.count(ServiceRecord.id).label('monthly')
+            ).where(
+                and_(
+                    ServiceRecord.product_id == product_id,
+                    ServiceRecord.created_at >= month_start
+                )
+            )
+            sr_month_result = await self.db.execute(sr_month_query)
+            monthly_orders = sr_month_result.scalar() or 0
+            
+            # 本月收入
+            sr_month_revenue_query = select(
+                func.sum(ServiceRecord.final_price).label('monthly_revenue')
+            ).where(
+                and_(
+                    ServiceRecord.product_id == product_id,
+                    ServiceRecord.created_at >= month_start
+                )
+            )
+            sr_month_revenue_result = await self.db.execute(sr_month_revenue_query)
+            monthly_revenue = sr_month_revenue_result.scalar() or Decimal('0')
+            
+            # 完成率（已完成订单 / 总订单）
+            completed_query = select(
+                func.count(ServiceRecord.id).label('completed')
+            ).where(
+                and_(
+                    ServiceRecord.product_id == product_id,
+                    ServiceRecord.status == 'completed'
+                )
+            )
+            completed_result = await self.db.execute(completed_query)
+            completed_count = completed_result.scalar() or 0
+            completion_rate = (Decimal(completed_count) / Decimal(total_orders) * 100) if total_orders > 0 else None
+            
+            # 平均处理天数（使用MySQL的DATEDIFF函数）
+            # MySQL的DATEDIFF(date1, date2)返回date1-date2的天数差
+            avg_days_query = text("""
+                SELECT AVG(DATEDIFF(actual_completion_date, actual_start_date)) as avg_days
+                FROM service_records
+                WHERE product_id = :product_id
+                  AND status = 'completed'
+                  AND actual_start_date IS NOT NULL
+                  AND actual_completion_date IS NOT NULL
+            """)
+            avg_days_result = await self.db.execute(avg_days_query, {"product_id": product_id})
+            avg_processing_days = avg_days_result.scalar()
+            
+            result.statistics = ProductStatistics(
+                total_orders=total_orders,
+                monthly_orders=monthly_orders,
+                total_revenue=total_revenue if total_revenue else None,
+                monthly_revenue=monthly_revenue if monthly_revenue else None,
+                completion_rate=completion_rate,
+                customer_rating=None,  # 需要从评价表查询
+                refund_rate=None,  # 需要从退款记录查询
+                avg_processing_days=Decimal(str(avg_processing_days)) if avg_processing_days else None
+            )
+        except Exception as e:
+            logger.warning(f"获取统计信息失败: {e}", exc_info=True)
+        
+        # 5. 变更历史（可选，失败时返回空列表）
+        try:
+            from common.models.operation_audit_log import OperationAuditLog
+            from foundation_service.repositories.organization_repository import OrganizationRepository
+            
+            history_query = select(OperationAuditLog).where(
+                and_(
+                    OperationAuditLog.entity_type == 'products',
+                    OperationAuditLog.entity_id == product_id
+                )
+            ).order_by(desc(OperationAuditLog.operated_at)).limit(10)
+            
+            history_result = await self.db.execute(history_query)
+            history_records = history_result.scalars().all()
+            
+            history_list = []
+            for record in history_records:
+                # 从changed_fields解析变更字段
+                field_name = None
+                if record.changed_fields and isinstance(record.changed_fields, list) and len(record.changed_fields) > 0:
+                    field_name = record.changed_fields[0]
+                
+                history_list.append(ChangeHistoryItem(
+                    changed_at=record.operated_at,
+                    changed_by=record.user_id,
+                    changed_by_name=record.username,
+                    change_type=record.operation_type or "update",
+                    field_name=field_name,
+                    old_value=None,  # 可以从data_before解析
+                    new_value=None,  # 可以从data_after解析
+                    description=f"{record.operation_type} - {record.entity_type}"
+                ))
+            
+            result.history = history_list
+        except Exception as e:
+            logger.warning(f"获取变更历史失败: {e}", exc_info=True)
+        
+        return result
     
     async def delete_product(self, product_id: str) -> None:
         """删除产品"""

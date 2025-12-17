@@ -266,4 +266,26 @@ class VendorProductRepository(BaseRepository[VendorProduct]):
             service_counts[row.organization_id] = row.service_count or 0
         
         return service_counts
+    
+    async def get_by_product_id(
+        self,
+        product_id: str,
+    ) -> List[VendorProduct]:
+        """
+        根据产品ID查询供应商产品关联
+        
+        Args:
+            product_id: 产品ID
+        
+        Returns:
+            供应商产品关联列表
+        """
+        query = select(VendorProduct).where(
+            VendorProduct.product_id == product_id
+        ).order_by(
+            VendorProduct.is_primary.desc(),
+            VendorProduct.priority.asc()
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
 
