@@ -18,6 +18,7 @@ from common.models.organization import Organization
 from common.models.user import User
 from common.exceptions import OrganizationNotFoundError, BusinessException
 from common.utils.logger import get_logger
+from common.utils.id_generator import generate_id
 from sqlalchemy import select
 
 logger = get_logger(__name__)
@@ -84,8 +85,12 @@ class OrganizationService:
                 logger.warning(f"组织编码已存在: code={request.code}")
                 raise BusinessException(detail=f"组织编码 {request.code} 已存在")
         
-        # 3. 创建组织
+        # 3. 生成组织ID
+        organization_id = await generate_id(self.db, "Organization")
+        
+        # 4. 创建组织
         organization = Organization(
+            id=organization_id,
             name=request.name,
             code=request.code,
             organization_type=request.organization_type,
@@ -127,7 +132,7 @@ class OrganizationService:
         organization = await self.org_repo.create(organization)
         logger.info(f"组织创建成功: id={organization.id}, name={organization.name}, code={organization.code}")
         
-        # 4. 自动创建该组织的 admin 用户
+        # 5. 自动创建该组织的 admin 用户
         await self._create_organization_admin(organization)
         
         return await self._to_response(organization)

@@ -21,7 +21,8 @@ from foundation_service.api.v1 import (
     orders, order_items, order_comments, order_files, leads, collection_tasks,
     temporary_links, notifications, opportunities, product_dependencies,
     product_categories, products, service_types, customers, contacts,
-    service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers
+    service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers,
+    system_config
 )
 from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
@@ -39,7 +40,8 @@ from common.models import (
     ProductDependency, Customer, CustomerSource, CustomerChannel,
     ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
     OrderPriceSnapshot, ExchangeRateHistory, PriceChangeLog, CustomerLevelPrice,
-    ProductPriceList, VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog
+    ProductPriceList, VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog,
+    SystemConfig, SystemConfigHistory
 )
 
 # 初始化日志
@@ -336,6 +338,7 @@ app.include_router(roles.router, prefix="/api/foundation/roles", tags=["角色�
 app.include_router(organization_domains.router, prefix="/api/foundation/organization-domains", tags=["组织领域管理"])
 app.include_router(permissions.router, prefix="/api/foundation", tags=["权限管理"])
 app.include_router(menus.router, prefix="/api/foundation", tags=["菜单管理"])
+app.include_router(system_config.router, prefix="/api/foundation/system-config", tags=["系统配置"])
 
 # Order Workflow Service 路由
 app.include_router(orders.router, prefix="/api/order-workflow/orders", tags=["订单管理"])

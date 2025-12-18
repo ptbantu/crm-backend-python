@@ -19,6 +19,7 @@ from foundation_service.schemas.order import (
 )
 from foundation_service.services.order_item_service import OrderItemService
 from common.utils.logger import get_logger
+from common.utils.id_generator import generate_id
 from common.exceptions import BusinessException
 import uuid
 
@@ -70,12 +71,15 @@ class OrderService:
         )
         
         try:
+            # 生成订单ID
+            order_id = await generate_id(self.db, "Order")
+            
             # 生成订单号
             order_number = self._generate_order_number()
             
             # 创建订单
             order = Order(
-                id=str(uuid.uuid4()),
+                id=order_id,
                 order_number=order_number,
                 title=request.title,
                 customer_id=request.customer_id,
