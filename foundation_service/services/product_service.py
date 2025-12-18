@@ -30,6 +30,7 @@ from foundation_service.services.product_price_sync_service import ProductPriceS
 from common.models.product import Product
 from common.models.product_price import ProductPrice
 from common.exceptions import BusinessException
+from common.utils.id_generator import generate_id
 from datetime import datetime
 
 
@@ -85,8 +86,12 @@ class ProductService:
         
         extended_notes = request.notes or ""
         
+        # 生成产品ID
+        product_id = await generate_id(self.db, "Product")
+        
         # 创建产品
         product = Product(
+            id=product_id,
             name=request.name,
             code=request.code,
             enterprise_service_code=enterprise_service_code,

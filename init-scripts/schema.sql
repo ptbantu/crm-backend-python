@@ -1958,6 +1958,41 @@ CREATE TABLE IF NOT EXISTS `supplier_cost_history` (
   CONSTRAINT `fk_cost_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_cost_nonneg` CHECK (((coalesce(`cost_cny`,0) >= 0) and (coalesce(`cost_idr`,0) >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='服务提供方成本历史表(版本控制，支持内部交付和供应商交付)';
+CREATE TABLE IF NOT EXISTS `system_config` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `config_key` varchar(100) NOT NULL COMMENT '配置键（唯一索引）',
+  `config_value` json NOT NULL COMMENT '配置值（JSON格式）',
+  `config_type` varchar(50) NOT NULL COMMENT '配置类型: oss/ai/sms/email/system',
+  `description` varchar(500) DEFAULT NULL COMMENT '配置描述',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `created_by` char(36) DEFAULT NULL COMMENT '创建人ID',
+  `updated_by` char(36) DEFAULT NULL COMMENT '更新人ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_config_key` (`config_key`),
+  KEY `ix_config_type` (`config_type`),
+  KEY `ix_config_enabled` (`is_enabled`),
+  KEY `fk_config_created_by` (`created_by`),
+  KEY `fk_config_updated_by` (`updated_by`),
+  CONSTRAINT `fk_config_created_by` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_config_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统配置表';
+CREATE TABLE IF NOT EXISTS `system_config_history` (
+  `id` char(36) NOT NULL DEFAULT (uuid()),
+  `config_id` char(36) NOT NULL COMMENT '配置ID',
+  `old_value` json DEFAULT NULL COMMENT '旧值（JSON格式）',
+  `new_value` json NOT NULL COMMENT '新值（JSON格式）',
+  `changed_by` char(36) NOT NULL COMMENT '变更人ID',
+  `changed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '变更时间',
+  `change_reason` varchar(500) DEFAULT NULL COMMENT '变更原因',
+  PRIMARY KEY (`id`),
+  KEY `ix_history_config_id` (`config_id`),
+  KEY `ix_history_changed_at` (`changed_at` DESC),
+  KEY `ix_history_changed_by` (`changed_by`),
+  CONSTRAINT `fk_history_changed_by` FOREIGN KEY (`changed_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_history_config` FOREIGN KEY (`config_id`) REFERENCES `system_config` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统配置历史表';
 CREATE TABLE IF NOT EXISTS `temporary_links` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `link_token` varchar(255) NOT NULL COMMENT '链接令牌（唯一）',
@@ -2016,8 +2051,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   KEY `ix_users_active` (`is_active`),
   KEY `ix_users_wechat` (`wechat`),
   KEY `ix_users_locked` (`is_locked`)
-) ENGINE=InnoDB DEFAULT CHARSET=umysqldump: Couldn't execute 'SHOW FIELDS FROM `v_current_product_prices`': View 'bantu_crm.v_current_product_prices' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them (1356)
-tf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
   SET NEW.updated_at = NOW();
 END */;;
 SET @saved_cs_client     = @@character_set_client;
@@ -2032,7 +2066,8 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `is_approved`,
  1 AS `approved_by`,
  1 AS `approved_at`,
- 1 AS `change_reason`,
+ 1 AS `change_reason`mysqldump: Couldn't execute 'SHOW FIELDS FROM `v_current_product_prices`': View 'bantu_crm.v_current_product_prices' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them (1356)
+,
  1 AS `changed_by`,
  1 AS `created_at`,
  1 AS `updated_at`*/;

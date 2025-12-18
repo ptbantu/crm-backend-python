@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc
 from common.models.audit_log import AuditLog
 from common.utils.repository import BaseRepository
+from common.utils.id_generator import generate_id
 
 
 class AuditRepository(BaseRepository[AuditLog]):
@@ -62,7 +63,11 @@ class AuditRepository(BaseRepository[AuditLog]):
         Returns:
             AuditLog: 创建的审计日志对象
         """
+        # 生成审计日志ID
+        audit_log_id = await generate_id(self.db, "AuditLog")
+        
         audit_log = AuditLog(
+            id=audit_log_id,
             organization_id=organization_id,
             user_id=user_id,
             user_name=user_name,

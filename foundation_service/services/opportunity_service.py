@@ -28,6 +28,7 @@ from foundation_service.schemas.opportunity import (
 from foundation_service.utils.organization_helper import get_user_organization_id
 from common.models import Customer, User, Product
 from common.utils.logger import get_logger
+from common.utils.id_generator import generate_id
 from common.exceptions import BusinessException
 
 logger = get_logger(__name__)
@@ -70,9 +71,12 @@ class OpportunityService:
             raise BusinessException(detail="客户不存在", status_code=404)
         
         try:
+            # 生成商机ID
+            opportunity_id = await generate_id(self.db, "Opportunity")
+            
             # 创建商机
             opportunity = Opportunity(
-                id=str(uuid.uuid4()),
+                id=opportunity_id,
                 customer_id=request.customer_id,
                 lead_id=request.lead_id,
                 name=request.name,
@@ -329,9 +333,12 @@ class OpportunityService:
             # 1. 创建或使用已有客户
             customer_id = request.customer_id
             if not customer_id:
+                # 生成客户ID
+                new_customer_id = await generate_id(self.db, "Customer")
+                
                 # 从线索创建客户
                 customer = Customer(
-                    id=str(uuid.uuid4()),
+                    id=new_customer_id,
                     name=lead.company_name or lead.name,
                     customer_type="organization" if lead.company_name else "individual",
                     customer_source_type="own",

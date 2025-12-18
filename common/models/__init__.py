@@ -61,6 +61,8 @@ from common.models.lead_follow_up import LeadFollowUp
 from common.models.lead_note import LeadNote
 from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
 from common.models.audit_log import AuditLog
+from common.models.system_config import SystemConfig
+from common.models.system_config_history import SystemConfigHistory
 __all__ = [
     "User",
     "Organization",
@@ -115,5 +117,7 @@ __all__ = [
     "ProductPriceList",
     "VendorProductFinancial",
     "AuditLog",
+    "SystemConfig",
+    "SystemConfigHistory",
 ]
 

@@ -18,6 +18,7 @@ from foundation_service.schemas.lead import (
     LeadListResponse,
 )
 from common.utils.logger import get_logger
+from common.utils.id_generator import generate_id
 from common.exceptions import BusinessException
 import uuid
 
@@ -69,11 +70,14 @@ class LeadService:
             )
         
         try:
+            # 生成线索ID
+            lead_id = await generate_id(self.db, "Lead")
+            
             # 如果没有提供 owner_user_id，则默认设置为创建人（线索与用户绑定）
             owner_user_id = request.owner_user_id or created_by
             
             lead = Lead(
-                id=str(uuid.uuid4()),
+                id=lead_id,
                 name=request.name,
                 company_name=request.company_name,
                 contact_name=request.contact_name,
