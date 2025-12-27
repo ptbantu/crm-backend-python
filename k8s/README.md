@@ -139,7 +139,55 @@ kubectl logs -f deployment/crm-foundation-service
 配置通过 ConfigMap 和 Secret 管理：
 
 - **ConfigMap** (`crm-python-config`): 非敏感配置
+  - 数据库连接信息（从 mysql-config 引用）
+  - Redis、MongoDB、MinIO 等服务的连接信息
+  - JWT 算法、过期时间等配置
+  - 天眼查 API URL 和超时时间
 - **Secret** (`crm-python-secret`): 敏感信息（密码、密钥等）
+  - 数据库密码
+  - JWT 密钥
+  - Redis、MongoDB 密码
+  - **天眼查 API Key**（必填，用于企业信息查询功能）
+
+#### 配置天眼查 API Key
+
+**开发/测试环境**：
+```bash
+# 编辑 secret.yaml 文件
+vim k8s/deployments/secret.yaml
+
+# 修改 TIANYANCHA_API_KEY 的值
+# TIANYANCHA_API_KEY: "your_actual_api_key_here"
+
+# 应用配置
+kubectl apply -f k8s/deployments/secret.yaml
+
+# 重启服务使配置生效
+kubectl rollout restart deployment/crm-foundation-service
+```
+
+**生产环境**：
+```bash
+# 方式一：使用 kubectl 命令创建/更新 Secret（推荐）
+kubectl create secret generic crm-python-secret \
+  --from-literal=TIANYANCHA_API_KEY=your_actual_api_key_here \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# 方式二：使用 base64 编码（编辑 secret.yaml）
+echo -n "your_actual_api_key_here" | base64
+# 将输出的 base64 编码值填入 k8s/prod/secret.yaml 中的 TIANYANCHA_API_KEY
+
+# 应用配置
+kubectl apply -f k8s/prod/secret.yaml
+
+# 重启服务使配置生效
+kubectl rollout restart deployment/crm-foundation-service
+```
+
+**获取天眼查 API Key**：
+1. 访问 [天眼查开放平台](https://open.tianyancha.com/)
+2. 注册/登录账号
+3. 创建应用并获取 API Key
 
 ### Ingress 配置
 

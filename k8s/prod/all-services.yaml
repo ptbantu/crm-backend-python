@@ -151,6 +151,22 @@ spec:
             secretKeyRef:
               name: minio-secret
               key: MINIO_ROOT_PASSWORD
+        # 天眼查 API 配置
+        - name: TIANYANCHA_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: TIANYANCHA_API_KEY
+        - name: TIANYANCHA_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: TIANYANCHA_API_URL
+        - name: TIANYANCHA_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: TIANYANCHA_TIMEOUT
         # Analytics 配置（已合并到 foundation_service）
         - name: METRICS_COLLECTION_INTERVAL
           valueFrom:

@@ -35,6 +35,26 @@ crm-backend-python/
 
 ## 快速开始
 
+### 环境变量配置
+
+1. 复制环境变量示例文件：
+```bash
+cp .env.example .env
+```
+
+2. 编辑 `.env` 文件，填入实际配置值：
+```bash
+# 必填：天眼查 API Key（用于企业信息查询功能）
+TIANYANCHA_API_KEY=your_tianyancha_api_key_here
+
+# 其他配置项根据需要修改
+```
+
+**重要提示**：
+- `.env` 文件包含敏感信息，请勿提交到版本控制系统
+- 天眼查 API Key 获取方式：登录 [天眼查开放平台](https://open.tianyancha.com/)
+- 更多环境变量配置说明请参考 `.env.example` 文件
+
 ### 安装依赖
 
 ```bash

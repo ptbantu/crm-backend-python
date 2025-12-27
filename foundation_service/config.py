@@ -44,6 +44,11 @@ class Settings(BaseServiceSettings):
     CACHE_ENABLED: bool = True  # 是否启用缓存
     CACHE_TTL: int = 300  # 缓存过期时间（秒），5分钟
     CACHE_KEY_PREFIX: str = "analytics:"  # 缓存键前缀
+    
+    # 天眼查 API 配置
+    TIANYANCHA_API_URL: str = "http://open.api.tianyancha.com"  # 天眼查API地址（开放平台）
+    TIANYANCHA_API_KEY: str = ""  # 天眼查API密钥（从环境变量 TIANYANCHA_API_KEY 读取）
+    TIANYANCHA_TIMEOUT: int = 30  # 请求超时时间（秒）
 
 
 settings = Settings()
