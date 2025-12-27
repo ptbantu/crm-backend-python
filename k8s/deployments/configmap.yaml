@@ -7,6 +7,7 @@ metadata:
   namespace: default
   labels:
     app: crm-python
+    environment: development
 data:
   # Foundation Service 配置（单体服务，包含所有功能）
   # 数据库配置从 mysql-config ConfigMap 引用（在 deployment 中配置）
@@ -41,7 +42,13 @@ data:
   # MongoDB 配置（用于日志和监控）
   MONGO_HOST: "mongodb.default.svc.cluster.local"
   MONGO_PORT: "27017"
+  MONGO_DATABASE: "bantu_crm"
   MONGO_DB: "bantu_crm_logs"
+  MONGO_AUTH_SOURCE: "bantu_crm"
   
   # MinIO 配置（用于文件存储）
   MINIO_ENDPOINT: "minio.default.svc.cluster.local"
+  
+  # 天眼查 API 配置（非敏感配置）
+  TIANYANCHA_API_URL: "http://open.api.tianyancha.com"
+  TIANYANCHA_TIMEOUT: "30"

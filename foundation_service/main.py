@@ -22,7 +22,7 @@ from foundation_service.api.v1 import (
     temporary_links, notifications, opportunities, product_dependencies,
     product_categories, products, service_types, customers, contacts,
     service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers,
-    system_config
+    system_config, tianyancha
 )
 from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
@@ -339,6 +339,7 @@ app.include_router(organization_domains.router, prefix="/api/foundation/organiza
 app.include_router(permissions.router, prefix="/api/foundation", tags=["权限管理"])
 app.include_router(menus.router, prefix="/api/foundation", tags=["菜单管理"])
 app.include_router(system_config.router, prefix="/api/foundation/system-config", tags=["系统配置"])
+app.include_router(tianyancha.router, prefix="/api/foundation/tianyancha", tags=["天眼查检索"])
 
 # Order Workflow Service 路由
 app.include_router(orders.router, prefix="/api/order-workflow/orders", tags=["订单管理"])

@@ -22,6 +22,7 @@ passlib[bcrypt]==1.7.4
 
 # HTTP 客户端（服务间调用）
 httpx==0.25.1
+requests==2.31.0  # 天眼查API使用（同步请求）
 
 # Redis 客户端（异步支持）
 redis[hiredis]==5.0.1

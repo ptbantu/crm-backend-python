@@ -9,7 +9,7 @@ metadata:
     app: crm-foundation-service
     service: foundation
     version: python
-    environment: production
+    environment: development
 spec:
   replicas: 1
   selector:
@@ -21,7 +21,12 @@ spec:
         app: crm-foundation-service
         service: foundation
         version: python
+        environment: development
     spec:
+      # 确保 Pod 使用节点的 IP 作为出口 IP（K3s 默认已启用 SNAT）
+      # 这样可以将节点 IP (168.231.118.179) 加入天眼查 API 白名单
+      # 注意：hostNetwork 会改变网络行为，当前配置不需要它
+      # Pod 的出口 IP 已经是节点 IP，通过 SNAT 实现
       containers:
       - name: foundation
         image: bantu-crm-crm-foundation-service:dev
@@ -138,6 +143,22 @@ spec:
             configMapKeyRef:
               name: crm-python-config
               key: MONGO_AUTH_SOURCE
+        # 天眼查 API 配置
+        - name: TIANYANCHA_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: TIANYANCHA_API_KEY
+        - name: TIANYANCHA_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: TIANYANCHA_API_URL
+        - name: TIANYANCHA_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: TIANYANCHA_TIMEOUT
         volumeMounts:
         # 挂载本地代码目录，实现热重载
         - name: common-code
@@ -145,17 +166,18 @@ spec:
         - name: foundation-code
           mountPath: /app/foundation_service
         resources:
+          # 开发环境：降低资源限制
           requests:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "512Mi"
+            cpu: "250m"
           limits:
-            memory: "2Gi"
-            cpu: "2000m"
+            memory: "1Gi"
+            cpu: "1000m"
         livenessProbe:
           httpGet:
             path: /health
             port: 8081
-          initialDelaySeconds: 60
+          initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
@@ -163,7 +185,7 @@ spec:
           httpGet:
             path: /health
             port: 8081
-          initialDelaySeconds: 30
+          initialDelaySeconds: 15
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
@@ -171,8 +193,8 @@ spec:
           httpGet:
             path: /health
             port: 8081
-          initialDelaySeconds: 10
-          periodSeconds: 10
+          initialDelaySeconds: 5
+          periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 30
       volumes:

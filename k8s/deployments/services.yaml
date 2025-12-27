@@ -12,7 +12,7 @@ metadata:
   labels:
     app: crm-foundation-service
     service: foundation
-    environment: production
+    environment: development
 spec:
   type: ClusterIP
   ports:

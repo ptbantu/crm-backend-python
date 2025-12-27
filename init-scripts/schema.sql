@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `_migration_product_prices_log` (
   PRIMARY KEY (`id`),
   KEY `idx_product_id` (`product_id`),
   KEY `idx_migration_status` (`migration_status`)
-) ENGINE=InnoDB AUTO_INCREMENT=379 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品价格迁移日志表';
+) ENGINE=InnoDB AUTO_INCREMENT=364 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='产品价格迁移日志表';
 CREATE TABLE IF NOT EXISTS `_product_prices_backup` (
   `id` char(36) NOT NULL,
   `product_id` char(36) NOT NULL COMMENT '产品ID（外键 → products.id）',

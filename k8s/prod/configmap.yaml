@@ -46,3 +46,7 @@ data:
   
   # MinIO 配置（用于文件存储）
   MINIO_ENDPOINT: "minio.default.svc.cluster.local"
+  
+  # 天眼查 API 配置（非敏感配置）
+  TIANYANCHA_API_URL: "https://api.tianyancha.com"
+  TIANYANCHA_TIMEOUT: "30"
