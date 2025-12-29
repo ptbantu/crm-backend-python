@@ -1,7 +1,7 @@
 """
 订单模型
 """
-from sqlalchemy import Column, String, Numeric, Date, Text, ForeignKey, Index, Integer
+from sqlalchemy import Column, String, Numeric, Date, Text, ForeignKey, Index, Integer, Enum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.mysql import DATETIME
@@ -11,6 +11,14 @@ from common.database import Base
 # 从共享模型导入 User 和 Customer
 from common.models import User, Customer
 import uuid
+import enum
+
+
+class OrderTypeEnum(str, enum.Enum):
+    """订单类型枚举"""
+    COMBINATION = "combination"  # 组合
+    LONG_TERM = "long_term"  # 长周期
+    ONE_TIME = "one_time"  # 一次性
 
 
 class Order(Base):
@@ -23,7 +31,7 @@ class Order(Base):
     title = Column(String(255), nullable=False, comment="订单标题")
     
     # 关联
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True, comment="客户ID")
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="RESTRICT"), nullable=False, index=True, comment="客户ID")
     service_record_id = Column(String(36), ForeignKey("service_records.id", ondelete="SET NULL"), nullable=True, index=True, comment="服务记录ID")
     workflow_instance_id = Column(String(36), ForeignKey("workflow_instances.id", ondelete="SET NULL"), nullable=True, index=True, comment="工作流实例ID")
     product_id = Column(String(36), ForeignKey("products.id", ondelete="SET NULL"), nullable=True, index=True, comment="产品ID（向后兼容）")
@@ -51,6 +59,13 @@ class Order(Base):
     status_id = Column(String(36), nullable=True, index=True, comment="状态ID（跨服务引用）")
     status_code = Column(String(50), nullable=True, index=True, comment="状态代码")
     
+    # 长周期服务字段（新增）
+    order_type = Column(Enum(OrderTypeEnum), nullable=False, default=OrderTypeEnum.ONE_TIME, comment="订单类型：combination(组合), long_term(长周期), one_time(一次性交付)")
+    cycle_months = Column(Integer, nullable=True, comment="长周期服务月数（NULL=非长周期, 6/12/等）")
+    start_date = Column(Date, nullable=True, comment="长周期服务开始日期（影响每月回款计算）")
+    monthly_payment_amount = Column(Numeric(18, 2), nullable=True, comment="长周期每月回款金额（自动计算：总价 / cycle_months）")
+    is_fully_paid_excluding_long = Column(Boolean, nullable=False, default=False, comment="排除长周期后是否全部回款（1=是，用于销售收入确认）")
+    
     # 时间信息
     expected_start_date = Column(Date, nullable=True, comment="预期开始日期")
     expected_completion_date = Column(Date, nullable=True, comment="预期完成日期")
@@ -76,6 +91,7 @@ class Order(Base):
     order_items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     order_comments = relationship("OrderComment", back_populates="order", cascade="all, delete-orphan")
     order_files = relationship("OrderFile", back_populates="order", cascade="all, delete-orphan")
+    payments = relationship("OrderPayment", back_populates="order", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index("ix_orders_customer", "customer_id"),

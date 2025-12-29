@@ -1,11 +1,18 @@
 """
 订单项模型
 """
-from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Numeric, Date, CheckConstraint, UniqueConstraint
+from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Numeric, Date, CheckConstraint, UniqueConstraint, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
 import uuid
+import enum
+
+
+class ItemTypeEnum(str, enum.Enum):
+    """服务项类型枚举"""
+    LONG_TERM = "long_term"  # 长周期
+    ONE_TIME = "one_time"  # 一次性
 
 
 class OrderItem(Base):
@@ -58,6 +65,10 @@ class OrderItem(Base):
     estimated_profit_cny = Column(Numeric(18, 2), default=0, nullable=False, comment="预估毛利(CNY)")
     estimated_profit_idr = Column(Numeric(18, 2), default=0, nullable=False, comment="预估毛利(IDR)")
     
+    # 长周期服务字段（新增）
+    item_type = Column(Enum(ItemTypeEnum), nullable=False, default=ItemTypeEnum.ONE_TIME, comment="服务项类型：long_term(长周期), one_time(一次性)")
+    cycle_months = Column(Integer, nullable=True, comment="若长周期，指定月数")
+    
     # 状态
     status = Column(String(50), nullable=False, default="pending", index=True, comment="订单项状态：pending, in_progress, completed, cancelled")
     
@@ -67,6 +78,7 @@ class OrderItem(Base):
     
     # 关系
     order = relationship("Order", back_populates="order_items")
+    payments = relationship("OrderPayment", back_populates="order_item", cascade="all, delete-orphan")
     
     # 检查约束和唯一约束
     __table_args__ = (

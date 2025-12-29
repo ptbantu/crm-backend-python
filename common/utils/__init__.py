@@ -4,6 +4,9 @@
 from .logger import Logger, get_logger, default_logger
 from .repository import BaseRepository
 from .service import BaseService
+from .oss_helper import OpportunityOSSHelper
+from .email_helper import OpportunityEmailHelper
+from .pdf_helper import OpportunityPDFHelper
 
 __all__ = [
     "Logger",
@@ -11,5 +14,8 @@ __all__ = [
     "default_logger",
     "BaseRepository",
     "BaseService",
+    "OpportunityOSSHelper",
+    "OpportunityEmailHelper",
+    "OpportunityPDFHelper",
 ]
 

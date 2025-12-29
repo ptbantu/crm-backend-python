@@ -50,6 +50,9 @@ psutil==5.9.6  # 系统监控工具
 # 邮件发送
 aiosmtplib==3.0.1  # 异步 SMTP 客户端
 
+# PDF 生成
+reportlab==4.0.7  # PDF 生成库
+
 # WeChaty 微信机器人（暂时注释，等需要时再启用）
 # wechaty==0.10.7  # 微信机器人框架
 # pyee==11.1.0  # wechaty 0.10.7 兼容的 pyee 版本（AsyncIOEventEmitter 支持）

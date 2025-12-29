@@ -131,6 +131,24 @@ class OpportunityResponse(BaseModel):
     expected_close_date: Optional[date] = None
     actual_close_date: Optional[date] = None
     description: Optional[str] = None
+    # 新增字段
+    current_stage_id: Optional[str] = None
+    current_stage_code: Optional[str] = None
+    current_stage_name_zh: Optional[str] = None
+    workflow_status: str = Field(default="active", description="工作流整体状态")
+    collection_status: str = Field(default="not_started", description="整体收款状态")
+    total_received_amount: Decimal = Field(default=Decimal("0"), description="已收总金额")
+    service_type: str = Field(default="one_time", description="服务类型")
+    is_split_required: bool = Field(default=False, description="是否需要订单拆分")
+    split_order_required: bool = Field(default=False, description="是否需要拆分独立订单")
+    has_staged_services: bool = Field(default=False, description="是否包含分阶段服务")
+    tax_service_cycle_months: Optional[int] = None
+    tax_service_start_date: Optional[date] = None
+    primary_quotation_id: Optional[str] = None
+    primary_contract_id: Optional[str] = None
+    developed_by: Optional[str] = None
+    last_followup_at: Optional[datetime] = None
+    is_stale: bool = Field(default=False, description="是否长久未跟进")
     products: List[OpportunityProductResponse] = Field(default=[], description="产品列表")
     payment_stages: List[OpportunityPaymentStageResponse] = Field(default=[], description="付款阶段列表")
     created_by: Optional[str] = None
@@ -192,6 +210,21 @@ class OpportunityAssignRequest(BaseModel):
 class OpportunityStageUpdateRequest(BaseModel):
     """商机阶段更新请求"""
     stage: str = Field(..., description="商机阶段")
+
+
+# 商机工作流状态更新请求
+class OpportunityWorkflowStatusUpdateRequest(BaseModel):
+    """商机工作流状态更新请求"""
+    workflow_status: str = Field(..., description="工作流状态：active, paused, completed, cancelled")
+
+
+# 商机服务类型更新请求
+class OpportunityServiceTypeUpdateRequest(BaseModel):
+    """商机服务类型更新请求"""
+    service_type: str = Field(..., description="服务类型：one_time, long_term, mixed")
+    is_split_required: Optional[bool] = Field(None, description="是否需要订单拆分")
+    tax_service_cycle_months: Optional[int] = Field(None, description="财税服务周期（月）")
+    tax_service_start_date: Optional[date] = Field(None, description="财税服务开始日期")
 
 
 # 商机转化请求

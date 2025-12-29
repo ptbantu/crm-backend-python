@@ -2,7 +2,7 @@
 联系人模型（共享定义）
 所有微服务共享的联系人表结构定义
 """
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint, Integer
 from sqlalchemy.sql import func
 from common.database import Base
 import uuid
@@ -14,7 +14,7 @@ class Contact(Base):
     
     # 基础字段
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # 数据隔离字段
     owner_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True, comment="负责人ID（数据隔离）")

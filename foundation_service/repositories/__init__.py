@@ -25,6 +25,35 @@ from foundation_service.repositories.opportunity_repository import (
     OpportunityProductRepository,
     OpportunityPaymentStageRepository,
 )
+from foundation_service.repositories.opportunity_stage_template_repository import OpportunityStageTemplateRepository
+from foundation_service.repositories.opportunity_stage_history_repository import OpportunityStageHistoryRepository
+from foundation_service.repositories.quotation_repository import QuotationRepository
+from foundation_service.repositories.quotation_item_repository import QuotationItemRepository
+from foundation_service.repositories.quotation_document_repository import QuotationDocumentRepository
+from foundation_service.repositories.quotation_template_repository import QuotationTemplateRepository
+from foundation_service.repositories.contract_entity_repository import ContractEntityRepository
+from foundation_service.repositories.contract_repository import ContractRepository
+from foundation_service.repositories.contract_template_repository import ContractTemplateRepository
+from foundation_service.repositories.contract_document_repository import ContractDocumentRepository
+from foundation_service.repositories.invoice_repository import InvoiceRepository
+from foundation_service.repositories.invoice_file_repository import InvoiceFileRepository
+from foundation_service.repositories.product_document_rule_repository import ProductDocumentRuleRepository
+from foundation_service.repositories.contract_material_document_repository import (
+    ContractMaterialDocumentRepository,
+    MaterialNotificationEmailRepository,
+)
+from foundation_service.repositories.order_payment_repository import OrderPaymentRepository
+from foundation_service.repositories.payment_repository import (
+    PaymentRepository,
+    PaymentVoucherRepository,
+    CollectionTodoRepository,
+)
+from foundation_service.repositories.execution_order_repository import (
+    ExecutionOrderRepository,
+    ExecutionOrderItemRepository,
+    ExecutionOrderDependencyRepository,
+    CompanyRegistrationInfoRepository,
+)
 from foundation_service.repositories.product_dependency_repository import ProductDependencyRepository
 
 __all__ = [
@@ -48,5 +77,28 @@ __all__ = [
     "OpportunityRepository",
     "OpportunityProductRepository",
     "OpportunityPaymentStageRepository",
+    "OpportunityStageTemplateRepository",
+    "OpportunityStageHistoryRepository",
+    "QuotationRepository",
+    "QuotationItemRepository",
+    "QuotationDocumentRepository",
+    "QuotationTemplateRepository",
+    "ContractEntityRepository",
+    "ContractRepository",
+    "ContractTemplateRepository",
+    "ContractDocumentRepository",
+    "InvoiceRepository",
+    "InvoiceFileRepository",
+    "ProductDocumentRuleRepository",
+    "ContractMaterialDocumentRepository",
+    "MaterialNotificationEmailRepository",
+    "OrderPaymentRepository",
+    "PaymentRepository",
+    "PaymentVoucherRepository",
+    "CollectionTodoRepository",
+    "ExecutionOrderRepository",
+    "ExecutionOrderItemRepository",
+    "ExecutionOrderDependencyRepository",
+    "CompanyRegistrationInfoRepository",
     "ProductDependencyRepository",
 ]

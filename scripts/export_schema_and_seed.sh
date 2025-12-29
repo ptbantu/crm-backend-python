@@ -108,34 +108,28 @@ echo "2. 导出 Seed Data"
 echo "=========================================="
 echo ""
 
-# 定义需要导出数据的表（有数据的表）
-TABLES_WITH_DATA=(
-    "customer_levels"
-    "customer_sources"
-    "customers"
-    "follow_up_statuses"
-    "menu_permissions"
-    "menus"
-    "order_items"
-    "order_statuses"
-    "orders"
-    "organization_domains"
-    "organization_employees"
-    "organizations"
-    "permissions"
-    "product_categories"
-    "products"
-    "role_permissions"
-    "roles"
-    "user_roles"
-    "users"
-)
+# 自动获取数据库中的所有表名
+echo "📋 获取数据库中的所有表..."
+TABLES_STR=$(kubectl exec "$MYSQL_POD" -- bash -c "export LANG=C.UTF-8 && mysql -uroot -p'$MYSQL_ROOT_PASSWORD' \
+    -D '$MYSQL_DATABASE' \
+    -N \
+    -e 'SHOW TABLES;' 2>/dev/null" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
 
-# 导出 seed data（确保使用 UTF-8 编码）
-# 将表名数组转换为空格分隔的字符串
-TABLES_STR=$(IFS=' '; echo "${TABLES_WITH_DATA[*]}")
+if [ -z "$TABLES_STR" ]; then
+    echo "❌ 错误: 未能获取数据库表列表"
+    exit 1
+fi
+
+# 显示将要导出的表
+echo "✅ 找到以下表:"
+echo "$TABLES_STR" | tr ' ' '\n' | nl
+echo ""
+echo "📊 总共 $(echo "$TABLES_STR" | wc -w) 个表"
+echo ""
 
 # 先在 Pod 内导出到临时文件，避免管道编码问题
+# 注意：TABLES_STR 已经包含所有表名，直接使用即可
+echo "📤 开始导出数据..."
 kubectl exec "$MYSQL_POD" -- bash -c "export LANG=C.UTF-8 && mysqldump -uroot -p'$MYSQL_ROOT_PASSWORD' \
     --no-create-info \
     --skip-triggers \
@@ -144,7 +138,9 @@ kubectl exec "$MYSQL_POD" -- bash -c "export LANG=C.UTF-8 && mysqldump -uroot -p
     --single-transaction \
     --default-character-set=utf8mb4 \
     --set-charset \
-    '$MYSQL_DATABASE' $TABLES_STR > /tmp/seed_data_raw.sql 2>&1" || true
+    '$MYSQL_DATABASE' $TABLES_STR > /tmp/seed_data_raw.sql 2>&1" || {
+    echo "⚠️  警告: 导出过程中可能有错误，继续处理..."
+}
 
 # 从 Pod 复制文件到本地
 kubectl cp "$MYSQL_POD:/tmp/seed_data_raw.sql" /tmp/seed_data_raw.sql >/dev/null 2>&1

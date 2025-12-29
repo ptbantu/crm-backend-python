@@ -20,7 +20,6 @@ from common.models.organization import Organization
 from common.models import User
 from common.exceptions import BusinessException
 from common.utils.logger import get_logger
-from common.utils.id_generator import generate_id
 from foundation_service.utils.customer_code_generator import generate_customer_code
 
 logger = get_logger(__name__)
@@ -67,12 +66,8 @@ class CustomerService:
                 raise BusinessException(detail="父客户不存在")
             logger.debug(f"验证父客户成功: parent_id={request.parent_customer_id}, parent_name={parent.name}")
         
-        # 生成客户ID
-        customer_id = await generate_id(self.db, "Customer")
-        
-        # 创建客户
+        # 创建客户（ID由数据库自增生成）
         customer = Customer(
-            id=customer_id,
             name=request.name,
             code=code,
             customer_type=request.customer_type,

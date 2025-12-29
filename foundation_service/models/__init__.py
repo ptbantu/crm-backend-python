@@ -20,6 +20,18 @@ from common.models.lead_note import LeadNote
 from common.models.lead_pool import LeadPool
 from common.models.notification import Notification
 from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
+from common.models.opportunity_stage_template import OpportunityStageTemplate
+from common.models.opportunity_stage_history import OpportunityStageHistory
+from common.models.quotation import Quotation, QuotationItem, QuotationDocument
+from common.models.quotation_template import QuotationTemplate
+from common.models.contract_entity import ContractEntity
+from common.models.contract import Contract, ContractTemplate, ContractDocument
+from common.models.invoice import Invoice, InvoiceFile
+from common.models.product_document_rule import ProductDocumentRule
+from common.models.contract_material_document import ContractMaterialDocument, MaterialNotificationEmail
+from common.models.order_payment import OrderPayment
+from common.models.payment import Payment, PaymentVoucher, CollectionTodo
+from common.models.execution_order import ExecutionOrder, ExecutionOrderItem, ExecutionOrderDependency, CompanyRegistrationInfo
 from common.models.workflow_definition import WorkflowDefinition
 from common.models.workflow_instance import WorkflowInstance
 from common.models.workflow_task import WorkflowTask
@@ -75,6 +87,29 @@ __all__ = [
     "Opportunity",
     "OpportunityProduct",
     "OpportunityPaymentStage",
+    "OpportunityStageTemplate",
+    "OpportunityStageHistory",
+    "Quotation",
+    "QuotationItem",
+    "QuotationDocument",
+    "QuotationTemplate",
+    "ContractEntity",
+    "Contract",
+    "ContractTemplate",
+    "ContractDocument",
+    "Invoice",
+    "InvoiceFile",
+    "ProductDocumentRule",
+    "ContractMaterialDocument",
+    "MaterialNotificationEmail",
+    "OrderPayment",
+    "Payment",
+    "PaymentVoucher",
+    "CollectionTodo",
+    "ExecutionOrder",
+    "ExecutionOrderItem",
+    "ExecutionOrderDependency",
+    "CompanyRegistrationInfo",
     "ProductDependency",
     # Service Management
     "Customer",

@@ -2,11 +2,10 @@
 客户模型（共享定义）
 所有微服务共享的客户表结构定义
 """
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, JSON, CheckConstraint
+from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, JSON, CheckConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
-import uuid
 
 
 class Customer(Base):
@@ -14,7 +13,7 @@ class Customer(Base):
     __tablename__ = "customers"
     
     # 基础字段
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(Integer, primary_key=True, autoincrement=True, comment="客户ID：数据库自增，5位数字")
     name = Column(String(255), nullable=False, index=True)
     code = Column(String(100), nullable=True, unique=True, index=True)
     
@@ -23,7 +22,7 @@ class Customer(Base):
     customer_source_type = Column(String(50), nullable=False, default="own", index=True)  # own, agent
     
     # 层级关系
-    parent_customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
+    parent_customer_id = Column(Integer, ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
     
     # 关联关系（注意：users 和 organizations 表在其他服务中，但可以通过 common.models 引用）
     owner_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)  # 内部客户所有者

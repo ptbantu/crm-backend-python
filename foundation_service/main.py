@@ -22,7 +22,8 @@ from foundation_service.api.v1 import (
     temporary_links, notifications, opportunities, product_dependencies,
     product_categories, products, service_types, customers, contacts,
     service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers,
-    system_config, tianyancha
+    system_config, tianyancha, quotations, contracts, invoices, material_documents,
+    order_payments, execution_orders, payments
 )
 from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
@@ -35,6 +36,13 @@ from common.models import (
     OrganizationDomain, OrganizationDomainRelation, Permission, RolePermission, Menu, MenuPermission,
     Order, OrderItem, OrderComment, OrderFile, Lead, LeadFollowUp, LeadNote,
     LeadPool, Notification, Opportunity, OpportunityProduct, OpportunityPaymentStage,
+    OpportunityStageTemplate, OpportunityStageHistory,
+    Quotation, QuotationItem, QuotationDocument, QuotationTemplate,
+    ContractEntity, Contract, ContractTemplate, ContractDocument,
+    Invoice, InvoiceFile,
+    ProductDocumentRule, ContractMaterialDocument, MaterialNotificationEmail,
+    OrderPayment, Payment, PaymentVoucher, CollectionTodo,
+    ExecutionOrder, ExecutionOrderItem, ExecutionOrderDependency, CompanyRegistrationInfo,
     CollectionTask, TemporaryLink, CustomerLevel, FollowUpStatus,
     WorkflowDefinition, WorkflowInstance, WorkflowTask, WorkflowTransition,
     ProductDependency, Customer, CustomerSource, CustomerChannel,
@@ -322,6 +330,29 @@ from foundation_service.models import (
     Opportunity,
     OpportunityProduct,
     OpportunityPaymentStage,
+    OpportunityStageTemplate,
+    OpportunityStageHistory,
+    Quotation,
+    QuotationItem,
+    QuotationDocument,
+    QuotationTemplate,
+    ContractEntity,
+    Contract,
+    ContractTemplate,
+    ContractDocument,
+    Invoice,
+    InvoiceFile,
+    ProductDocumentRule,
+    ContractMaterialDocument,
+    MaterialNotificationEmail,
+    OrderPayment,
+    Payment,
+    PaymentVoucher,
+    CollectionTodo,
+    ExecutionOrder,
+    ExecutionOrderItem,
+    ExecutionOrderDependency,
+    CompanyRegistrationInfo,
     ProductDependency,
     WorkflowDefinition,
     WorkflowInstance,
@@ -353,6 +384,13 @@ app.include_router(notifications.router, prefix="/api/order-workflow/notificatio
 app.include_router(customer_levels_router, prefix="/api/order-workflow", tags=["选项配置"])
 app.include_router(opportunities.router, prefix="/api/order-workflow/opportunities", tags=["商机管理"])
 app.include_router(product_dependencies.router, prefix="/api/order-workflow/product-dependencies", tags=["产品依赖关系"])
+app.include_router(quotations.router, prefix="/api/order-workflow", tags=["报价单管理"])
+app.include_router(contracts.router, prefix="/api/order-workflow", tags=["合同管理"])
+app.include_router(invoices.router, prefix="/api/order-workflow", tags=["发票管理"])
+app.include_router(material_documents.router, prefix="/api/order-workflow", tags=["办理资料管理"])
+app.include_router(order_payments.router, prefix="/api/order-workflow", tags=["订单回款管理"])
+app.include_router(execution_orders.router, prefix="/api/order-workflow", tags=["执行订单管理"])
+app.include_router(payments.router, prefix="/api/order-workflow", tags=["收款管理"])
 
 # Service Management 路由
 app.include_router(product_categories.router, prefix="/api/service-management/categories", tags=["产品分类"])

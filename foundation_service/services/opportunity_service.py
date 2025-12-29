@@ -14,6 +14,7 @@ from foundation_service.repositories.opportunity_repository import (
     OpportunityPaymentStageRepository,
 )
 from foundation_service.services.product_dependency_service import ProductDependencyService
+from foundation_service.services.opportunity_stage_service import OpportunityStageService
 from foundation_service.schemas.opportunity import (
     CreateOpportunityRequest,
     UpdateOpportunityRequest,
@@ -24,6 +25,8 @@ from foundation_service.schemas.opportunity import (
     LeadConvertToOpportunityRequest,
     OpportunityConvertToOrderRequest,
     ProductDependencyValidationResponse,
+    OpportunityWorkflowStatusUpdateRequest,
+    OpportunityServiceTypeUpdateRequest,
 )
 from foundation_service.utils.organization_helper import get_user_organization_id
 from common.models import Customer, User, Product
@@ -43,6 +46,7 @@ class OpportunityService:
         self.product_repository = OpportunityProductRepository(db)
         self.payment_stage_repository = OpportunityPaymentStageRepository(db)
         self.dependency_service = ProductDependencyService(db)
+        self.stage_service = OpportunityStageService(db)
     
     async def create_opportunity(
         self,
@@ -93,6 +97,14 @@ class OpportunityService:
             
             await self.db.add(opportunity)
             await self.db.flush()  # 获取opportunity.id
+            
+            # 初始化阶段（设置为第一个阶段）
+            from foundation_service.repositories.opportunity_stage_template_repository import OpportunityStageTemplateRepository
+            stage_template_repo = OpportunityStageTemplateRepository(self.db)
+            first_stage = await stage_template_repo.get_by_order(1)
+            if first_stage:
+                opportunity.current_stage_id = first_stage.id
+                opportunity.workflow_status = "active"
             
             # 处理产品列表
             if request.products:
@@ -254,6 +266,63 @@ class OpportunityService:
         
         return await self._to_response(opportunity)
     
+    async def update_workflow_status(
+        self,
+        opportunity_id: str,
+        request: OpportunityWorkflowStatusUpdateRequest,
+        organization_id: Optional[str] = None,
+        updated_by: Optional[str] = None,
+    ) -> OpportunityResponse:
+        """更新工作流状态"""
+        opportunity = await self.repository.get_by_id(opportunity_id, organization_id)
+        if not opportunity:
+            raise BusinessException(detail="商机不存在", status_code=404)
+        
+        try:
+            opportunity.workflow_status = request.workflow_status
+            opportunity.updated_by = updated_by
+            
+            await self.db.commit()
+            await self.db.refresh(opportunity)
+            
+            return await self._to_response(opportunity)
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"更新工作流状态失败: {e}", exc_info=True)
+            raise BusinessException(detail=f"更新工作流状态失败: {str(e)}")
+    
+    async def update_service_type(
+        self,
+        opportunity_id: str,
+        request: OpportunityServiceTypeUpdateRequest,
+        organization_id: Optional[str] = None,
+        updated_by: Optional[str] = None,
+    ) -> OpportunityResponse:
+        """更新服务类型"""
+        opportunity = await self.repository.get_by_id(opportunity_id, organization_id)
+        if not opportunity:
+            raise BusinessException(detail="商机不存在", status_code=404)
+        
+        try:
+            opportunity.service_type = request.service_type
+            if request.is_split_required is not None:
+                opportunity.is_split_required = request.is_split_required
+            if request.tax_service_cycle_months is not None:
+                opportunity.tax_service_cycle_months = request.tax_service_cycle_months
+            if request.tax_service_start_date is not None:
+                opportunity.tax_service_start_date = request.tax_service_start_date
+            
+            opportunity.updated_by = updated_by
+            
+            await self.db.commit()
+            await self.db.refresh(opportunity)
+            
+            return await self._to_response(opportunity)
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(f"更新服务类型失败: {e}", exc_info=True)
+            raise BusinessException(detail=f"更新服务类型失败: {str(e)}")
+    
     async def delete_opportunity(
         self,
         opportunity_id: str,
@@ -333,12 +402,8 @@ class OpportunityService:
             # 1. 创建或使用已有客户
             customer_id = request.customer_id
             if not customer_id:
-                # 生成客户ID
-                new_customer_id = await generate_id(self.db, "Customer")
-                
-                # 从线索创建客户
+                # 从线索创建客户（ID由数据库自增生成）
                 customer = Customer(
-                    id=new_customer_id,
                     name=lead.company_name or lead.name,
                     customer_type="organization" if lead.company_name else "individual",
                     customer_source_type="own",
@@ -705,6 +770,20 @@ class OpportunityService:
         except Exception as e:
             logger.warning(f"获取付款阶段列表失败: {e}")
         
+        # 获取当前阶段信息
+        current_stage_code = None
+        current_stage_name_zh = None
+        try:
+            if opportunity.current_stage_id:
+                from foundation_service.repositories.opportunity_stage_template_repository import OpportunityStageTemplateRepository
+                stage_template_repo = OpportunityStageTemplateRepository(self.db)
+                current_stage = await stage_template_repo.get_by_id(opportunity.current_stage_id)
+                if current_stage:
+                    current_stage_code = current_stage.code
+                    current_stage_name_zh = current_stage.name_zh
+        except Exception as e:
+            logger.warning(f"获取当前阶段信息失败: {e}")
+        
         return OpportunityResponse(
             id=opportunity.id,
             customer_id=opportunity.customer_id,
@@ -722,6 +801,24 @@ class OpportunityService:
             expected_close_date=opportunity.expected_close_date,
             actual_close_date=opportunity.actual_close_date,
             description=opportunity.description,
+            # 新增字段
+            current_stage_id=opportunity.current_stage_id,
+            current_stage_code=current_stage_code,
+            current_stage_name_zh=current_stage_name_zh,
+            workflow_status=opportunity.workflow_status or "active",
+            collection_status=opportunity.collection_status or "not_started",
+            total_received_amount=opportunity.total_received_amount or Decimal("0"),
+            service_type=opportunity.service_type or "one_time",
+            is_split_required=opportunity.is_split_required or False,
+            split_order_required=opportunity.split_order_required or False,
+            has_staged_services=opportunity.has_staged_services or False,
+            tax_service_cycle_months=opportunity.tax_service_cycle_months,
+            tax_service_start_date=opportunity.tax_service_start_date,
+            primary_quotation_id=opportunity.primary_quotation_id,
+            primary_contract_id=opportunity.primary_contract_id,
+            developed_by=opportunity.developed_by,
+            last_followup_at=opportunity.last_followup_at,
+            is_stale=opportunity.is_stale or False,
             products=products,
             payment_stages=payment_stages,
             created_by=opportunity.created_by,

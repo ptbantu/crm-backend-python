@@ -3,6 +3,7 @@
 所有微服务共享的产品/服务表结构定义
 """
 from sqlalchemy import Column, String, Text, Integer, Boolean, DateTime, ForeignKey, Numeric, JSON
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
 import uuid
@@ -104,6 +105,9 @@ class Product(Base):
     # 时间戳
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    # 关系（使用字符串引用避免循环导入）
+    document_rules = relationship("ProductDocumentRule", back_populates="product", cascade="all, delete-orphan")
     
     # 检查约束
     __table_args__ = (

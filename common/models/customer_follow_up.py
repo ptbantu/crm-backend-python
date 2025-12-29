@@ -1,7 +1,7 @@
 """
 客户跟进记录模型
 """
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, CheckConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
@@ -17,7 +17,7 @@ class CustomerFollowUp(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # 关联信息
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True, comment="客户ID")
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True, comment="客户ID")
     
     # 跟进信息
     follow_up_type = Column(String(50), nullable=False, index=True, comment="跟进类型：call(电话), meeting(会议), email(邮件), note(备注), visit(拜访), wechat(微信), whatsapp(WhatsApp)")

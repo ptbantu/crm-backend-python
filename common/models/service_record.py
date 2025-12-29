@@ -30,7 +30,7 @@ class ServiceRecord(Base):
     linked_id_external = Column(String(255), nullable=True)
     
     # 客户关联
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True)
     customer_name = Column(String(255), nullable=True)  # 冗余字段
     
     # 服务关联
@@ -52,7 +52,7 @@ class ServiceRecord(Base):
     sales_username = Column(String(255), nullable=True)  # 冗余字段
     
     # 推荐客户（转介绍）
-    referral_customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
+    referral_customer_id = Column(Integer, ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True)
     referral_customer_name = Column(String(255), nullable=True)  # 冗余字段
     
     # 状态管理

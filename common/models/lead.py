@@ -1,7 +1,7 @@
 """
 线索模型
 """
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, JSON, CheckConstraint
+from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, JSON, CheckConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
@@ -27,7 +27,7 @@ class Lead(Base):
     
     # 关联信息
     # 注意：customers 表现在在本地定义，可以使用外键约束
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True, comment="关联客户ID（可选）")
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="SET NULL"), nullable=True, index=True, comment="关联客户ID（可选）")
     # 注意：organizations 表在 foundation_service 的数据库中，不能使用外键约束，只保留索引
     # organization_id 必须为 NOT NULL，创建时从用户的 organization_employees 表自动获取
     organization_id = Column(String(36), nullable=True, index=True, comment="组织ID（可选，跨服务引用）")

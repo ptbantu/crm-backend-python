@@ -1,7 +1,7 @@
 """
 客户备注模型
 """
-from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint
+from sqlalchemy import Column, String, Text, Boolean, DateTime, ForeignKey, CheckConstraint, Integer
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
@@ -17,7 +17,7 @@ class CustomerNote(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     
     # 关联信息
-    customer_id = Column(String(36), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True, comment="客户ID")
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True, comment="客户ID")
     
     # 备注信息
     note_type = Column(String(50), nullable=False, index=True, comment="备注类型：comment(评论), reminder(提醒), task(任务), internal(内部), customer_feedback(客户反馈)")
