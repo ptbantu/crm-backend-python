@@ -78,13 +78,13 @@ for SQL_FILE in "$@"; do
     
     # 执行 SQL - 使用 kubectl exec 方式（更可靠）
     echo "   正在导入..."
-    if kubectl exec "$MYSQL_POD" -- sh -c "mysql -uroot -p'$MYSQL_ROOT_PASSWORD' $MYSQL_DATABASE < /tmp/$(basename $SQL_FILE)" 2>&1; then
+    if kubectl exec "$MYSQL_POD" -- sh -c "mysql -uroot -p'$MYSQL_ROOT_PASSWORD' --default-character-set=utf8mb4 $MYSQL_DATABASE < /tmp/$(basename $SQL_FILE)" 2>&1; then
         echo "✅ 导入成功: $SQL_FILE"
     else
         echo "❌ 导入失败: $SQL_FILE"
         echo "   尝试直接导入方式..."
         # 备用方式：直接导入
-        kubectl exec -i "$MYSQL_POD" -- mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < "$SQL_FILE" 2>&1 && \
+        kubectl exec -i "$MYSQL_POD" -- mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 "$MYSQL_DATABASE" < "$SQL_FILE" 2>&1 && \
             echo "✅ 导入成功: $SQL_FILE" || \
             echo "❌ 导入失败: $SQL_FILE（请检查 SQL 文件语法）"
     fi

@@ -23,7 +23,7 @@ from foundation_service.api.v1 import (
     product_categories, products, service_types, customers, contacts,
     service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers,
     system_config, tianyancha, quotations, contracts, invoices, material_documents,
-    order_payments, execution_orders, payments
+    order_payments, execution_orders, payments, contract_entities
 )
 from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
@@ -263,7 +263,10 @@ app.add_middleware(
 async def business_exception_handler(request, exc: BusinessException):
     """业务异常处理"""
     logger.warning(
-        f"业务异常: {exc.detail} | 路径: {request.url.path} | 方法: {request.method}",
+        "业务异常: {} | 路径: {} | 方法: {}",
+        exc.detail,
+        request.url.path,
+        request.method,
         exc_info=True
     )
     result = Result.error(code=exc.status_code, message=exc.detail)
@@ -386,6 +389,7 @@ app.include_router(opportunities.router, prefix="/api/order-workflow/opportuniti
 app.include_router(product_dependencies.router, prefix="/api/order-workflow/product-dependencies", tags=["产品依赖关系"])
 app.include_router(quotations.router, prefix="/api/order-workflow", tags=["报价单管理"])
 app.include_router(contracts.router, prefix="/api/order-workflow", tags=["合同管理"])
+app.include_router(contract_entities.router, prefix="/api/order-workflow/contract-entities", tags=["财税主体管理"])
 app.include_router(invoices.router, prefix="/api/order-workflow", tags=["发票管理"])
 app.include_router(material_documents.router, prefix="/api/order-workflow", tags=["办理资料管理"])
 app.include_router(order_payments.router, prefix="/api/order-workflow", tags=["订单回款管理"])

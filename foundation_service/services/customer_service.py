@@ -342,12 +342,12 @@ class CustomerService:
                 agent_name = agent.name
         
         return CustomerResponse(
-            id=customer.id,
+            id=str(customer.id),
             name=customer.name,
             code=customer.code,
             customer_type=customer.customer_type,
             customer_source_type=customer.customer_source_type,
-            parent_customer_id=customer.parent_customer_id,
+            parent_customer_id=str(customer.parent_customer_id) if customer.parent_customer_id is not None else None,
             parent_customer_name=parent_customer_name,
             owner_user_id=customer.owner_user_id,
             owner_user_name=owner_user_name,
