@@ -250,8 +250,7 @@ class SystemConfigService:
     async def _test_oss_connection(self, config_data: Dict[str, Any]) -> TestConnectionResponse:
         """测试OSS连接"""
         try:
-            # 这里应该实际调用OSS SDK进行连接测试
-            # 为了演示，我们只做基本验证
+            # 验证必需字段
             required_fields = ["endpoint", "access_key_id", "access_key_secret", "bucket_name"]
             for field in required_fields:
                 if field not in config_data or not config_data[field]:
@@ -260,13 +259,42 @@ class SystemConfigService:
                         message=f"缺少必需字段: {field}"
                     )
             
-            # TODO: 实际调用OSS SDK测试连接
+            # 实际调用OSS SDK测试连接
+            from common.oss_client import init_oss, ping_oss
+            
+            # 临时初始化OSS连接进行测试
+            init_oss(
+                endpoint=config_data.get("endpoint"),
+                access_key_id=config_data.get("access_key_id"),
+                access_key_secret=config_data.get("access_key_secret"),
+                bucket_name=config_data.get("bucket_name"),
+                region=config_data.get("region"),
+                use_https=True
+            )
+            
+            # 测试连接
+            if ping_oss():
+                return TestConnectionResponse(
+                    success=True,
+                    message="OSS连接测试成功",
+                    details={
+                        "bucket": config_data.get("bucket_name"),
+                        "endpoint": config_data.get("endpoint"),
+                        "region": config_data.get("region", "未设置")
+                    }
+                )
+            else:
+                return TestConnectionResponse(
+                    success=False,
+                    message="OSS连接测试失败：无法连接到OSS服务"
+                )
+        except ValueError as e:
             return TestConnectionResponse(
-                success=True,
-                message="OSS连接测试成功",
-                details={"bucket": config_data.get("bucket_name")}
+                success=False,
+                message=f"OSS配置错误: {str(e)}"
             )
         except Exception as e:
+            logger.error(f"OSS连接测试异常: {str(e)}", exc_info=True)
             return TestConnectionResponse(
                 success=False,
                 message=f"OSS连接测试失败: {str(e)}"

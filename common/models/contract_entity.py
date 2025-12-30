@@ -30,6 +30,7 @@ class ContractEntity(Base):
     bank_name = Column(String(200), nullable=True, comment="开户行")
     bank_account_no = Column(String(100), nullable=True, comment="收款账户")
     bank_account_name = Column(String(200), nullable=True, comment="账户名称")
+    swift_code = Column(String(50), nullable=True, comment="SWIFT代码")
     
     # 货币与联系信息
     currency = Column(String(10), nullable=False, default="CNY", index=True, comment="主要收款币种：CNY 或 IDR")

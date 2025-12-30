@@ -1,8 +1,10 @@
 """
-OSS文件存储工具类 - 商机工作流专用
+OSS文件存储工具类
+- OpportunityOSSHelper: 商机工作流专用
+- OSSHelper: 通用文件上传工具类
 提供报价单、合同、发票、资料等文件的上传、下载、删除功能
 """
-from typing import Optional, BinaryIO, Union
+from typing import Optional, BinaryIO, Union, Dict, Any
 from io import BytesIO
 from pathlib import Path
 from datetime import datetime
@@ -16,12 +18,269 @@ from common.oss_client import (
     delete_file,
     get_file_url,
     file_exists,
+    get_file_info,
     generate_object_name as _generate_object_name,
+    ping_oss,
 )
 from common.oss_config import OSSConfig
 from common.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+class OSSHelper:
+    """通用OSS文件存储工具类"""
+    
+    @staticmethod
+    def initialize_from_config(config_data: Dict[str, Any]):
+        """
+        从配置字典初始化OSS连接
+        
+        Args:
+            config_data: OSS配置字典，包含 endpoint, access_key_id, access_key_secret, bucket_name, region 等
+        """
+        try:
+            init_oss(
+                endpoint=config_data.get("endpoint"),
+                access_key_id=config_data.get("access_key_id"),
+                access_key_secret=config_data.get("access_key_secret"),
+                bucket_name=config_data.get("bucket_name"),
+                region=config_data.get("region"),
+                use_https=config_data.get("use_https", True),
+            )
+            logger.info("OSS连接已初始化（从配置）")
+        except Exception as e:
+            logger.error(f"OSS初始化失败: {e}")
+            raise
+    
+    @staticmethod
+    def initialize_from_env():
+        """从环境变量初始化OSS连接"""
+        try:
+            init_oss(
+                endpoint=OSSConfig.ENDPOINT,
+                access_key_id=OSSConfig.ACCESS_KEY_ID,
+                access_key_secret=OSSConfig.ACCESS_KEY_SECRET,
+                bucket_name=OSSConfig.BUCKET_NAME,
+                region=OSSConfig.REGION,
+                use_https=OSSConfig.USE_HTTPS,
+            )
+            logger.info("OSS连接已初始化（从环境变量）")
+        except Exception as e:
+            logger.warning(f"OSS初始化失败（将使用占位符）: {e}")
+    
+    @staticmethod
+    def test_connection(config_data: Optional[Dict[str, Any]] = None) -> bool:
+        """
+        测试OSS连接
+        
+        Args:
+            config_data: OSS配置字典（可选），如果不提供则使用环境变量配置
+        
+        Returns:
+            bool: 连接是否成功
+        """
+        try:
+            if config_data:
+                OSSHelper.initialize_from_config(config_data)
+            else:
+                OSSHelper.initialize_from_env()
+            
+            return ping_oss()
+        except Exception as e:
+            logger.error(f"OSS连接测试失败: {e}")
+            return False
+    
+    @staticmethod
+    def upload_file(
+        file_data: Union[bytes, BytesIO, str],
+        filename: str,
+        prefix: Optional[str] = None,
+        organization_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+        file_type: Optional[str] = None,
+        content_type: Optional[str] = None,
+        metadata: Optional[dict] = None,
+    ) -> Dict[str, Any]:
+        """
+        通用文件上传方法
+        
+        Args:
+            file_data: 文件数据（字节、文件流或文件路径）
+            filename: 原始文件名
+            prefix: 路径前缀（如：uploads, documents, orders）
+            organization_id: 组织ID（可选）
+            user_id: 用户ID（可选）
+            file_type: 文件类型（如：avatar, document, image, order_file）
+            content_type: 内容类型（MIME类型），如果不提供则根据文件扩展名推断
+            metadata: 元数据字典（可选）
+        
+        Returns:
+            dict: 包含 object_name, file_url, file_size 等信息
+        """
+        # 生成对象名称
+        object_name = _generate_object_name(
+            prefix=prefix or "uploads",
+            filename=filename,
+            organization_id=organization_id,
+            user_id=user_id,
+            file_type=file_type,
+        )
+        
+        # 如果没有指定 content_type，根据文件扩展名推断
+        if content_type is None:
+            ext = Path(filename).suffix.lower()
+            content_type_map = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".gif": "image/gif",
+                ".pdf": "application/pdf",
+                ".doc": "application/msword",
+                ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls": "application/vnd.ms-excel",
+                ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".zip": "application/zip",
+                ".rar": "application/x-rar-compressed",
+                ".txt": "text/plain; charset=utf-8",
+            }
+            content_type = content_type_map.get(ext, "application/octet-stream")
+        
+        # 上传文件
+        uploaded_object_name = upload_file(
+            object_name=object_name,
+            data=file_data,
+            content_type=content_type,
+            metadata=metadata,
+        )
+        
+        # 获取文件信息
+        file_info = get_file_info(uploaded_object_name)
+        file_size = file_info.get("size", 0) if file_info else 0
+        
+        # 生成文件访问URL
+        file_url = get_file_url(uploaded_object_name, expires=OSSConfig.EXPIRES)
+        
+        return {
+            "object_name": uploaded_object_name,
+            "file_url": file_url,
+            "file_size": file_size,
+            "content_type": content_type,
+            "filename": filename,
+        }
+    
+    @staticmethod
+    def upload_order_file(
+        order_id: str,
+        file_data: Union[bytes, BytesIO],
+        filename: str,
+        order_item_id: Optional[str] = None,
+        order_stage_id: Optional[str] = None,
+        file_category: Optional[str] = None,
+        content_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        上传订单文件
+        
+        Args:
+            order_id: 订单ID
+            file_data: 文件数据
+            filename: 文件名
+            order_item_id: 订单项ID（可选）
+            order_stage_id: 订单阶段ID（可选）
+            file_category: 文件分类（passport, visa, document, other）
+            content_type: 内容类型（可选）
+        
+        Returns:
+            dict: 包含 object_name, file_url, file_size 等信息
+        """
+        # 构建路径前缀
+        prefix_parts = ["orders", order_id]
+        if order_stage_id:
+            prefix_parts.append(f"stage_{order_stage_id}")
+        if order_item_id:
+            prefix_parts.append(f"item_{order_item_id}")
+        if file_category:
+            prefix_parts.append(file_category)
+        
+        prefix = "/".join(prefix_parts)
+        
+        return OSSHelper.upload_file(
+            file_data=file_data,
+            filename=filename,
+            prefix=prefix,
+            file_type="order_file",
+            content_type=content_type,
+        )
+    
+    @staticmethod
+    def get_file_url(object_name: str, expires: Optional[int] = None) -> str:
+        """
+        获取文件访问URL
+        
+        Args:
+            object_name: OSS对象名称
+            expires: URL过期时间（秒），默认使用配置中的值
+        
+        Returns:
+            str: 文件访问URL
+        """
+        return get_file_url(
+            object_name=object_name,
+            expires=expires or OSSConfig.EXPIRES,
+        )
+    
+    @staticmethod
+    def download_file(object_name: str) -> BytesIO:
+        """
+        下载文件
+        
+        Args:
+            object_name: OSS对象名称
+        
+        Returns:
+            BytesIO: 文件数据流
+        """
+        return download_file(object_name)
+    
+    @staticmethod
+    def delete_file(object_name: str) -> bool:
+        """
+        删除文件
+        
+        Args:
+            object_name: OSS对象名称
+        
+        Returns:
+            bool: 是否删除成功
+        """
+        return delete_file(object_name)
+    
+    @staticmethod
+    def file_exists(object_name: str) -> bool:
+        """
+        检查文件是否存在
+        
+        Args:
+            object_name: OSS对象名称
+        
+        Returns:
+            bool: 文件是否存在
+        """
+        return file_exists(object_name)
+    
+    @staticmethod
+    def get_file_info(object_name: str) -> Optional[Dict[str, Any]]:
+        """
+        获取文件信息
+        
+        Args:
+            object_name: OSS对象名称
+        
+        Returns:
+            dict: 文件信息（大小、类型、修改时间等），如果文件不存在返回 None
+        """
+        return get_file_info(object_name)
 
 
 class OpportunityOSSHelper:
