@@ -52,6 +52,7 @@ class ContractEntityService:
             bank_name=request.bank_name,
             bank_account_no=request.bank_account_no,
             bank_account_name=request.bank_account_name,
+            swift_code=request.swift_code,
             currency=request.currency,
             address=request.address,
             contact_phone=request.contact_phone,

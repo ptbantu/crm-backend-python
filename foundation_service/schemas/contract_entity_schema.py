@@ -22,6 +22,7 @@ class ContractEntityCreateRequest(BaseModel):
     bank_name: Optional[str] = Field(None, max_length=200, description="开户行")
     bank_account_no: Optional[str] = Field(None, max_length=100, description="收款账户")
     bank_account_name: Optional[str] = Field(None, max_length=200, description="账户名称")
+    swift_code: Optional[str] = Field(None, max_length=50, description="SWIFT代码")
     
     # 货币与联系信息
     currency: str = Field(default="CNY", max_length=10, description="主要收款币种：CNY 或 IDR")
@@ -47,6 +48,7 @@ class ContractEntityUpdateRequest(BaseModel):
     bank_name: Optional[str] = Field(None, max_length=200, description="开户行")
     bank_account_no: Optional[str] = Field(None, max_length=100, description="收款账户")
     bank_account_name: Optional[str] = Field(None, max_length=200, description="账户名称")
+    swift_code: Optional[str] = Field(None, max_length=50, description="SWIFT代码")
     
     # 货币与联系信息
     currency: Optional[str] = Field(None, max_length=10, description="主要收款币种")
@@ -73,6 +75,7 @@ class ContractEntityResponse(BaseModel):
     bank_name: Optional[str] = None
     bank_account_no: Optional[str] = None
     bank_account_name: Optional[str] = None
+    swift_code: Optional[str] = None
     
     # 货币与联系信息
     currency: str
