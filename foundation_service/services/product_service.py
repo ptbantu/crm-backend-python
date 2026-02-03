@@ -20,6 +20,7 @@ from foundation_service.schemas.product import (
     ProductStatistics,
     ChangeHistoryItem,
     ProductRules,
+    ProductCategoryGroup,
 )
 from foundation_service.repositories.product_repository import ProductRepository
 from foundation_service.repositories.product_category_repository import ProductCategoryRepository
@@ -734,8 +735,28 @@ class ProductService:
             
             product_responses.append(await self._to_response(product, category_name))
         
+        # 处理分组
+        groups = None
+        if group_by_category:
+            groups_map = {}
+            for item in product_responses:
+                # 使用分类ID作为键，如果是None则使用"uncategorized"
+                key = item.category_id or "uncategorized"
+                
+                if key not in groups_map:
+                    groups_map[key] = ProductCategoryGroup(
+                        category_id=item.category_id,
+                        category_name=item.category_name or "未分类",
+                        items=[]
+                    )
+                groups_map[key].items.append(item)
+            
+            # 转换回列表
+            groups = list(groups_map.values())
+        
         return ProductListResponse(
             items=product_responses,
+            groups=groups,
             total=total,
             page=page if not group_by_category else 1,
             size=size if not group_by_category else total,

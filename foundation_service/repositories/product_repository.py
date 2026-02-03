@@ -56,7 +56,8 @@ class ProductRepository(BaseRepository[Product]):
             query = query.where(or_(*conditions))
         
         # 排序
-        query = query.order_by(Product.created_at.desc())
+        # 按编码升序排列
+        query = query.order_by(Product.code.asc())
         
         # 计算总数
         count_query = select(func.count()).select_from(Product)
@@ -113,13 +114,13 @@ class ProductRepository(BaseRepository[Product]):
         if conditions:
             query = query.where(or_(*conditions))
         
-        # 先按分类名称排序（NULL值排在最后），然后按code排序（英文字母排序，NULL值排在最后）
+        # 先按分类名称排序（NULL值排在最后），然后按code升序排序
         # MySQL 不支持 NULLS LAST，使用 COALESCE 或 ISNULL 让 NULL 值排在最后
         # 使用 COALESCE 将 NULL 转换为一个很大的字符串，确保 NULL 值排在最后
         from sqlalchemy import func
         query = query.order_by(
             func.coalesce(ProductCategory.name, 'zzzzzzzzzz').asc(),  # NULL 值转换为 'zzzzzzzzzz' 排在最后
-            func.coalesce(Product.code, 'zzzzzzzzzz').asc()  # NULL 值转换为 'zzzzzzzzzz' 排在最后
+            Product.code.asc()  # 按编码升序排列
         )
         
         # 计算总数

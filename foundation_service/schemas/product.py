@@ -230,9 +230,17 @@ class ProductResponse(BaseModel):
         from_attributes = True
 
 
+class ProductCategoryGroup(BaseModel):
+    """产品分类分组"""
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
+    items: List[ProductResponse]
+
+
 class ProductListResponse(BaseModel):
     """产品/服务列表响应"""
     items: List[ProductResponse]
+    groups: Optional[List[ProductCategoryGroup]] = None
     total: int
     page: int
     size: int
