@@ -64,9 +64,18 @@ class SupplierServiceResponse(BaseModel):
     price_history: List[Dict[str, Any]]
 
 
+class SupplierServiceCategoryGroup(BaseModel):
+    """供应商服务分类分组"""
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
+    items: List[SupplierServiceResponse]
+
+
 class SupplierServiceListResponse(BaseModel):
     """供应商服务列表响应"""
     items: List[SupplierServiceResponse]
+    groups: Optional[List[SupplierServiceCategoryGroup]] = None
+    field_labels: Optional[Dict[str, Dict[str, str]]] = None
     total: int
     page: int
     size: int
@@ -196,6 +205,7 @@ async def get_supplier_services(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     is_available: Optional[bool] = None,
+    group_by_category: bool = Query(False, description="是否按分类分组展示"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -204,11 +214,12 @@ async def get_supplier_services(
     GET /api/service-management/suppliers/{supplier_id}/services
     """
     service = SupplierService(db)
-    items, total = await service.get_supplier_services(
+    items, total, groups = await service.get_supplier_services(
         supplier_id=supplier_id,
         page=page,
         size=size,
         is_available=is_available,
+        group_by_category=group_by_category,
     )
     
     # 转换为响应格式
@@ -217,8 +228,59 @@ async def get_supplier_services(
         for item in items
     ]
     
+    # 字段翻译表
+    field_labels = {
+        "product_name": {
+            "zh": "产品名称",
+            "en": "Product Name",
+            "id": "Nama Produk"
+        },
+        "cost_price_idr": {
+            "zh": "成本 (IDR)",
+            "en": "Cost (IDR)",
+            "id": "Biaya (IDR)"
+        },
+        "cost_price_cny": {
+            "zh": "成本 (CNY)",
+            "en": "Cost (CNY)",
+            "id": "Biaya (CNY)"
+        },
+        "processing_days": {
+            "zh": "处理天数",
+            "en": "Processing Days",
+            "id": "Hari Pemrosesan"
+        },
+        "status": {
+            "zh": "状态",
+            "en": "Status",
+            "id": "Status"
+        },
+        "action": {
+            "zh": "操作",
+            "en": "Action",
+            "id": "Tindakan"
+        },
+        "active": {
+            "zh": "激活",
+            "en": "Active",
+            "id": "Aktif"
+        },
+        "edit": {
+            "zh": "编辑",
+            "en": "Edit",
+            "id": "Edit"
+        },
+        "remove": {
+            "zh": "移除",
+            "en": "Remove",
+            "id": "Hapus"
+        }
+    }
+    
     return Result.success(data=SupplierServiceListResponse(
         items=service_responses,
+        groups=groups,
+        field_labels=field_labels,
         total=total,
         page=page,
         size=size,

@@ -184,6 +184,7 @@ class LeadRepository(BaseRepository[Lead]):
         lead.pool_id = pool_id
         lead.moved_to_pool_at = datetime.utcnow()
         lead.owner_user_id = None  # 移入公海池后清空负责人
+        lead.status = "new"  # 重置状态为新建
         
         await self.db.commit()
         await self.db.refresh(lead)

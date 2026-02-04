@@ -24,7 +24,7 @@ class LeadCreateRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=50, description="联系电话")
     email: Optional[EmailStr] = Field(None, description="邮箱")
     address: Optional[str] = Field(None, description="地址")
-    customer_id: Optional[str] = Field(None, description="关联客户ID（可选）")
+    customer_id: Optional[int] = Field(None, description="关联客户ID（可选）")
     owner_user_id: Optional[str] = Field(None, description="销售负责人ID")
     status: str = Field(default="new", description="状态：new, contacted, qualified, converted, lost")
     level: Optional[str] = Field(None, description="客户分级代码（从数据库customer_levels表获取）")
@@ -39,7 +39,7 @@ class LeadUpdateRequest(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     address: Optional[str] = None
-    customer_id: Optional[str] = None
+    customer_id: Optional[int] = None
     owner_user_id: Optional[str] = None
     status: Optional[str] = None
     level: Optional[str] = None
@@ -56,7 +56,7 @@ class LeadResponse(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     address: Optional[str] = None
-    customer_id: Optional[str] = None
+    customer_id: Optional[int] = None
     organization_id: Optional[str] = None  # 可选，线索与用户绑定，不需要 organization_id
     owner_user_id: Optional[str] = None
     owner_username: Optional[str] = None  # 负责人用户名（从 User 表关联获取）

@@ -11,6 +11,8 @@ from foundation_service.repositories.organization_repository import Organization
 from foundation_service.repositories.vendor_product_repository import VendorProductRepository
 from foundation_service.repositories.product_repository import ProductRepository
 from foundation_service.repositories.product_category_repository import ProductCategoryRepository
+from foundation_service.schemas.product import ProductCategoryGroup
+from foundation_service.schemas.supplier import SupplierServiceCategoryGroup, SupplierServiceResponse
 from common.models.organization import Organization
 from common.models.vendor_product import VendorProduct
 from common.models.product import Product
@@ -97,7 +99,8 @@ class SupplierService:
         page: int = 1,
         size: int = 10,
         is_available: Optional[bool] = None,
-    ) -> tuple[List[Dict[str, Any]], int]:
+        group_by_category: bool = False,
+    ) -> tuple[List[Dict[str, Any]], int, Optional[List[SupplierServiceCategoryGroup]]]:
         """
         获取供应商提供的所有服务和价格
         
@@ -111,23 +114,34 @@ class SupplierService:
             page: 页码
             size: 每页数量
             is_available: 是否可用
+            group_by_category: 是否按分类分组
         
         Returns:
-            (服务列表, 总数)
+            (服务列表, 总数, 分组列表)
         """
         # 验证供应商存在
         await self.get_supplier_detail(supplier_id)
         
         # 获取供应商提供的产品列表
+        # 如果需要分组，则获取所有数据（忽略分页）
+        # 这里为了简单起见，如果 group_by_category=True，我们在内存中进行分组，
+        # 但要注意 vendor_product_repo.get_products_by_vendor 仍然会分页。
+        # 如果需要获取所有数据进行分组，应该调整 repository 方法或传入足够大的 size。
+        # 暂时保持原有逻辑，只对当前页数据进行分组，或者让前端请求足够大的 size。
+        # 为了支持“列表展示和产品列表一样要分类展示”，我们假设用户希望看到分类结构。
+        
         products, total = await self.vendor_product_repo.get_products_by_vendor(
             vendor_id=supplier_id,
             page=page,
-            size=size,
+            size=size if not group_by_category else 1000, # 如果分组，尝试获取更多数据
             is_available=is_available,
         )
         
         # 构建返回数据
         service_list = []
+        # 用于分组的临时字典
+        groups_map = {}
+        
         for product in products:
             # 获取供应商产品关联信息（包含成本价）
             vendor_product = await self.vendor_product_repo.get_vendor_product_info(
@@ -170,9 +184,29 @@ class SupplierService:
                 'sales_prices': sales_prices,
             }
             
+            # 创建响应对象，用于分组
+            response_item = SupplierServiceResponse(**service_data)
             service_list.append(service_data)
+            
+            if group_by_category:
+                key = product.category_id or "uncategorized"
+                if key not in groups_map:
+                    groups_map[key] = SupplierServiceCategoryGroup(
+                        category_id=product.category_id,
+                        category_name=category_name or "未分类",
+                        items=[]
+                    )
+                groups_map[key].items.append(response_item)
         
-        return service_list, total
+        groups = None
+        if group_by_category:
+            # 转换回列表
+            groups = list(groups_map.values())
+            # 对每个组内的项目按 product_code 排序
+            for group in groups:
+                group.items.sort(key=lambda x: x.product_code or "")
+        
+        return service_list, total, groups
     
     async def _get_vendor_product_price_history(
         self,
