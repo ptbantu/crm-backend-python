@@ -23,7 +23,8 @@ from foundation_service.api.v1 import (
     product_categories, products, service_types, customers, contacts,
     service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers,
     system_config, tianyancha, quotations, contracts, invoices, material_documents,
-    order_payments, execution_orders, payments, contract_entities
+    order_payments, execution_orders, payments, contract_entities, requirement_submissions,
+    opportunity_pipeline, pipeline_actions
 )
 from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
@@ -40,7 +41,8 @@ from common.models import (
     Quotation, QuotationItem, QuotationDocument, QuotationTemplate,
     ContractEntity, Contract, ContractTemplate, ContractDocument,
     Invoice, InvoiceFile,
-    ProductDocumentRule, ContractMaterialDocument, MaterialNotificationEmail,
+    ProductDocumentRule, RequirementSubmissionRecord, RequirementAttachmentDetail,
+    ContractMaterialDocument, MaterialNotificationEmail,
     OrderPayment, Payment, PaymentVoucher, CollectionTodo,
     ExecutionOrder, ExecutionOrderItem, ExecutionOrderDependency, CompanyRegistrationInfo,
     CollectionTask, TemporaryLink, CustomerLevel, FollowUpStatus,
@@ -49,7 +51,8 @@ from common.models import (
     ProductCategory, Product, VendorProduct, ProductPrice, ProductPriceHistory,
     OrderPriceSnapshot, ExchangeRateHistory, PriceChangeLog, CustomerLevelPrice,
     ProductPriceList, VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog,
-    SystemConfig, SystemConfigHistory
+    SystemConfig, SystemConfigHistory, PipelineConfig, PipelineStage, OpportunityPipelineLog,
+    PipelineActionConfig, ActionType, OpportunityActionLog, ActionStatus
 )
 
 # 初始化日志
@@ -346,6 +349,8 @@ from foundation_service.models import (
     Invoice,
     InvoiceFile,
     ProductDocumentRule,
+    RequirementSubmissionRecord,
+    RequirementAttachmentDetail,
     ContractMaterialDocument,
     MaterialNotificationEmail,
     OrderPayment,
@@ -361,6 +366,13 @@ from foundation_service.models import (
     WorkflowInstance,
     WorkflowTask,
     WorkflowTransition,
+    PipelineConfig,
+    PipelineStage,
+    OpportunityPipelineLog,
+    PipelineActionConfig,
+    ActionType,
+    OpportunityActionLog,
+    ActionStatus,
 )
 
 # 注册路由
@@ -386,12 +398,15 @@ app.include_router(temporary_links.router, prefix="/api/order-workflow/temporary
 app.include_router(notifications.router, prefix="/api/order-workflow/notifications", tags=["通知系统"])
 app.include_router(customer_levels_router, prefix="/api/order-workflow", tags=["选项配置"])
 app.include_router(opportunities.router, prefix="/api/order-workflow/opportunities", tags=["商机管理"])
+app.include_router(opportunity_pipeline.router, prefix="/api/order-workflow/opportunities", tags=["商机流水线"])
+app.include_router(pipeline_actions.router, prefix="/api/order-workflow/opportunities", tags=["商机流水线动作"])
 app.include_router(product_dependencies.router, prefix="/api/order-workflow/product-dependencies", tags=["产品依赖关系"])
 app.include_router(quotations.router, prefix="/api/order-workflow", tags=["报价单管理"])
 app.include_router(contracts.router, prefix="/api/order-workflow", tags=["合同管理"])
 app.include_router(contract_entities.router, prefix="/api/order-workflow/contract-entities", tags=["财税主体管理"])
 app.include_router(invoices.router, prefix="/api/order-workflow", tags=["发票管理"])
 app.include_router(material_documents.router, prefix="/api/order-workflow", tags=["办理资料管理"])
+app.include_router(requirement_submissions.router, prefix="/api/service-management", tags=["资料提交管理"])
 app.include_router(order_payments.router, prefix="/api/order-workflow", tags=["订单回款管理"])
 app.include_router(execution_orders.router, prefix="/api/order-workflow", tags=["执行订单管理"])
 app.include_router(payments.router, prefix="/api/order-workflow", tags=["收款管理"])

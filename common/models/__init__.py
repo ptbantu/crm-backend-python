@@ -68,6 +68,8 @@ from common.models.contract_entity import ContractEntity
 from common.models.contract import Contract, ContractTemplate, ContractDocument
 from common.models.invoice import Invoice, InvoiceFile
 from common.models.product_document_rule import ProductDocumentRule
+from common.models.requirement_submission_record import RequirementSubmissionRecord
+from common.models.requirement_attachment_detail import RequirementAttachmentDetail
 from common.models.contract_material_document import ContractMaterialDocument, MaterialNotificationEmail
 from common.models.order_payment import OrderPayment
 from common.models.payment import Payment, PaymentVoucher, CollectionTodo
@@ -75,6 +77,10 @@ from common.models.execution_order import ExecutionOrder, ExecutionOrderItem, Ex
 from common.models.audit_log import AuditLog
 from common.models.system_config import SystemConfig
 from common.models.system_config_history import SystemConfigHistory
+from common.models.pipeline_config import PipelineConfig, PipelineStage
+from common.models.opportunity_pipeline_log import OpportunityPipelineLog
+from common.models.pipeline_action_config import PipelineActionConfig, ActionType
+from common.models.opportunity_action_log import OpportunityActionLog, ActionStatus
 __all__ = [
     "User",
     "Organization",
@@ -117,6 +123,8 @@ __all__ = [
     "Invoice",
     "InvoiceFile",
     "ProductDocumentRule",
+    "RequirementSubmissionRecord",
+    "RequirementAttachmentDetail",
     "ContractMaterialDocument",
     "MaterialNotificationEmail",
     "OrderPayment",
@@ -154,5 +162,12 @@ __all__ = [
     "AuditLog",
     "SystemConfig",
     "SystemConfigHistory",
+    "PipelineConfig",
+    "PipelineStage",
+    "OpportunityPipelineLog",
+    "PipelineActionConfig",
+    "ActionType",
+    "OpportunityActionLog",
+    "ActionStatus",
 ]
 

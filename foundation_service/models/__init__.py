@@ -28,6 +28,8 @@ from common.models.contract_entity import ContractEntity
 from common.models.contract import Contract, ContractTemplate, ContractDocument
 from common.models.invoice import Invoice, InvoiceFile
 from common.models.product_document_rule import ProductDocumentRule
+from common.models.requirement_submission_record import RequirementSubmissionRecord
+from common.models.requirement_attachment_detail import RequirementAttachmentDetail
 from common.models.contract_material_document import ContractMaterialDocument, MaterialNotificationEmail
 from common.models.order_payment import OrderPayment
 from common.models.payment import Payment, PaymentVoucher, CollectionTodo
@@ -56,6 +58,10 @@ from common.models.vendor_product_financial import VendorProductFinancial
 from common.models.contact import Contact
 from common.models.service_record import ServiceRecord
 from common.models.service_type import ServiceType
+from common.models.pipeline_config import PipelineConfig, PipelineStage
+from common.models.opportunity_pipeline_log import OpportunityPipelineLog
+from common.models.pipeline_action_config import PipelineActionConfig, ActionType
+from common.models.opportunity_action_log import OpportunityActionLog, ActionStatus
 
 __all__ = [
     # Foundation Service
@@ -100,6 +106,8 @@ __all__ = [
     "Invoice",
     "InvoiceFile",
     "ProductDocumentRule",
+    "RequirementSubmissionRecord",
+    "RequirementAttachmentDetail",
     "ContractMaterialDocument",
     "MaterialNotificationEmail",
     "OrderPayment",
@@ -127,4 +135,11 @@ __all__ = [
     "ServiceRecord",
     "ServiceType",
     "Industry",
+    "PipelineConfig",
+    "PipelineStage",
+    "OpportunityPipelineLog",
+    "PipelineActionConfig",
+    "ActionType",
+    "OpportunityActionLog",
+    "ActionStatus",
 ]
