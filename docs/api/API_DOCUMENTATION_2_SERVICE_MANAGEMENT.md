@@ -22,6 +22,7 @@
 2. [服务类型管理](#52-服务类型管理)
 3. [服务管理](#53-服务管理)
 4. [客户管理](#6-客户管理)
+   - 4.1 [客户外部公司数据关联](#16-客户外部公司数据关联) ⭐ 新增（第一阶段：框架+Mock数据）
 5. [联系人管理](#62-联系人管理)
 6. [服务记录管理](#63-服务记录管理)
 7. [统一响应格式](#统一响应格式)
@@ -963,6 +964,471 @@ Authorization: Bearer <token>
 - `id`: 客户 ID (UUID)
 
 **注意**: 删除客户前，系统会检查是否有服务记录或订单关联。如果有关联数据，建议先处理关联数据。
+
+---
+
+####1.6 客户外部公司数据关联
+
+客户可以关联外部企业工商数据（如天眼查），用于自动填充企业信息、提取联系人、验证企业真实性等。
+
+**功能说明**：
+- 第一阶段：通过手动传入或Mock数据实现框架搭建
+- 第二阶段：集成天眼查API实现自动获取（等待国内代理接口）
+
+**数据存储**：
+- 企业数据存储在 `customers.tianyancha_data` JSON字段
+- 同步时间记录在 `customers.tianyancha_synced_at`
+- 关联状态通过 `customers.linked_module` 和 `customers.linked_id_external` 标识
+
+---
+
+#####1.6.1 搜索天眼查企业
+
+**接口地址**: `POST /api/service-management/customers/tianyancha/search`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/tianyancha/search`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**请求体**:
+```json
+{
+  "keyword": "北京",
+  "page_num": 1,
+  "page_size": 10
+}
+```
+
+**字段说明**:
+- `keyword`: 搜索关键词（企业名称/统一社会信用代码/注册号）
+- `page_num`: 页码，从1开始（默认: 1）
+- `page_size`: 每页数量，最大20（默认: 10）
+
+**响应示例（第一阶段 - 暂不可用）**:
+```json
+{
+  "code": 200,
+  "message": "天眼查API暂不可用，请稍后再试",
+  "data": {
+    "total": 0,
+    "items": []
+  }
+}
+```
+
+**响应示例（第二阶段 - 实际数据）**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "total": 100,
+    "items": [
+      {
+        "enterprise_id": "123456",
+        "name": "北京测试科技有限公司",
+        "credit_code": "91110000XXXXXXXXXX",
+        "legal_representative": "张三",
+        "registered_capital": "100万元",
+        "establishment_date": "2020-01-01",
+        "business_status": "存续"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#####1.6.2 关联天眼查企业到客户
+
+**接口地址**: `POST /api/service-management/customers/{customer_id}/tianyancha/link`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{customer_id}/tianyancha/link`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户ID（整数）
+
+**请求体（第一阶段 - 手动传入数据）**:
+```json
+{
+  "enterprise_id": "mock_123456",
+  "fetch_detail": false,
+  "update_customer_info": true,
+  "create_contact": false,
+  "enterprise_data": {
+    "name": "北京测试科技有限公司",
+    "credit_code": "91110000XXXXXXXXXX",
+    "legal_representative": "张三",
+    "registered_capital": "100万元",
+    "establishment_date": "2020-01-01",
+    "business_status": "存续",
+    "company_type": "有限责任公司",
+    "industry": "软件和信息技术服务业",
+    "address": "北京市朝阳区XXX",
+    "business_scope": "软件开发；技术咨询...",
+    "shareholders": [
+      {
+        "name": "张三",
+        "type": "自然人股东",
+        "capital": "60万元",
+        "ratio": "60%"
+      },
+      {
+        "name": "李四",
+        "type": "自然人股东",
+        "capital": "40万元",
+        "ratio": "40%"
+      }
+    ]
+  }
+}
+```
+
+**请求体（第二阶段 - 自动获取）**:
+```json
+{
+  "enterprise_id": "123456",
+  "fetch_detail": true,
+  "update_customer_info": true,
+  "create_contact": true
+}
+```
+
+**字段说明**:
+- `enterprise_id`: 天眼查企业ID（必填）
+- `fetch_detail`: 是否获取详细信息，第一阶段暂不支持（默认: false）
+- `update_customer_info`: 是否更新客户基础信息（名称、描述）（默认: true）
+- `create_contact`: 是否自动创建法人联系人（默认: false）
+- `enterprise_data`: 企业数据（第一阶段必填，第二阶段可选）
+
+**响应示例（成功）**:
+```json
+{
+  "code": 200,
+  "message": "关联成功",
+  "data": {
+    "success": true,
+    "message": "关联成功",
+    "customer": {
+      "id": "1",
+      "name": "北京测试科技有限公司",
+      "linked_module": "tianyancha",
+      "linked_id_external": "mock_123456",
+      "enrich_status": "enriched",
+      "tianyancha_data": {
+        "name": "北京测试科技有限公司",
+        "credit_code": "91110000XXXXXXXXXX",
+        "legal_representative": "张三",
+        "registered_capital": "100万元",
+        "establishment_date": "2020-01-01",
+        "business_status": "存续",
+        "company_type": "有限责任公司",
+        "industry": "软件和信息技术服务业",
+        "address": "北京市朝阳区XXX",
+        "business_scope": "软件开发；技术咨询...",
+        "shareholders": [
+          {
+            "name": "张三",
+            "type": "自然人股东",
+            "capital": "60万元",
+            "ratio": "60%"
+          }
+        ]
+      },
+      "tianyancha_synced_at": "2026-02-10T05:30:00"
+    },
+    "contact": null,
+    "updated_fields": [
+      "linked_module",
+      "linked_id_external",
+      "tianyancha_data",
+      "tianyancha_synced_at",
+      "enrich_status",
+      "name",
+      "description"
+    ]
+  }
+}
+```
+
+**业务逻辑**:
+1. 验证客户是否存在
+2. 第一阶段：直接使用 `enterprise_data` 参数中的数据
+3. 第二阶段：如果 `enterprise_data` 为空，则调用天眼查API获取详情
+4. 更新客户字段：`linked_module`、`linked_id_external`、`tianyancha_data`、`tianyancha_synced_at`、`enrich_status`
+5. 可选：更新客户名称和描述（基于 `update_customer_info` 参数）
+6. 可选：创建法人联系人（基于 `create_contact` 参数）
+7. 记录审计日志
+
+---
+
+#####1.6.3 获取客户天眼查数据
+
+**接口地址**: `GET /api/service-management/customers/{customer_id}/tianyancha`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{customer_id}/tianyancha`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户ID（整数）
+
+**响应示例（已关联）**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "is_linked": true,
+    "enterprise_id": "mock_123456",
+    "enterprise_data": {
+      "name": "北京测试科技有限公司",
+      "credit_code": "91110000XXXXXXXXXX",
+      "legal_representative": "张三",
+      "registered_capital": "100万元",
+      "establishment_date": "2020-01-01",
+      "business_status": "存续",
+      "company_type": "有限责任公司",
+      "industry": "软件和信息技术服务业",
+      "address": "北京市朝阳区XXX",
+      "business_scope": "软件开发；技术咨询...",
+      "shareholders": [
+        {
+          "name": "张三",
+          "type": "自然人股东",
+          "capital": "60万元",
+          "ratio": "60%"
+        }
+      ]
+    },
+    "synced_at": "2026-02-10T05:30:00"
+  }
+}
+```
+
+**响应示例（未关联）**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "is_linked": false,
+    "enterprise_id": null,
+    "enterprise_data": null,
+    "synced_at": null
+  }
+}
+```
+
+---
+
+#####1.6.4 从天眼查数据创建联系人
+
+**接口地址**: `POST /api/service-management/customers/{customer_id}/tianyancha/create-contact`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{customer_id}/tianyancha/create-contact`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户ID（整数）
+
+**请求体（创建法定代表人联系人）**:
+```json
+{
+  "contact_type": "legal_representative",
+  "is_primary": true,
+  "is_decision_maker": true
+}
+```
+
+**请求体（创建股东联系人）**:
+```json
+{
+  "contact_type": "shareholder",
+  "shareholder_name": "李四",
+  "is_primary": false,
+  "is_decision_maker": false
+}
+```
+
+**字段说明**:
+- `contact_type`: 联系人类型，`legal_representative`（法定代表人）或 `shareholder`（股东）
+- `shareholder_name`: 股东姓名，当 `contact_type=shareholder` 时必填
+- `is_primary`: 是否设置为主要联系人（默认: true）
+- `is_decision_maker`: 是否设置为决策人（默认: true）
+
+**响应示例（成功）**:
+```json
+{
+  "code": 200,
+  "message": "操作成功",
+  "data": {
+    "id": "uuid",
+    "customer_id": "1",
+    "customer_name": "北京测试科技有限公司",
+    "first_name": "三",
+    "last_name": "张",
+    "full_name": "张三",
+    "position": "法定代表人",
+    "is_primary": true,
+    "is_decision_maker": true,
+    "notes": "来自天眼查数据",
+    "created_at": "2026-02-10T05:35:00",
+    "updated_at": "2026-02-10T05:35:00"
+  }
+}
+```
+
+**业务逻辑**:
+1. 验证客户是否存在
+2. 验证客户是否已关联天眼查数据
+3. 从 `tianyancha_data` 中提取联系人信息（法人或股东）
+4. 解析中文姓名（姓氏+名字）
+5. 创建联系人记录，职位自动设置为"法定代表人"或"股东"
+6. 备注标注"来自天眼查数据"
+7. 记录审计日志
+
+**注意**:
+- 此功能不依赖天眼查API，直接从已存储的 `tianyancha_data` 中提取信息
+- 第一阶段和第二阶段均可使用
+- 如果天眼查数据中没有相应联系人信息，会返回错误
+
+---
+
+#####1.6.5 刷新天眼查数据
+
+**接口地址**: `POST /api/service-management/customers/{customer_id}/tianyancha/refresh`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{customer_id}/tianyancha/refresh`
+
+**请求头**:
+```
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户ID（整数）
+
+**请求体**:
+```json
+{
+  "force": false
+}
+```
+
+**字段说明**:
+- `force`: 是否强制刷新，忽略24小时缓存（默认: false）
+
+**响应示例（第一阶段 - 框架实现）**:
+```json
+{
+  "code": 200,
+  "message": "数据已是最新（上次同步: 2026-02-10 05:30:00）",
+  "data": {
+    "success": true,
+    "message": "数据已是最新（上次同步: 2026-02-10 05:30:00）",
+    "updated": false,
+    "changed_fields": null,
+    "enterprise_data": {
+      "name": "北京测试科技有限公司",
+      "credit_code": "91110000XXXXXXXXXX"
+    }
+  }
+}
+```
+
+**响应示例（第二阶段 - 实际刷新）**:
+```json
+{
+  "code": 200,
+  "message": "数据已更新",
+  "data": {
+    "success": true,
+    "message": "数据已更新",
+    "updated": true,
+    "changed_fields": ["registered_capital", "business_status"],
+    "enterprise_data": {
+      "name": "北京测试科技有限公司",
+      "credit_code": "91110000XXXXXXXXXX",
+      "registered_capital": "150万元",
+      "business_status": "存续"
+    }
+  }
+}
+```
+
+**业务逻辑**:
+1. 验证客户是否已关联天眼查
+2. 检查24小时缓存（除非 `force=true`）
+3. 第一阶段：返回原数据，不实际调用API
+4. 第二阶段：调用天眼查API获取最新数据
+5. 比较新旧数据，返回变更字段列表
+6. 更新 `tianyancha_data` 和 `tianyancha_synced_at`
+7. 记录审计日志
+
+---
+
+#####1.6.6 解除天眼查关联
+
+**接口地址**: `DELETE /api/service-management/customers/{customer_id}/tianyancha/unlink`
+
+**完整地址**:
+- 生产环境: `https://www.bantu.sbs/api/service-management/customers/{customer_id}/tianyancha/unlink`
+
+**请求头**:
+```
+Authorization: Bearer <token>
+```
+
+**路径参数**:
+- `customer_id`: 客户ID（整数）
+
+**响应示例（成功）**:
+```json
+{
+  "code": 200,
+  "message": "解除关联成功",
+  "data": {
+    "success": true,
+    "message": "解除关联成功"
+  }
+}
+```
+
+**业务逻辑**:
+1. 验证客户是否存在
+2. 清空关联字段：`linked_module`、`linked_id_external`、`tianyancha_data`、`tianyancha_synced_at`、`enrich_status`
+3. 不删除已创建的联系人记录
+4. 记录审计日志
+
+**注意**:
+- 解除关联不会删除已创建的联系人
+- 如需删除联系人，请使用联系人管理接口单独删除
 
 ---
 
