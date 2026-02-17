@@ -1,7 +1,7 @@
 """
 商机模型
 """
-from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Numeric, Date, CheckConstraint, Boolean, Enum
+from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, Numeric, Date, CheckConstraint, Boolean, Enum, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
@@ -41,6 +41,7 @@ class Opportunity(Base):
     
     # 服务类型（新增）
     service_type = Column(String(20), nullable=False, default="one_time", comment="服务类型：one_time(一次性), long_term(长周期), mixed(混合)")
+    service_scope = Column(JSON, nullable=True, comment="服务范围标签列表，如 ['VISA','REG','SITE']，从关联产品的 service_types.code 自动推导")
     is_split_required = Column(Boolean, nullable=False, default=False, comment="是否需要订单拆分（1=需要，长周期服务标记）")
     split_order_required = Column(Boolean, nullable=False, default=False, comment="是否需要拆分独立订单（1=是，长周期服务将生成独立订单）")
     has_staged_services = Column(Boolean, nullable=False, default=False, comment="是否包含分阶段服务（财税/IT分阶段）")

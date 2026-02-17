@@ -27,6 +27,7 @@ class PipelineActionConfig(Base):
     name = Column(String(100), nullable=False, comment="动作名称")
     action_type = Column(SQLEnum(ActionType), nullable=False, comment="动作类型")
     is_required = Column(Boolean, nullable=False, default=True, comment="是否必需")
+    trigger_condition = Column(String(50), nullable=False, default="DEFAULT", comment="触发条件标签: DEFAULT/VISA/REG/SITE")
     order = Column(Integer, nullable=False, default=1, comment="执行顺序")
     description = Column(Text, nullable=True, comment="动作描述")
 
