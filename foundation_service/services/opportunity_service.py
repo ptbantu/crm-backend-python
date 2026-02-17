@@ -3,11 +3,14 @@
 """
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import datetime, date
 from decimal import Decimal
 import uuid
 
 from common.models.opportunity import Opportunity, OpportunityProduct, OpportunityPaymentStage
+from common.models.product import Product
+from common.models.service_type import ServiceType
 from foundation_service.repositories.opportunity_repository import (
     OpportunityRepository,
     OpportunityProductRepository,
@@ -248,6 +251,7 @@ class OpportunityService:
                 opp_collection_status = opportunity.collection_status
                 opp_total_received_amount = opportunity.total_received_amount
                 opp_service_type = opportunity.service_type
+                opp_service_scope = opportunity.service_scope
                 opp_is_split_required = opportunity.is_split_required
                 opp_split_order_required = opportunity.split_order_required
                 opp_has_staged_services = opportunity.has_staged_services
@@ -284,6 +288,7 @@ class OpportunityService:
                 opp_collection_status = None
                 opp_total_received_amount = None
                 opp_service_type = None
+                opp_service_scope = None
                 opp_is_split_required = None
                 opp_split_order_required = None
                 opp_has_staged_services = None
@@ -350,6 +355,7 @@ class OpportunityService:
                 opp_collection_status = reloaded_opportunity.collection_status
                 opp_total_received_amount = reloaded_opportunity.total_received_amount
                 opp_service_type = reloaded_opportunity.service_type
+                opp_service_scope = reloaded_opportunity.service_scope
                 opp_is_split_required = reloaded_opportunity.is_split_required
                 opp_split_order_required = reloaded_opportunity.split_order_required
                 opp_has_staged_services = reloaded_opportunity.has_staged_services
@@ -463,6 +469,7 @@ class OpportunityService:
                     'collection_status': opp_collection_status,
                     'total_received_amount': opp_total_received_amount,
                     'service_type': opp_service_type,
+                    'service_scope': opp_service_scope,
                     'is_split_required': opp_is_split_required,
                     'split_order_required': opp_split_order_required,
                     'has_staged_services': opp_has_staged_services,
@@ -719,6 +726,35 @@ class OpportunityService:
     ) -> List[dict]:
         """计算产品执行顺序"""
         return await self.dependency_service.get_execution_order(product_ids)
+
+    async def compute_and_update_service_scope(self, opportunity_id: str) -> List[str]:
+        """根据商机关联的产品自动计算 service_scope
+
+        逻辑：
+        1. opportunity_products → products → service_types
+        2. 提取所有 service_types.code，去重
+        3. 更新 opportunity.service_scope
+        """
+        # 1. 查询商机产品 → 产品 → 服务类型
+        stmt = (
+            select(ServiceType.code)
+            .join(Product, Product.service_type_id == ServiceType.id)
+            .join(OpportunityProduct, OpportunityProduct.product_id == Product.id)
+            .where(OpportunityProduct.opportunity_id == opportunity_id)
+            .distinct()
+        )
+        result = await self.db.execute(stmt)
+        service_codes = [row[0] for row in result.all() if row[0]]  # 过滤 NULL
+
+        # 2. 更新商机
+        opp_stmt = select(Opportunity).where(Opportunity.id == opportunity_id)
+        opp = (await self.db.execute(opp_stmt)).scalar_one_or_none()
+        if opp:
+            opp.service_scope = service_codes
+            await self.db.flush()
+
+        logger.info(f"商机 {opportunity_id} 的 service_scope 已计算为: {service_codes}")
+        return service_codes
     
     async def convert_lead_to_opportunity(
         self,
@@ -1201,6 +1237,7 @@ class OpportunityService:
                 collection_status=opportunity_data['collection_status'] or "not_started",
                 total_received_amount=opportunity_data['total_received_amount'] or Decimal("0"),
                 service_type=opportunity_data['service_type'] or "one_time",
+                service_scope=opportunity_data.get('service_scope'),
                 is_split_required=opportunity_data['is_split_required'] or False,
                 split_order_required=opportunity_data['split_order_required'] or False,
                 has_staged_services=opportunity_data['has_staged_services'] or False,
@@ -1245,6 +1282,7 @@ class OpportunityService:
                 collection_status=opportunity.collection_status or "not_started",
                 total_received_amount=opportunity.total_received_amount or Decimal("0"),
                 service_type=opportunity.service_type or "one_time",
+                service_scope=opportunity.service_scope,
                 is_split_required=opportunity.is_split_required or False,
                 split_order_required=opportunity.split_order_required or False,
                 has_staged_services=opportunity.has_staged_services or False,
