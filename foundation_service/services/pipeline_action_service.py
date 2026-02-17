@@ -11,6 +11,8 @@ from common.models.pipeline_action_config import PipelineActionConfig, ActionTyp
 from common.models.opportunity_action_log import OpportunityActionLog, ActionStatus
 from common.models.opportunity_pipeline_log import OpportunityPipelineLog
 from common.models.pipeline_config import PipelineStage
+from common.models.opportunity import Opportunity
+from common.models.opp_execution_summary import OppExecutionSummary
 from foundation_service.schemas.pipeline_action import (
     ActionLogResponse,
     StageActionsResponse,
@@ -35,7 +37,7 @@ class PipelineActionService:
         current_user_id: str
     ) -> List[OpportunityActionLog]:
         """
-        阶段进入时初始化所有动作日志
+        阶段进入时初始化动作日志（按 service_scope 过滤）
 
         Args:
             opportunity_id: 商机ID
@@ -46,34 +48,41 @@ class PipelineActionService:
         Returns:
             创建的动作日志列表
         """
-        # 获取该阶段的所有动作配置
+        # 1. 获取商机的 service_scope
+        opp_stmt = select(Opportunity).where(Opportunity.id == opportunity_id)
+        opp = (await self.db.execute(opp_stmt)).scalar_one_or_none()
+        service_scope = opp.service_scope or [] if opp else []
+
+        # 2. 获取该阶段所有 action configs
         stmt = select(PipelineActionConfig).where(
             PipelineActionConfig.stage_id == stage_id
         ).order_by(PipelineActionConfig.order)
-        result = await self.db.execute(stmt)
-        action_configs = result.scalars().all()
+        action_configs = (await self.db.execute(stmt)).scalars().all()
 
         if not action_configs:
             return []
 
-        # 为每个动作配置创建执行日志
+        # 3. 按 service_scope 过滤 (trigger_condition="DEFAULT" 始终包含)
+        filtered_configs = [
+            c for c in action_configs
+            if c.trigger_condition == "DEFAULT" or c.trigger_condition in service_scope
+        ]
+
+        # 4. 为过滤后的 configs 创建 action logs（幂等检查保留）
         action_logs = []
-        for config in action_configs:
-            # 检查是否已存在（避免重复初始化）
-            stmt = select(OpportunityActionLog).where(
+        for config in filtered_configs:
+            existing_stmt = select(OpportunityActionLog).where(
                 and_(
                     OpportunityActionLog.opportunity_id == opportunity_id,
                     OpportunityActionLog.action_config_id == config.id
                 )
             )
-            result = await self.db.execute(stmt)
-            existing = result.scalar_one_or_none()
+            existing = (await self.db.execute(existing_stmt)).scalar_one_or_none()
 
             if existing:
                 action_logs.append(existing)
                 continue
 
-            # 创建新的动作日志
             action_log = OpportunityActionLog(
                 id=str(uuid.uuid4()),
                 opportunity_id=opportunity_id,
@@ -89,6 +98,9 @@ class PipelineActionService:
             action_logs.append(action_log)
 
         await self.db.flush()
+
+        # 5. 同步快照表
+        await self._sync_execution_summary(opportunity_id, stage_id, filtered_configs, action_logs)
         return action_logs
 
     async def get_stage_actions(
@@ -212,6 +224,11 @@ class PipelineActionService:
             duration = (action_log.finished_at - action_log.started_at).total_seconds() / 60
             action_log.duration_minutes = int(duration)
 
+        await self.db.flush()
+
+        # 同步快照表
+        await self._sync_after_action_update(action_log, f"完成动作: {action_log.action_name}")
+
         await self.db.commit()
         await self.db.refresh(action_log)
 
@@ -276,6 +293,12 @@ class PipelineActionService:
             duration = (action_log.finished_at - action_log.started_at).total_seconds() / 60
             action_log.duration_minutes = int(duration)
 
+        await self.db.flush()
+
+        # 同步快照表
+        status_desc = "批准" if request.approved else "拒绝"
+        await self._sync_after_action_update(action_log, f"{status_desc}动作: {action_log.action_name}")
+
         await self.db.commit()
         await self.db.refresh(action_log)
 
@@ -326,6 +349,11 @@ class PipelineActionService:
         action_log.notes = request.reason
         action_log.updated_by = current_user_id
 
+        await self.db.flush()
+
+        # 同步快照表
+        await self._sync_after_action_update(action_log, f"跳过动作: {action_log.action_name}")
+
         await self.db.commit()
         await self.db.refresh(action_log)
 
@@ -338,6 +366,7 @@ class PipelineActionService:
     ) -> bool:
         """
         检查阶段是否可以完成（所有必需动作已完成）
+        优先使用快照表，fallback 到全量扫描
 
         Args:
             opportunity_id: 商机ID
@@ -346,14 +375,26 @@ class PipelineActionService:
         Returns:
             是否可以完成阶段
         """
-        # 获取该阶段的所有动作配置
+        # 优先从快照表读取
+        summary_stmt = select(OppExecutionSummary).where(
+            OppExecutionSummary.opportunity_id == opportunity_id,
+            OppExecutionSummary.current_stage_id == stage_id
+        )
+        summary = (await self.db.execute(summary_stmt)).scalar_one_or_none()
+        if summary:
+            return summary.pending_required_count == 0
+
+        # fallback: 全量扫描
+        return await self._full_scan_check(opportunity_id, stage_id)
+
+    async def _full_scan_check(self, opportunity_id: str, stage_id: str) -> bool:
+        """全量扫描检查阶段完成状态（fallback）"""
         stmt = select(PipelineActionConfig).where(
             PipelineActionConfig.stage_id == stage_id
         )
         result = await self.db.execute(stmt)
         action_configs = result.scalars().all()
 
-        # 获取动作执行日志
         action_logs = []
         for config in action_configs:
             stmt = select(OpportunityActionLog).where(
@@ -364,7 +405,6 @@ class PipelineActionService:
             )
             result = await self.db.execute(stmt)
             log = result.scalar_one_or_none()
-
             if log:
                 action_logs.append(log)
 
@@ -462,6 +502,124 @@ class PipelineActionService:
         return ActionLogResponse.model_validate(action_log)
 
     # 私有方法
+
+    async def _sync_execution_summary(
+        self,
+        opportunity_id: str,
+        stage_id: str,
+        action_configs: list,
+        action_logs: list,
+        last_action_desc: str = None
+    ):
+        """
+        同步执行快照表 crm_opp_execution_summary
+
+        Args:
+            opportunity_id: 商机ID
+            stage_id: 阶段ID
+            action_configs: 当前阶段的 PipelineActionConfig 列表（已过滤）
+            action_logs: 当前商机的 OpportunityActionLog 列表
+            last_action_desc: 最后一次操作摘要
+        """
+        # 计算 pending_required_count
+        required_configs = [c for c in action_configs if c.is_required]
+        log_map = {log.action_config_id: log for log in action_logs}
+        pending = sum(
+            1 for c in required_configs
+            if c.id not in log_map or log_map[c.id].status != ActionStatus.DONE
+        )
+
+        # 获取阶段信息（stage code/name/order）用于计算进度
+        stage_stmt = select(PipelineStage).where(PipelineStage.id == stage_id)
+        stage = (await self.db.execute(stage_stmt)).scalar_one_or_none()
+        total_stages = 9  # 固定9个阶段
+        progress = round((stage.order / total_stages) * 100, 2) if stage else 0.0
+
+        # Upsert crm_opp_execution_summary
+        summary_stmt = select(OppExecutionSummary).where(
+            OppExecutionSummary.opportunity_id == opportunity_id
+        )
+        summary = (await self.db.execute(summary_stmt)).scalar_one_or_none()
+
+        if summary:
+            summary.current_stage_id = stage_id
+            summary.current_stage_code = getattr(stage, 'stage_code', stage.id) if stage else None
+            summary.current_stage_name = stage.name if stage else None
+            summary.total_progress = progress
+            summary.pending_required_count = pending
+            summary.total_required_count = len(required_configs)
+            summary.health_status = "RED" if pending > 3 else "YELLOW" if pending > 0 else "GREEN"
+            if last_action_desc:
+                summary.last_action_desc = last_action_desc
+                summary.last_action_at = datetime.now()
+        else:
+            self.db.add(OppExecutionSummary(
+                opportunity_id=opportunity_id,
+                current_stage_id=stage_id,
+                current_stage_code=getattr(stage, 'stage_code', stage.id) if stage else None,
+                current_stage_name=stage.name if stage else None,
+                total_progress=progress,
+                pending_required_count=pending,
+                total_required_count=len(required_configs),
+                health_status="GREEN",
+                last_action_desc=last_action_desc,
+                last_action_at=datetime.now() if last_action_desc else None,
+            ))
+        await self.db.flush()
+
+    async def _sync_after_action_update(
+        self,
+        action_log: OpportunityActionLog,
+        last_action_desc: str
+    ):
+        """
+        在 action 状态更新后同步快照表（内部辅助方法）
+
+        Args:
+            action_log: 已更新的动作日志
+            last_action_desc: 最后操作摘要
+        """
+        # 1. 获取 stage_id（从 action_config）
+        config_stmt = select(PipelineActionConfig).where(
+            PipelineActionConfig.id == action_log.action_config_id
+        )
+        config = (await self.db.execute(config_stmt)).scalar_one_or_none()
+        if not config:
+            return
+        stage_id = config.stage_id
+
+        # 2. 获取商机的 service_scope
+        opp_stmt = select(Opportunity).where(Opportunity.id == action_log.opportunity_id)
+        opp = (await self.db.execute(opp_stmt)).scalar_one_or_none()
+        service_scope = opp.service_scope or [] if opp else []
+
+        # 3. 获取该阶段所有过滤后的 configs
+        all_configs_stmt = select(PipelineActionConfig).where(
+            PipelineActionConfig.stage_id == stage_id
+        )
+        all_configs = (await self.db.execute(all_configs_stmt)).scalars().all()
+        filtered_configs = [
+            c for c in all_configs
+            if c.trigger_condition == "DEFAULT" or c.trigger_condition in service_scope
+        ]
+
+        # 4. 获取当前 pipeline_log 中该商机的所有 action logs
+        logs_stmt = select(OpportunityActionLog).where(
+            and_(
+                OpportunityActionLog.opportunity_id == action_log.opportunity_id,
+                OpportunityActionLog.pipeline_log_id == action_log.pipeline_log_id
+            )
+        )
+        action_logs = (await self.db.execute(logs_stmt)).scalars().all()
+
+        # 5. 同步快照
+        await self._sync_execution_summary(
+            opportunity_id=action_log.opportunity_id,
+            stage_id=stage_id,
+            action_configs=filtered_configs,
+            action_logs=list(action_logs),
+            last_action_desc=last_action_desc
+        )
 
     async def _check_can_complete_stage(
         self,
