@@ -4,6 +4,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 
 
@@ -33,6 +34,7 @@ class ActionConfigResponse(BaseModel):
     name: str
     action_type: ActionType
     is_required: bool
+    trigger_condition: str
     order: int
     description: Optional[str] = None
     validation_rules: Optional[Dict[str, Any]] = None
@@ -96,6 +98,25 @@ class StageActionsResponse(BaseModel):
     completed_actions: int
     required_actions: int
     can_complete_stage: bool
+
+    class Config:
+        from_attributes = True
+
+
+class OppExecutionSummaryResponse(BaseModel):
+    """商机执行快照响应"""
+    opportunity_id: str
+    current_stage_id: Optional[str] = None
+    current_stage_code: Optional[str] = None
+    current_stage_name: Optional[str] = None
+    total_progress: Decimal
+    pending_required_count: int
+    total_required_count: int
+    health_status: str
+    last_action_at: Optional[datetime] = None
+    last_action_desc: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

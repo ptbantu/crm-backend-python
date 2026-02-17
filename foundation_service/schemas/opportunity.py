@@ -139,6 +139,7 @@ class OpportunityResponse(BaseModel):
     collection_status: str = Field(default="not_started", description="整体收款状态")
     total_received_amount: Decimal = Field(default=Decimal("0"), description="已收总金额")
     service_type: str = Field(default="one_time", description="服务类型")
+    service_scope: Optional[List[str]] = Field(None, description="服务范围标签列表，如 ['VISA','REG','SITE']")
     is_split_required: bool = Field(default=False, description="是否需要订单拆分")
     split_order_required: bool = Field(default=False, description="是否需要拆分独立订单")
     has_staged_services: bool = Field(default=False, description="是否包含分阶段服务")
