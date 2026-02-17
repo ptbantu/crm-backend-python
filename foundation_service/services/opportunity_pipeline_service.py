@@ -43,6 +43,12 @@ class OpportunityPipelineService:
         """启动流水线"""
         logger.info(f"启动商机流水线: opportunity_id={opportunity_id}, pipeline_id={request.pipeline_id}")
 
+        # --- 新增：启动流水线前计算 service_scope ---
+        from foundation_service.services.opportunity_service import OpportunityService
+        opp_service = OpportunityService(self.db)
+        service_scope = await opp_service.compute_and_update_service_scope(opportunity_id)
+        logger.info(f"商机 {opportunity_id} 的 service_scope 已更新为: {service_scope}")
+
         # 验证商机是否存在
         stmt = select(Opportunity).where(Opportunity.id == opportunity_id)
         result = await self.db.execute(stmt)
