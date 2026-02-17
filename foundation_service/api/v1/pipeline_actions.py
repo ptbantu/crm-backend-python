@@ -14,7 +14,8 @@ from foundation_service.schemas.pipeline_action import (
     StageActionsResponse,
     ExecuteActionRequest,
     ApproveActionRequest,
-    SkipActionRequest
+    SkipActionRequest,
+    OppExecutionSummaryResponse
 )
 
 router = APIRouter()
@@ -183,3 +184,24 @@ async def trigger_sub_pipeline(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"触发子流水线失败: {str(e)}")
+
+
+@router.get(
+    "/{opportunity_id}/pipeline/execution-summary",
+    summary="获取商机执行快照",
+    description="获取商机当前阶段进度、健康状态和剩余必填项数量",
+    response_model=None
+)
+async def get_execution_summary(
+    opportunity_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """获取商机执行快照，供前端 Dashboard 快速显示进度信息"""
+    try:
+        service = PipelineActionService(db)
+        result = await service.get_execution_summary(opportunity_id)
+        return Result.success(data=OppExecutionSummaryResponse.model_validate(result))
+    except BusinessException as e:
+        raise HTTPException(status_code=e.status_code if hasattr(e, 'status_code') else 400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取执行快照失败: {str(e)}")

@@ -103,6 +103,24 @@ class PipelineActionService:
         await self._sync_execution_summary(opportunity_id, stage_id, filtered_configs, action_logs)
         return action_logs
 
+    async def get_execution_summary(self, opportunity_id: str) -> OppExecutionSummary:
+        """
+        获取商机执行快照
+
+        Args:
+            opportunity_id: 商机ID
+
+        Returns:
+            执行快照对象
+        """
+        summary_stmt = select(OppExecutionSummary).where(
+            OppExecutionSummary.opportunity_id == opportunity_id
+        )
+        summary = (await self.db.execute(summary_stmt)).scalar_one_or_none()
+        if not summary:
+            raise BusinessException(detail="商机执行快照不存在，请先启动流水线", status_code=404)
+        return summary
+
     async def get_stage_actions(
         self,
         opportunity_id: str,
