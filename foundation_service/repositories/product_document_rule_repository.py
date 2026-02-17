@@ -71,3 +71,9 @@ class ProductDocumentRuleRepository(BaseRepository[ProductDocumentRule]):
         )
         result = await self.db.execute(query)
         return list(result.scalars().all())
+    
+    async def count_by_rule_code(self, rule_code: str) -> int:
+        """统计指定规则代码的数量"""
+        query = select(ProductDocumentRule).where(ProductDocumentRule.rule_code == rule_code)
+        result = await self.db.execute(query)
+        return len(list(result.scalars().all()))

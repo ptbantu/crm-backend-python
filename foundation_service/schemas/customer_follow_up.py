@@ -19,7 +19,7 @@ class CustomerFollowUpCreateRequest(BaseModel):
 class CustomerFollowUpResponse(BaseModel):
     """跟进记录响应"""
     id: str
-    customer_id: str
+    customer_id: int
     follow_up_type: str
     content: Optional[str] = None
     follow_up_date: datetime

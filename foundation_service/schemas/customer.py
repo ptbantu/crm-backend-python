@@ -2,7 +2,7 @@
 客户相关模式
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Dict, Any
 from datetime import datetime
 
 
@@ -64,7 +64,7 @@ class CustomerCreateRequest(BaseModel):
     customer_source_type: Optional[str] = Field(None, description="客户来源类型（已废弃，请使用 source_id）")
     
     # 关联关系
-    parent_customer_id: Optional[str] = Field(None, description="父客户ID")
+    parent_customer_id: Optional[int] = Field(None, description="父客户ID")
     owner_user_id: Optional[str] = Field(None, description="内部客户所有者ID")
     agent_user_id: Optional[str] = Field(None, description="渠道客户用户ID")
     agent_id: Optional[str] = Field(None, description="渠道客户组织ID")
@@ -95,7 +95,7 @@ class CustomerUpdateRequest(BaseModel):
     customer_source_type: Optional[str] = Field(None, description="客户来源类型（已废弃，请使用 source_id）")
     
     # 关联关系
-    parent_customer_id: Optional[str] = None
+    parent_customer_id: Optional[int] = None
     owner_user_id: Optional[str] = None
     agent_user_id: Optional[str] = None
     agent_id: Optional[str] = None
@@ -120,7 +120,7 @@ class CustomerResponse(BaseModel):
     customer_source_type: str
     
     # 关联关系
-    parent_customer_id: Optional[str] = None
+    parent_customer_id: Optional[int] = None
     parent_customer_name: Optional[str] = None
     owner_user_id: Optional[str] = None
     owner_user_name: Optional[str] = None
@@ -149,7 +149,11 @@ class CustomerResponse(BaseModel):
     updated_at: datetime
     last_follow_up_at: Optional[datetime] = None
     next_follow_up_at: Optional[datetime] = None
-    
+
+    # 天眼查关联字段
+    tianyancha_data: Optional[Dict[str, Any]] = None
+    tianyancha_synced_at: Optional[datetime] = None
+
     class Config:
         from_attributes = True
 

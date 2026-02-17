@@ -1,15 +1,28 @@
 """
 客户服务
 """
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.sql import func
+from datetime import datetime, timedelta
 from foundation_service.schemas.customer import (
     CustomerCreateRequest,
     CustomerUpdateRequest,
     CustomerResponse,
     CustomerListResponse,
 )
+from foundation_service.schemas.customer_tianyancha import (
+    TianyanchaSearchRequest,
+    TianyanchaLinkRequest,
+    TianyanchaCreateContactRequest,
+    TianyanchaRefreshRequest,
+    TianyanchaDataResponse,
+    TianyanchaLinkResponse,
+    TianyanchaUnlinkResponse,
+    TianyanchaRefreshResponse,
+)
+from foundation_service.schemas.contact import ContactCreateRequest, ContactResponse
 from foundation_service.repositories.customer_repository import CustomerRepository
 from common.models.customer import Customer
 from common.models.customer_level import CustomerLevel
@@ -372,5 +385,350 @@ class CustomerService:
             updated_at=customer.updated_at,
             last_follow_up_at=customer.last_follow_up_at if hasattr(customer, 'last_follow_up_at') else None,
             next_follow_up_at=customer.next_follow_up_at if hasattr(customer, 'next_follow_up_at') else None,
+            tianyancha_data=customer.tianyancha_data if hasattr(customer, 'tianyancha_data') else None,
+            tianyancha_synced_at=customer.tianyancha_synced_at if hasattr(customer, 'tianyancha_synced_at') else None,
         )
 
+    # ==================== 天眼查关联功能 ====================
+
+    async def search_tianyancha_enterprises(
+        self,
+        request: TianyanchaSearchRequest
+    ) -> Dict[str, Any]:
+        """
+        搜索天眼查企业（第一阶段：返回提示信息）
+
+        Args:
+            request: 搜索请求
+
+        Returns:
+            搜索结果（第一阶段返回空数据和提示）
+        """
+        logger.info(f"搜索天眼查企业: keyword={request.keyword}, page={request.page_num}, size={request.page_size}")
+
+        # 第一阶段：天眼查API暂不可用，返回提示
+        logger.warning("天眼查API暂不可用，等待代理接口")
+        return {
+            "total": 0,
+            "items": [],
+            "page_num": request.page_num,
+            "page_size": request.page_size,
+            "message": "天眼查API暂不可用，请稍后再试。第二阶段将集成代理接口。"
+        }
+
+    async def link_tianyancha_enterprise(
+        self,
+        customer_id: str,
+        request: TianyanchaLinkRequest,
+        current_user_id: Optional[str] = None
+    ) -> TianyanchaLinkResponse:
+        """
+        关联天眼查企业到客户
+
+        Args:
+            customer_id: 客户ID
+            request: 关联请求
+            current_user_id: 当前用户ID
+
+        Returns:
+            关联响应
+        """
+        logger.info(
+            f"关联天眼查企业: customer_id={customer_id}, enterprise_id={request.enterprise_id}, "
+            f"update_info={request.update_customer_info}, create_contact={request.create_contact}"
+        )
+
+        # 获取客户
+        customer = await self.customer_repo.get_by_id(customer_id)
+        if not customer:
+            logger.warning(f"客户不存在: customer_id={customer_id}")
+            raise BusinessException(detail="客户不存在", status_code=404)
+
+        # 第一阶段：使用前端传入的企业数据
+        if not request.enterprise_data:
+            raise BusinessException(
+                detail="第一阶段需要手动传入企业数据（enterprise_data字段），第二阶段将自动从天眼查获取"
+            )
+
+        enterprise_data = request.enterprise_data
+        logger.info(f"使用手动传入的企业数据: name={enterprise_data.get('name')}")
+
+        # 更新客户的天眼查关联字段
+        customer.linked_module = "tianyancha"
+        customer.linked_id_external = request.enterprise_id
+        customer.tianyancha_data = enterprise_data
+        customer.tianyancha_synced_at = datetime.now()
+        customer.enrich_status = "enriched"
+
+        updated_fields = ["linked_module", "linked_id_external", "tianyancha_data", "tianyancha_synced_at", "enrich_status"]
+
+        # 可选：更新客户基础信息
+        if request.update_customer_info and enterprise_data.get("name"):
+            # 只在客户名称为空或者明确要求更新时才更新
+            if not customer.name or customer.name.strip() == "":
+                customer.name = enterprise_data.get("name")
+                updated_fields.append("name")
+
+            # 更新描述（追加企业信息）
+            enterprise_desc = f"企业类型：{enterprise_data.get('company_type', '未知')}\n"
+            enterprise_desc += f"注册资本：{enterprise_data.get('registered_capital', '未知')}\n"
+            enterprise_desc += f"成立日期：{enterprise_data.get('establishment_date', '未知')}\n"
+            enterprise_desc += f"经营状态：{enterprise_data.get('business_status', '未知')}"
+
+            if customer.description:
+                customer.description = f"{customer.description}\n\n【天眼查企业信息】\n{enterprise_desc}"
+            else:
+                customer.description = f"【天眼查企业信息】\n{enterprise_desc}"
+            updated_fields.append("description")
+
+        # 保存客户更新
+        customer = await self.customer_repo.update(customer)
+        logger.info(f"客户天眼查关联成功: customer_id={customer_id}, enterprise_id={request.enterprise_id}")
+
+        # 转换客户为响应格式
+        customer_response = await self._to_response(customer)
+
+        # 可选：自动创建法人联系人
+        contact_response = None
+        if request.create_contact and enterprise_data.get("legal_representative"):
+            try:
+                from foundation_service.services.contact_service import ContactService
+                contact_service = ContactService(self.db)
+
+                legal_rep_name = enterprise_data.get("legal_representative")
+                # 解析中文姓名（通常最后一个字是名，前面是姓）
+                if len(legal_rep_name) >= 2:
+                    last_name = legal_rep_name[0]  # 第一个字作为姓
+                    first_name = legal_rep_name[1:]  # 其余作为名
+                else:
+                    last_name = legal_rep_name
+                    first_name = ""
+
+                contact_create_request = ContactCreateRequest(
+                    customer_id=int(customer_id),
+                    first_name=first_name,
+                    last_name=last_name,
+                    position="法定代表人",
+                    is_primary=True,
+                    is_decision_maker=True,
+                    is_active=True,
+                    notes="来自天眼查数据自动创建"
+                )
+
+                contact_response = await contact_service.create_contact(contact_create_request)
+                logger.info(f"自动创建法人联系人成功: contact_id={contact_response.id}, name={legal_rep_name}")
+            except Exception as e:
+                logger.warning(f"创建法人联系人失败: {str(e)}", exc_info=True)
+                # 不影响主流程，继续
+
+        return TianyanchaLinkResponse(
+            success=True,
+            message="关联成功",
+            customer=customer_response.model_dump(),
+            contact=contact_response.model_dump() if contact_response else None,
+            updated_fields=updated_fields
+        )
+
+    async def get_tianyancha_data(
+        self,
+        customer_id: str
+    ) -> TianyanchaDataResponse:
+        """
+        获取客户的天眼查数据
+
+        Args:
+            customer_id: 客户ID
+
+        Returns:
+            天眼查数据响应
+        """
+        logger.debug(f"获取客户天眼查数据: customer_id={customer_id}")
+
+        customer = await self.customer_repo.get_by_id(customer_id)
+        if not customer:
+            logger.warning(f"客户不存在: customer_id={customer_id}")
+            raise BusinessException(detail="客户不存在", status_code=404)
+
+        is_linked = (
+            customer.linked_module == "tianyancha" and
+            customer.linked_id_external is not None
+        )
+
+        return TianyanchaDataResponse(
+            is_linked=is_linked,
+            enterprise_id=customer.linked_id_external if is_linked else None,
+            enterprise_data=customer.tianyancha_data if is_linked else None,
+            synced_at=customer.tianyancha_synced_at if is_linked else None
+        )
+
+    async def unlink_tianyancha_enterprise(
+        self,
+        customer_id: str
+    ) -> TianyanchaUnlinkResponse:
+        """
+        解除客户的天眼查关联
+
+        Args:
+            customer_id: 客户ID
+
+        Returns:
+            解除关联响应
+        """
+        logger.info(f"解除天眼查关联: customer_id={customer_id}")
+
+        customer = await self.customer_repo.get_by_id(customer_id)
+        if not customer:
+            logger.warning(f"客户不存在: customer_id={customer_id}")
+            raise BusinessException(detail="客户不存在", status_code=404)
+
+        # 清除天眼查相关字段
+        customer.linked_module = None
+        customer.linked_id_external = None
+        customer.tianyancha_data = None
+        customer.tianyancha_synced_at = None
+        customer.enrich_status = None
+
+        await self.customer_repo.update(customer)
+        logger.info(f"天眼查关联解除成功: customer_id={customer_id}")
+
+        return TianyanchaUnlinkResponse(
+            success=True,
+            message="解除关联成功"
+        )
+
+    async def refresh_tianyancha_data(
+        self,
+        customer_id: str,
+        request: TianyanchaRefreshRequest
+    ) -> TianyanchaRefreshResponse:
+        """
+        刷新客户的天眼查数据
+
+        Args:
+            customer_id: 客户ID
+            request: 刷新请求
+
+        Returns:
+            刷新响应
+        """
+        logger.info(f"刷新天眼查数据: customer_id={customer_id}, force={request.force}")
+
+        customer = await self.customer_repo.get_by_id(customer_id)
+        if not customer:
+            logger.warning(f"客户不存在: customer_id={customer_id}")
+            raise BusinessException(detail="客户不存在", status_code=404)
+
+        # 检查是否已关联
+        if customer.linked_module != "tianyancha" or not customer.linked_id_external:
+            raise BusinessException(detail="客户尚未关联天眼查企业")
+
+        # 检查24小时缓存
+        if not request.force and customer.tianyancha_synced_at:
+            time_diff = datetime.now() - customer.tianyancha_synced_at
+            if time_diff < timedelta(hours=24):
+                logger.info(f"天眼查数据在24小时内已同步，跳过刷新: synced_at={customer.tianyancha_synced_at}")
+                return TianyanchaRefreshResponse(
+                    success=True,
+                    message=f"数据已是最新（上次同步: {customer.tianyancha_synced_at.strftime('%Y-%m-%d %H:%M:%S')}）",
+                    updated=False,
+                    changed_fields=None,
+                    enterprise_data=customer.tianyancha_data
+                )
+
+        # 第一阶段：暂不调用API，返回提示
+        logger.warning("天眼查API暂不可用，无法刷新数据")
+        return TianyanchaRefreshResponse(
+            success=False,
+            message="天眼查API暂不可用，等待第二阶段集成代理接口",
+            updated=False,
+            changed_fields=None,
+            enterprise_data=customer.tianyancha_data
+        )
+
+    async def create_contact_from_tianyancha(
+        self,
+        customer_id: str,
+        request: TianyanchaCreateContactRequest
+    ) -> ContactResponse:
+        """
+        从天眼查数据创建联系人
+
+        Args:
+            customer_id: 客户ID
+            request: 创建联系人请求
+
+        Returns:
+            联系人响应
+        """
+        logger.info(
+            f"从天眼查数据创建联系人: customer_id={customer_id}, "
+            f"type={request.contact_type}, shareholder={request.shareholder_name}"
+        )
+
+        customer = await self.customer_repo.get_by_id(customer_id)
+        if not customer:
+            logger.warning(f"客户不存在: customer_id={customer_id}")
+            raise BusinessException(detail="客户不存在", status_code=404)
+
+        # 检查是否已关联天眼查
+        if not customer.tianyancha_data:
+            raise BusinessException(detail="客户尚未关联天眼查数据")
+
+        tianyancha_data = customer.tianyancha_data
+
+        # 根据类型提取联系人信息
+        contact_name = None
+        position = None
+
+        if request.contact_type == "legal_representative":
+            contact_name = tianyancha_data.get("legal_representative")
+            position = "法定代表人"
+            if not contact_name:
+                raise BusinessException(detail="天眼查数据中没有法定代表人信息")
+        elif request.contact_type == "shareholder":
+            if not request.shareholder_name:
+                raise BusinessException(detail="创建股东联系人时必须指定 shareholder_name")
+
+            # 从股东列表中查找
+            shareholders = tianyancha_data.get("shareholders", [])
+            shareholder_found = None
+            for shareholder in shareholders:
+                if shareholder.get("name") == request.shareholder_name:
+                    shareholder_found = shareholder
+                    break
+
+            if not shareholder_found:
+                raise BusinessException(detail=f"在天眼查数据中找不到股东: {request.shareholder_name}")
+
+            contact_name = shareholder_found.get("name")
+            shareholder_type = shareholder_found.get("type", "股东")
+            ratio = shareholder_found.get("ratio", "")
+            position = f"{shareholder_type}（持股{ratio}）" if ratio else shareholder_type
+
+        # 解析中文姓名
+        if len(contact_name) >= 2:
+            last_name = contact_name[0]
+            first_name = contact_name[1:]
+        else:
+            last_name = contact_name
+            first_name = ""
+
+        # 创建联系人
+        from foundation_service.services.contact_service import ContactService
+        contact_service = ContactService(self.db)
+
+        contact_create_request = ContactCreateRequest(
+            customer_id=int(customer_id),
+            first_name=first_name,
+            last_name=last_name,
+            position=position,
+            is_primary=request.is_primary,
+            is_decision_maker=request.is_decision_maker,
+            is_active=True,
+            notes=f"来自天眼查数据（{request.contact_type}）"
+        )
+
+        contact_response = await contact_service.create_contact(contact_create_request)
+        logger.info(f"从天眼查创建联系人成功: contact_id={contact_response.id}, name={contact_name}")
+
+        return contact_response

@@ -9,13 +9,18 @@ from datetime import datetime
 class ProductDocumentRuleRequest(BaseModel):
     """产品资料规则请求"""
     product_id: str = Field(..., description="产品ID")
-    rule_code: str = Field(..., description="规则代码")
+    rule_code: Optional[str] = Field(None, description="规则代码（可选，不提供时自动生成）")
     document_name_zh: str = Field(..., description="资料名称（中文）")
     document_name_id: Optional[str] = Field(None, description="资料名称（印尼文）")
     document_type: str = Field(..., description="资料类型")
     is_required: bool = Field(default=True, description="是否必填")
+    min_file_count: Optional[int] = Field(default=1, description="最小文件数")
+    max_file_count: Optional[int] = None
     max_size_kb: Optional[int] = None
     allowed_extensions: Optional[str] = None
+    support_zip: Optional[bool] = Field(default=False, description="是否支持ZIP")
+    zip_extract_mode: Optional[str] = Field(None, description="ZIP解压模式")
+    file_type: Optional[str] = None
     validation_rules_json: Optional[dict] = None
     depends_on_rule_id: Optional[str] = Field(None, description="依赖的前置资料规则ID")
     sort_order: int = Field(default=0, description="显示排序")
@@ -32,8 +37,13 @@ class ProductDocumentRuleResponse(BaseModel):
     document_name_id: Optional[str] = None
     document_type: str
     is_required: bool
+    min_file_count: Optional[int] = 1
+    max_file_count: Optional[int] = None
     max_size_kb: Optional[int] = None
     allowed_extensions: Optional[str] = None
+    support_zip: Optional[bool] = False
+    zip_extract_mode: Optional[str] = None
+    file_type: Optional[str] = None
     validation_rules_json: Optional[dict] = None
     depends_on_rule_id: Optional[str] = None
     sort_order: int

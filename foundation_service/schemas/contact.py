@@ -8,7 +8,7 @@ from datetime import datetime
 
 class ContactCreateRequest(BaseModel):
     """创建联系人请求"""
-    customer_id: str = Field(..., description="客户ID")
+    customer_id: int = Field(..., description="客户ID")
     first_name: str = Field(..., min_length=1, max_length=255, description="名")
     last_name: str = Field(..., min_length=1, max_length=255, description="姓")
     
@@ -80,7 +80,7 @@ class ContactUpdateRequest(BaseModel):
 class ContactResponse(BaseModel):
     """联系人响应"""
     id: str
-    customer_id: str
+    customer_id: int
     customer_name: Optional[str] = None
     first_name: str
     last_name: str

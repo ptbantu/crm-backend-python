@@ -47,7 +47,7 @@ class OpportunityPaymentStageRequest(BaseModel):
 # 创建商机请求
 class CreateOpportunityRequest(BaseModel):
     """创建商机请求"""
-    customer_id: str = Field(..., description="客户ID")
+    customer_id: int = Field(..., description="客户ID")
     lead_id: Optional[str] = Field(None, description="来源线索ID（可选）")
     name: str = Field(..., max_length=255, description="商机名称")
     amount: Optional[Decimal] = Field(None, description="商机金额")
@@ -116,7 +116,7 @@ class OpportunityPaymentStageResponse(BaseModel):
 class OpportunityResponse(BaseModel):
     """商机响应"""
     id: str
-    customer_id: str
+    customer_id: int
     customer_name: Optional[str] = None
     lead_id: Optional[str] = None
     lead_name: Optional[str] = None
@@ -170,7 +170,7 @@ class OpportunityListResponse(BaseModel):
 # 线索转化商机请求
 class LeadConvertToOpportunityRequest(BaseModel):
     """线索转化商机请求"""
-    customer_id: Optional[str] = Field(None, description="客户ID（如果已有客户，可选）")
+    customer_id: Optional[int] = Field(None, description="客户ID（如果已有客户，可选）")
     name: str = Field(..., max_length=255, description="商机名称")
     stage: str = Field(default="initial_contact", description="商机阶段")
     owner_user_id: Optional[str] = Field(None, description="负责人ID")

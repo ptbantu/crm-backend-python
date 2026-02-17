@@ -9,7 +9,7 @@ from decimal import Decimal
 
 class ServiceRecordCreateRequest(BaseModel):
     """创建服务记录请求"""
-    customer_id: str = Field(..., description="客户ID")
+    customer_id: int = Field(..., description="客户ID")
     
     # 服务关联
     service_type_id: Optional[str] = Field(None, description="服务类型ID")
@@ -25,7 +25,7 @@ class ServiceRecordCreateRequest(BaseModel):
     sales_user_id: Optional[str] = Field(None, description="销售用户ID")
     
     # 推荐客户
-    referral_customer_id: Optional[str] = Field(None, description="推荐客户ID（转介绍）")
+    referral_customer_id: Optional[int] = Field(None, description="推荐客户ID（转介绍）")
     
     # 状态和优先级
     status: str = Field(default="pending", description="状态：pending, in_progress, completed, cancelled, on_hold")
@@ -84,7 +84,7 @@ class ServiceRecordUpdateRequest(BaseModel):
     sales_user_id: Optional[str] = None
     
     # 推荐客户
-    referral_customer_id: Optional[str] = None
+    referral_customer_id: Optional[int] = None
     
     # 状态和优先级
     status: Optional[str] = None
@@ -130,7 +130,7 @@ class ServiceRecordUpdateRequest(BaseModel):
 class ServiceRecordResponse(BaseModel):
     """服务记录响应"""
     id: str
-    customer_id: str
+    customer_id: int
     customer_name: Optional[str] = None
     
     # 服务关联
@@ -152,7 +152,7 @@ class ServiceRecordResponse(BaseModel):
     sales_username: Optional[str] = None
     
     # 推荐客户
-    referral_customer_id: Optional[str] = None
+    referral_customer_id: Optional[int] = None
     referral_customer_name: Optional[str] = None
     
     # 状态和优先级

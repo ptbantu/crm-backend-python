@@ -48,16 +48,49 @@ class MaterialDocumentService:
     ) -> ProductDocumentRuleResponse:
         """创建产品资料规则"""
         try:
+            # 如果未提供 rule_code，自动生成
+            rule_code = request.rule_code
+            if not rule_code:
+                # 基于产品ID和文档名称生成规则代码
+                # 格式：{product_id前8位}_{文档名称简写}_{UUID前8位}
+                import re
+                # 将中文文档名称转换为简写（取前几个字符）
+                doc_name_slug = re.sub(r'[^\w\s-]', '', request.document_name_zh)
+                doc_name_slug = re.sub(r'[-\s]+', '_', doc_name_slug)
+                # 取前10个字符并转为大写
+                if len(doc_name_slug) > 10:
+                    doc_name_slug = doc_name_slug[:10]
+                doc_name_slug = doc_name_slug.upper()
+                # 使用产品ID的前8位（去掉横线）和文档名称生成代码
+                product_prefix = request.product_id[:8].replace('-', '').upper()
+                # 使用UUID前8位确保唯一性（不需要查询数据库）
+                uuid_suffix = str(uuid.uuid4())[:8].upper().replace('-', '')
+                rule_code = f"{product_prefix}_{doc_name_slug}_{uuid_suffix}"
+            
+            # 验证 document_type 字符串
+            # 将前端传来的字符串转换为小写
+            document_type_str = request.document_type.strip().lower()
+            
+            # 验证文档类型
+            valid_types = ["image", "pdf", "text", "number", "date", "file"]
+            if document_type_str not in valid_types:
+                raise BusinessException(detail=f"无效的文档类型: {request.document_type}")
+            
             rule = ProductDocumentRule(
                 id=str(uuid.uuid4()),
                 product_id=request.product_id,
-                rule_code=request.rule_code,
+                rule_code=rule_code,
                 document_name_zh=request.document_name_zh,
                 document_name_id=request.document_name_id,
-                document_type=request.document_type,
+                document_type=document_type_str,
                 is_required=request.is_required,
+                min_file_count=getattr(request, 'min_file_count', 1),
+                max_file_count=getattr(request, 'max_file_count', None),
                 max_size_kb=request.max_size_kb,
                 allowed_extensions=request.allowed_extensions,
+                support_zip=getattr(request, 'support_zip', False),
+                zip_extract_mode=getattr(request, 'zip_extract_mode', None),
+                file_type=getattr(request, 'file_type', None),
                 validation_rules_json=request.validation_rules_json,
                 depends_on_rule_id=request.depends_on_rule_id,
                 sort_order=request.sort_order,
@@ -65,11 +98,11 @@ class MaterialDocumentService:
                 is_active=request.is_active,
                 created_by=created_by,
             )
-            await self.db.add(rule)
+            self.db.add(rule)
             await self.db.commit()
             await self.db.refresh(rule)
             
-            return await self._rule_to_response(rule)
+            return self._rule_to_response(rule)
         except Exception as e:
             await self.db.rollback()
             logger.error(f"创建资料规则失败: {e}", exc_info=True)
@@ -81,7 +114,7 @@ class MaterialDocumentService:
     ) -> List[ProductDocumentRuleResponse]:
         """获取产品的所有资料规则"""
         rules = await self.rule_repo.get_by_product_id(product_id)
-        return [await self._rule_to_response(rule) for rule in rules]
+        return [self._rule_to_response(rule) for rule in rules]
     
     async def upload_material_document(
         self,
@@ -247,7 +280,7 @@ class MaterialDocumentService:
         
         return True, []
     
-    async def _rule_to_response(self, rule: ProductDocumentRule) -> ProductDocumentRuleResponse:
+    def _rule_to_response(self, rule: ProductDocumentRule) -> ProductDocumentRuleResponse:
         """转换为规则响应对象"""
         return ProductDocumentRuleResponse(
             id=rule.id,
@@ -255,10 +288,15 @@ class MaterialDocumentService:
             rule_code=rule.rule_code,
             document_name_zh=rule.document_name_zh,
             document_name_id=rule.document_name_id,
-            document_type=rule.document_type.value if rule.document_type else None,
+            document_type=rule.document_type or None,
             is_required=rule.is_required,
+            min_file_count=rule.min_file_count,
+            max_file_count=rule.max_file_count,
             max_size_kb=rule.max_size_kb,
             allowed_extensions=rule.allowed_extensions,
+            support_zip=rule.support_zip,
+            zip_extract_mode=rule.zip_extract_mode,
+            file_type=rule.file_type,
             validation_rules_json=rule.validation_rules_json,
             depends_on_rule_id=rule.depends_on_rule_id,
             sort_order=rule.sort_order,

@@ -36,13 +36,20 @@ class ProductDocumentRule(Base):
     # 基本信息
     document_name_zh = Column(String(255), nullable=False, comment="资料名称（中文，如：护照首页）")
     document_name_id = Column(String(255), nullable=True, comment="资料名称（印尼文）")
-    document_type = Column(Enum(DocumentTypeEnum), nullable=False, comment="资料类型")
+    document_type = Column(String(50), nullable=False, comment="资料类型")
     
     # 验证规则
     is_required = Column(Boolean, nullable=False, default=True, comment="是否必填（1=是）")
+    min_file_count = Column(Integer, nullable=False, default=1, comment="最小文件数（必填）")
+    max_file_count = Column(Integer, nullable=True, comment="最大文件数（NULL表示不限制）")
     max_size_kb = Column(Integer, nullable=True, comment="最大文件大小（KB）")
     allowed_extensions = Column(String(200), nullable=True, comment="允许扩展名（逗号分隔，如：jpg,png,pdf）")
     validation_rules_json = Column(JSON, nullable=True, comment="校验规则JSON，例如：{\"min_width\": 800, \"min_height\": 600}")
+    
+    # ZIP文件支持
+    support_zip = Column(Boolean, nullable=False, default=False, comment="是否支持ZIP文件")
+    zip_extract_mode = Column(String(50), nullable=True, comment="ZIP解压模式：none(不解压), extract(解压后单独校验), both(同时保留ZIP和解压文件)")
+    file_type = Column(String(50), nullable=True, comment="文件类型：text, pdf, zip, image, file（兼容现有document_type）")
     
     # 排序与描述
     sort_order = Column(Integer, nullable=False, default=0, comment="显示排序")
@@ -64,7 +71,13 @@ class ProductDocumentRule(Base):
     updater = relationship("User", foreign_keys=[updated_by], primaryjoin="ProductDocumentRule.updated_by == User.id", backref="updated_document_rules")
     material_documents = relationship("ContractMaterialDocument", back_populates="rule", cascade="all, delete-orphan")
     
+    # 关系（新增）
+    submission_records = relationship("RequirementSubmissionRecord", back_populates="rule", cascade="all, delete-orphan")
+    
     # 约束
     __table_args__ = (
         CheckConstraint("max_size_kb IS NULL OR max_size_kb > 0", name="chk_document_rule_max_size"),
+        CheckConstraint("min_file_count > 0", name="chk_min_file_count"),
+        CheckConstraint("max_file_count IS NULL OR max_file_count >= min_file_count", name="chk_max_file_count"),
+        CheckConstraint("zip_extract_mode IS NULL OR zip_extract_mode IN ('none', 'extract', 'both')", name="chk_zip_extract_mode"),
     )

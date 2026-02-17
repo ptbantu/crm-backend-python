@@ -16,7 +16,7 @@ class CustomerNoteCreateRequest(BaseModel):
 class CustomerNoteResponse(BaseModel):
     """备注响应"""
     id: str
-    customer_id: str
+    customer_id: int
     note_type: str
     content: str
     is_important: bool

@@ -70,7 +70,11 @@ class Customer(Base):
     # 跟进时间字段
     last_follow_up_at = Column(DateTime, nullable=True, index=True, comment="最后跟进时间")
     next_follow_up_at = Column(DateTime, nullable=True, index=True, comment="下次跟进时间")
-    
+
+    # 天眼查关联字段
+    tianyancha_data = Column(JSON, nullable=True, comment="天眼查企业数据（JSON格式）")
+    tianyancha_synced_at = Column(DateTime, nullable=True, comment="天眼查同步时间")
+
     # 关系
     parent_customer = relationship("Customer", foreign_keys=[parent_customer_id], remote_side=[id], primaryjoin="Customer.parent_customer_id == Customer.id", backref="child_customers")
     follow_ups = relationship("CustomerFollowUp", back_populates="customer", cascade="all, delete-orphan")

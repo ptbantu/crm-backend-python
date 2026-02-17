@@ -201,11 +201,11 @@ spec:
       # 开发模式：挂载本地代码目录
       - name: common-code
         hostPath:
-          path: /home/bantu/crm-backend-python/common
+          path: /home/bantu/dev/crm-backend-python/common
           type: Directory
       - name: foundation-code
         hostPath:
-          path: /home/bantu/crm-backend-python/foundation_service
+          path: /home/bantu/dev/crm-backend-python/foundation_service
           type: Directory
 
 

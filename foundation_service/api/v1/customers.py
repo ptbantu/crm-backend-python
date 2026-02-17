@@ -18,6 +18,17 @@ from foundation_service.schemas.customer import (
     CustomerUpdateRequest,
     CustomerListResponse,
 )
+from foundation_service.schemas.customer_tianyancha import (
+    TianyanchaSearchRequest,
+    TianyanchaLinkRequest,
+    TianyanchaCreateContactRequest,
+    TianyanchaRefreshRequest,
+    TianyanchaDataResponse,
+    TianyanchaLinkResponse,
+    TianyanchaUnlinkResponse,
+    TianyanchaRefreshResponse,
+)
+from foundation_service.schemas.contact import ContactResponse
 from foundation_service.schemas.customer_follow_up import (
     CustomerFollowUpCreateRequest,
     CustomerFollowUpResponse,
@@ -380,5 +391,249 @@ async def create_customer_note(
         return Result.success(data=result, message="备注创建成功")
     except Exception as e:
         logger.error(f"API: 创建客户备注失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        raise
+
+
+# ==================== 天眼查关联功能 ====================
+
+@router.post("/tianyancha/search", response_model=Result)
+async def search_tianyancha_enterprises(
+    request: TianyanchaSearchRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    搜索天眼查企业（第一阶段：返回提示信息）
+
+    第一阶段暂不调用天眼查API，返回空数据和提示信息。
+    第二阶段将集成国内代理接口后实现实际搜索功能。
+    """
+    logger.info(f"API: 搜索天眼查企业: keyword={request.keyword}")
+    try:
+        service = CustomerService(db)
+        result = await service.search_tianyancha_enterprises(request)
+        return Result.success(data=result)
+    except Exception as e:
+        logger.error(f"API: 搜索天眼查企业失败: error={str(e)}", exc_info=True)
+        raise
+
+
+@router.post("/{customer_id}/tianyancha/link", response_model=Result[TianyanchaLinkResponse])
+async def link_tianyancha_enterprise(
+    customer_id: str,
+    request: TianyanchaLinkRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    关联天眼查企业到客户
+
+    第一阶段：需要前端在 enterprise_data 字段中传入完整的企业数据（手动录入或Mock数据）
+    第二阶段：可选 enterprise_data，如果不提供则自动从天眼查API获取
+    """
+    logger.info(f"API: 关联天眼查企业: customer_id={customer_id}, enterprise_id={request.enterprise_id}")
+    try:
+        # 获取当前用户ID
+        user_id = get_current_user_id(request_obj)
+        organization_id = get_current_organization_id(request_obj)
+        if not organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无法获取组织信息"
+            )
+
+        service = CustomerService(db)
+        result = await service.link_tianyancha_enterprise(
+            customer_id=customer_id,
+            request=request,
+            current_user_id=user_id
+        )
+
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="UPDATE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="SUCCESS",
+            description=f"关联天眼查企业: {request.enterprise_id}"
+        )
+
+        logger.info(f"API: 关联天眼查企业成功: customer_id={customer_id}")
+        return Result.success(data=result, message="关联成功")
+    except Exception as e:
+        logger.error(f"API: 关联天眼查企业失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="UPDATE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
+        raise
+
+
+@router.get("/{customer_id}/tianyancha", response_model=Result[TianyanchaDataResponse])
+async def get_tianyancha_data(
+    customer_id: str,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """获取客户的天眼查数据"""
+    logger.debug(f"API: 获取客户天眼查数据: customer_id={customer_id}")
+    try:
+        service = CustomerService(db)
+        result = await service.get_tianyancha_data(customer_id)
+        logger.debug(f"API: 获取天眼查数据成功: customer_id={customer_id}, is_linked={result.is_linked}")
+        return Result.success(data=result)
+    except Exception as e:
+        logger.error(f"API: 获取天眼查数据失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+        raise
+
+
+@router.delete("/{customer_id}/tianyancha/unlink", response_model=Result[TianyanchaUnlinkResponse])
+async def unlink_tianyancha_enterprise(
+    customer_id: str,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """解除客户的天眼查关联"""
+    logger.info(f"API: 解除天眼查关联: customer_id={customer_id}")
+    try:
+        service = CustomerService(db)
+        result = await service.unlink_tianyancha_enterprise(customer_id)
+
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="DELETE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="SUCCESS",
+            description="解除天眼查关联"
+        )
+
+        logger.info(f"API: 解除天眼查关联成功: customer_id={customer_id}")
+        return Result.success(data=result, message="解除关联成功")
+    except Exception as e:
+        logger.error(f"API: 解除天眼查关联失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="DELETE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
+        raise
+
+
+@router.post("/{customer_id}/tianyancha/refresh", response_model=Result[TianyanchaRefreshResponse])
+async def refresh_tianyancha_data(
+    customer_id: str,
+    request: TianyanchaRefreshRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    刷新客户的天眼查数据
+
+    第一阶段：实现24小时缓存逻辑，但暂不调用实际API
+    第二阶段：集成天眼查API后实现完整刷新功能
+    """
+    logger.info(f"API: 刷新天眼查数据: customer_id={customer_id}, force={request.force}")
+    try:
+        service = CustomerService(db)
+        result = await service.refresh_tianyancha_data(customer_id, request)
+
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="UPDATE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="SUCCESS",
+            description=f"刷新天眼查数据（force={request.force}）"
+        )
+
+        logger.info(f"API: 刷新天眼查数据完成: customer_id={customer_id}, updated={result.updated}")
+        return Result.success(data=result)
+    except Exception as e:
+        logger.error(f"API: 刷新天眼查数据失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="UPDATE",
+            entity_type="customers",
+            entity_id=customer_id,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
+        raise
+
+
+@router.post("/{customer_id}/tianyancha/create-contact", response_model=Result[ContactResponse])
+async def create_contact_from_tianyancha(
+    customer_id: str,
+    request: TianyanchaCreateContactRequest,
+    request_obj: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    从天眼查数据创建联系人
+
+    支持从法定代表人或股东信息创建联系人。
+    此功能不依赖天眼查API，直接从已存储的 tianyancha_data 中提取信息。
+    """
+    logger.info(
+        f"API: 从天眼查创建联系人: customer_id={customer_id}, "
+        f"type={request.contact_type}, shareholder={request.shareholder_name}"
+    )
+    try:
+        service = CustomerService(db)
+        result = await service.create_contact_from_tianyancha(customer_id, request)
+
+        # 记录审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="CREATE",
+            entity_type="contacts",
+            entity_id=result.id,
+            status="SUCCESS",
+            description=f"从天眼查数据创建联系人（{request.contact_type}）"
+        )
+
+        logger.info(f"API: 从天眼查创建联系人成功: customer_id={customer_id}, contact_id={result.id}")
+        return Result.success(data=result, message="联系人创建成功")
+    except Exception as e:
+        logger.error(f"API: 从天眼查创建联系人失败: customer_id={customer_id}, error={str(e)}", exc_info=True)
+
+        # 记录失败审计日志
+        await log_audit_operation(
+            db=db,
+            request=request_obj,
+            operation_type="CREATE",
+            entity_type="contacts",
+            entity_id=None,
+            status="FAILURE",
+            error_message=str(e),
+            error_code=type(e).__name__
+        )
         raise
 

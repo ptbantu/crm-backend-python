@@ -12,7 +12,7 @@ from foundation_service.schemas.order_item import OrderItemResponse
 class OrderCreateRequest(BaseModel):
     """创建订单请求"""
     title: str = Field(..., max_length=255, description="订单标题")
-    customer_id: str = Field(..., description="客户ID")
+    customer_id: int = Field(..., description="客户ID")
     service_record_id: Optional[str] = Field(None, description="关联的服务记录ID（可选）")
     sales_user_id: str = Field(..., description="销售用户ID")
     
@@ -61,7 +61,7 @@ class OrderResponse(BaseModel):
     id: str
     order_number: str
     title: str
-    customer_id: str
+    customer_id: int
     customer_name: Optional[str] = None
     service_record_id: Optional[str] = None
     workflow_instance_id: Optional[str] = None
