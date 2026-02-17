@@ -52,7 +52,8 @@ from common.models import (
     OrderPriceSnapshot, ExchangeRateHistory, PriceChangeLog, CustomerLevelPrice,
     ProductPriceList, VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog,
     SystemConfig, SystemConfigHistory, PipelineConfig, PipelineStage, OpportunityPipelineLog,
-    PipelineActionConfig, ActionType, OpportunityActionLog, ActionStatus
+    PipelineActionConfig, ActionType, OpportunityActionLog, ActionStatus,
+    OppExecutionSummary
 )
 
 # 初始化日志
@@ -373,6 +374,7 @@ from foundation_service.models import (
     ActionType,
     OpportunityActionLog,
     ActionStatus,
+    OppExecutionSummary,
 )
 
 # 注册路由

@@ -62,6 +62,7 @@ from common.models.pipeline_config import PipelineConfig, PipelineStage
 from common.models.opportunity_pipeline_log import OpportunityPipelineLog
 from common.models.pipeline_action_config import PipelineActionConfig, ActionType
 from common.models.opportunity_action_log import OpportunityActionLog, ActionStatus
+from common.models.opp_execution_summary import OppExecutionSummary
 
 __all__ = [
     # Foundation Service
@@ -142,4 +143,5 @@ __all__ = [
     "ActionType",
     "OpportunityActionLog",
     "ActionStatus",
+    "OppExecutionSummary",
 ]
