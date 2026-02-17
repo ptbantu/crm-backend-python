@@ -470,6 +470,25 @@ CREATE TABLE IF NOT EXISTS `crm_customers` (
   KEY `idx_org_status` (`organization_id`,`status`),
   KEY `idx_org_created` (`organization_id`,`created_at` DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='客户档案主表';
+CREATE TABLE IF NOT EXISTS `crm_opp_execution_summary` (
+  `opportunity_id` char(36) NOT NULL COMMENT '商机ID',
+  `current_stage_id` char(36) DEFAULT NULL COMMENT '当前阶段ID（外键 → sys_pipeline_stages.id）',
+  `current_stage_code` varchar(50) DEFAULT NULL COMMENT '阶段编码，如 ST_OPP_05',
+  `current_stage_name` varchar(100) DEFAULT NULL COMMENT '阶段名称',
+  `total_progress` decimal(5,2) NOT NULL DEFAULT '0.00' COMMENT '整体进度 0-100%',
+  `pending_required_count` int NOT NULL DEFAULT '0' COMMENT '当前阶段剩余未完成必需 Action 数',
+  `total_required_count` int NOT NULL DEFAULT '0' COMMENT '当前阶段必需 Action 总数',
+  `health_status` enum('GREEN','YELLOW','RED') NOT NULL DEFAULT 'GREEN' COMMENT '健康状态',
+  `last_action_at` datetime DEFAULT NULL COMMENT '最后一次 Action 操作时间',
+  `last_action_desc` varchar(255) DEFAULT NULL COMMENT '最后一次操作摘要',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`opportunity_id`),
+  KEY `idx_health_status` (`health_status`),
+  KEY `idx_current_stage` (`current_stage_id`),
+  CONSTRAINT `fk_exec_summary_opp` FOREIGN KEY (`opportunity_id`) REFERENCES `opportunities` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_exec_summary_stage` FOREIGN KEY (`current_stage_id`) REFERENCES `sys_pipeline_stages` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商机流转执行快照表（实时对齐）';
 CREATE TABLE IF NOT EXISTS `crm_opp_pipeline_instances` (
   `id` char(36) NOT NULL DEFAULT (uuid()),
   `opportunity_id` char(36) NOT NULL COMMENT '商机ID',
@@ -1493,6 +1512,7 @@ CREATE TABLE IF NOT EXISTS `opportunities` (
   `name` varchar(255) NOT NULL COMMENT '商机名称',
   `amount` decimal(18,2) DEFAULT NULL COMMENT '商机金额',
   `service_type` enum('one_time','long_term','mixed') NOT NULL DEFAULT 'one_time' COMMENT '服务类型：one_time(一次性), long_term(长周期), mixed(混合)',
+  `service_scope` json DEFAULT NULL COMMENT '商机服务范围标签，如 ["VISA","REG","SITE"]',
   `tax_service_cycle_months` int DEFAULT NULL COMMENT '财税服务周期（月，6或12）',
   `tax_service_start_date` date DEFAULT NULL COMMENT '财税服务开始日期',
   `has_staged_services` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否包含分阶段服务（财税/IT分阶段）',
@@ -3122,6 +3142,7 @@ CREATE TABLE IF NOT EXISTS `sys_pipeline_action_configs` (
   `name` varchar(100) NOT NULL COMMENT '动作名称',
   `action_type` enum('FORM','FILE','APPROVAL','SUB_PIPELINE','API_CALL') NOT NULL COMMENT '动作类型',
   `is_required` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否必需（强制执行）',
+  `trigger_condition` varchar(50) NOT NULL DEFAULT 'DEFAULT' COMMENT '触发条件标签: DEFAULT=始终触发, VISA/REG/SITE=仅在 service_scope 包含该标签时触发',
   `order` int NOT NULL DEFAULT '1' COMMENT '执行顺序',
   `description` text COMMENT '动作描述',
   `validation_rules` json DEFAULT NULL COMMENT '验证规则（JSON格式）',
