@@ -202,6 +202,6 @@ async def get_execution_summary(
         result = await service.get_execution_summary(opportunity_id)
         return Result.success(data=OppExecutionSummaryResponse.model_validate(result))
     except BusinessException as e:
-        raise HTTPException(status_code=e.status_code if hasattr(e, 'status_code') else 400, detail=str(e))
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取执行快照失败: {str(e)}")
