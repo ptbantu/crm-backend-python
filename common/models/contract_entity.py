@@ -1,7 +1,7 @@
 """
 签约主体模型
 """
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, Numeric, CheckConstraint
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, Numeric, Integer, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from common.database import Base
@@ -36,6 +36,13 @@ class ContractEntity(Base):
     currency = Column(String(10), nullable=False, default="CNY", index=True, comment="主要收款币种：CNY 或 IDR")
     address = Column(Text, nullable=True, comment="公司地址")
     contact_phone = Column(String(50), nullable=True, comment="联系电话")
+
+    # 印章信息
+    seal_oss_key = Column(String(500), nullable=True, comment="印章图片OSS路径（PNG格式，透明背景）")
+    seal_position_x = Column(Integer, nullable=True, comment="印章X坐标（像素）")
+    seal_position_y = Column(Integer, nullable=True, comment="印章Y坐标（像素）")
+    seal_width = Column(Integer, nullable=True, comment="印章宽度（像素）")
+    seal_height = Column(Integer, nullable=True, comment="印章高度（像素）")
     
     # 状态
     is_active = Column(Boolean, nullable=False, default=True, index=True, comment="是否启用")

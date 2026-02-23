@@ -24,7 +24,7 @@ from foundation_service.api.v1 import (
     service_records, industries, customer_sources, analytics, monitoring, logs, audit, suppliers,
     system_config, tianyancha, quotations, contracts, invoices, material_documents,
     order_payments, execution_orders, payments, contract_entities, requirement_submissions,
-    opportunity_pipeline, pipeline_actions
+    opportunity_pipeline, pipeline_actions, document_templates, documents
 )
 from foundation_service.api.v1 import product_prices, exchange_rates, price_change_logs
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
@@ -53,7 +53,7 @@ from common.models import (
     ProductPriceList, VendorProductFinancial, Contact, ServiceRecord, ServiceType, Industry, AuditLog,
     SystemConfig, SystemConfigHistory, PipelineConfig, PipelineStage, OpportunityPipelineLog,
     PipelineActionConfig, ActionType, OpportunityActionLog, ActionStatus,
-    OppExecutionSummary
+    OppExecutionSummary, DocTemplate, CrmDocument, DocContractExt, DocInvoiceExt
 )
 
 # 初始化日志
@@ -375,6 +375,10 @@ from foundation_service.models import (
     OpportunityActionLog,
     ActionStatus,
     OppExecutionSummary,
+    DocTemplate,
+    CrmDocument,
+    DocContractExt,
+    DocInvoiceExt,
 )
 
 # 注册路由
@@ -436,6 +440,10 @@ app.include_router(logs.router, prefix="/api/analytics-monitoring/logs", tags=["
 
 # Audit Service 路由
 app.include_router(audit.router, prefix="/api/foundation/audit-logs", tags=["审计日志"])
+
+# Document Management 路由
+app.include_router(document_templates.router, prefix="/api/v1", tags=["文档模板管理"])
+app.include_router(documents.router, prefix="/api/v1", tags=["文档管理"])
 
 
 @app.get("/health")

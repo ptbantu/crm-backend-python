@@ -82,6 +82,10 @@ from common.models.opportunity_pipeline_log import OpportunityPipelineLog
 from common.models.pipeline_action_config import PipelineActionConfig, ActionType
 from common.models.opportunity_action_log import OpportunityActionLog, ActionStatus
 from common.models.opp_execution_summary import OppExecutionSummary
+from common.models.doc_template import DocTemplate, TemplateTypeEnum
+from common.models.crm_document import CrmDocument, DocumentTypeEnum, DocumentStatusEnum
+from common.models.doc_contract_ext import DocContractExt
+from common.models.doc_invoice_ext import DocInvoiceExt, InvoiceTypeEnum
 __all__ = [
     "User",
     "Organization",
@@ -171,5 +175,13 @@ __all__ = [
     "OpportunityActionLog",
     "ActionStatus",
     "OppExecutionSummary",
+    "DocTemplate",
+    "TemplateTypeEnum",
+    "CrmDocument",
+    "DocumentTypeEnum",
+    "DocumentStatusEnum",
+    "DocContractExt",
+    "DocInvoiceExt",
+    "InvoiceTypeEnum",
 ]
 

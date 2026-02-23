@@ -50,8 +50,11 @@ psutil==5.9.6  # 系统监控工具
 # 邮件发送
 aiosmtplib==3.0.1  # 异步 SMTP 客户端
 
-# PDF 生成
+# PDF 生成和文档处理
 reportlab==4.0.7  # PDF 生成库
+python-docx==1.1.0  # Word 文档操作
+PyPDF2==3.0.1  # PDF 操作和合并
+Pillow==10.1.0  # 图像处理（用于印章）
 
 # WeChaty 微信机器人（暂时注释，等需要时再启用）
 # wechaty==0.10.7  # 微信机器人框架

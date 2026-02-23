@@ -63,6 +63,10 @@ from common.models.opportunity_pipeline_log import OpportunityPipelineLog
 from common.models.pipeline_action_config import PipelineActionConfig, ActionType
 from common.models.opportunity_action_log import OpportunityActionLog, ActionStatus
 from common.models.opp_execution_summary import OppExecutionSummary
+from common.models.doc_template import DocTemplate
+from common.models.crm_document import CrmDocument
+from common.models.doc_contract_ext import DocContractExt
+from common.models.doc_invoice_ext import DocInvoiceExt
 
 __all__ = [
     # Foundation Service
@@ -144,4 +148,8 @@ __all__ = [
     "OpportunityActionLog",
     "ActionStatus",
     "OppExecutionSummary",
+    "DocTemplate",
+    "CrmDocument",
+    "DocContractExt",
+    "DocInvoiceExt",
 ]

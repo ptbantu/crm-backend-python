@@ -55,6 +55,10 @@ from foundation_service.repositories.execution_order_repository import (
     CompanyRegistrationInfoRepository,
 )
 from foundation_service.repositories.product_dependency_repository import ProductDependencyRepository
+from foundation_service.repositories.doc_template_repository import DocTemplateRepository
+from foundation_service.repositories.crm_document_repository import CrmDocumentRepository
+from foundation_service.repositories.doc_contract_ext_repository import DocContractExtRepository
+from foundation_service.repositories.doc_invoice_ext_repository import DocInvoiceExtRepository
 
 __all__ = [
     "OrderRepository",
@@ -101,4 +105,8 @@ __all__ = [
     "ExecutionOrderDependencyRepository",
     "CompanyRegistrationInfoRepository",
     "ProductDependencyRepository",
+    "DocTemplateRepository",
+    "CrmDocumentRepository",
+    "DocContractExtRepository",
+    "DocInvoiceExtRepository",
 ]
