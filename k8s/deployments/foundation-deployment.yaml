@@ -143,6 +143,58 @@ spec:
             configMapKeyRef:
               name: crm-python-config
               key: MONGO_AUTH_SOURCE
+        # MinIO 配置
+        - name: MINIO_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: MINIO_ENDPOINT
+        - name: MINIO_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: MINIO_PORT
+        - name: MINIO_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: MINIO_BUCKET
+        - name: MINIO_SECURE
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: MINIO_SECURE
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: MINIO_ACCESS_KEY
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: MINIO_SECRET_KEY
+        # Alibaba Cloud OSS 配置
+        - name: OSS_BUCKET_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: OSS_BUCKET_NAME
+        - name: OSS_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: crm-python-config
+              key: OSS_ENDPOINT
+        - name: OSS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: OSS_ACCESS_KEY_ID
+        - name: OSS_ACCESS_KEY_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: crm-python-secret
+              key: OSS_ACCESS_KEY_SECRET
         # 天眼查 API 配置
         - name: TIANYANCHA_API_KEY
           valueFrom:

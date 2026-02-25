@@ -68,6 +68,8 @@ site/
 *.key
 *.crt
 !certs/README.md
+k8s/deployments/secret.yaml
+k8s/prod/secret.yaml
 
 *.py.bak
 config/*

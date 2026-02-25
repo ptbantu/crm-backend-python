@@ -48,7 +48,14 @@ data:
   
   # MinIO 配置（用于文件存储）
   MINIO_ENDPOINT: "minio.default.svc.cluster.local"
-  
+  MINIO_PORT: "9000"
+  MINIO_BUCKET: "bantu-crm"
+  MINIO_SECURE: "false"
+
+  # Alibaba Cloud OSS 配置
+  OSS_BUCKET_NAME: "bantuqifu-dev"
+  OSS_ENDPOINT: "oss-ap-southeast-5.aliyuncs.com"
+
   # 天眼查 API 配置（非敏感配置）
   TIANYANCHA_API_URL: "http://open.api.tianyancha.com"
   TIANYANCHA_TIMEOUT: "30"
