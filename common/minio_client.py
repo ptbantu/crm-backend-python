@@ -17,8 +17,8 @@ _default_bucket: str = "bantu-crm"
 def init_minio(
     endpoint: str = "minio.default.svc.cluster.local",
     port: int = 9000,
-    access_key: str = "bantu_minio_admin",
-    secret_key: str = "bantu_minio_password_2024",
+    access_key: str = "",
+    secret_key: str = "",
     secure: bool = False,
     region: str = "us-east-1",
     default_bucket: str = "bantu-crm",

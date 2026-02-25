@@ -27,6 +27,10 @@ import os
 import argparse
 import pymysql
 from typing import Dict, Set, List, Tuple, Optional
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,11 +40,18 @@ DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'mysql'),
     'port': int(os.getenv('DB_PORT', 3306)),
     'user': os.getenv('DB_USER', 'bantu_user'),
-    'password': os.getenv('DB_PASSWORD', 'bantu_user_password_2024'),
+    'password': os.getenv('DB_PASSWORD'),
     'database': os.getenv('DB_NAME', 'bantu_crm'),
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor
 }
+
+# 验证必需的环境变量
+if not DB_CONFIG['password']:
+    print("错误: DB_PASSWORD 环境变量未设置")
+    print("请在 .env 文件中配置 DB_PASSWORD")
+    print("参考 .env.example 文件获取配置说明")
+    sys.exit(1)
 
 
 def escape_sql_string(value: str) -> str:

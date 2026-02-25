@@ -7,19 +7,30 @@ import sys
 import socket
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 print("=" * 70)
 print("MongoDB 连接测试 - 详细诊断")
 print("=" * 70)
 
 # 测试配置
-MONGO_HOST_FULL = "mongodb.default.svc.cluster.local"
+MONGO_HOST_FULL = os.getenv("MONGO_HOST", "mongodb.default.svc.cluster.local")
 MONGO_HOST_SHORT = "mongodb"  # 同一 namespace 内的短地址
-MONGO_PORT = 27017
-MONGO_DATABASE = "bantu_crm"
-MONGO_USERNAME = "bantu_mongo_user"
-MONGO_PASSWORD = "bantu_mongo_user_password_2024"
-MONGO_AUTH_SOURCE = "bantu_crm"
+MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
+MONGO_DATABASE = os.getenv("MONGO_DATABASE", "bantu_crm")
+MONGO_USERNAME = os.getenv("MONGO_USERNAME", "bantu_mongo_user")
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
+MONGO_AUTH_SOURCE = os.getenv("MONGO_AUTH_SOURCE", "bantu_crm")
+
+# 验证必需的环境变量
+if not MONGO_PASSWORD:
+    print("错误: MONGO_PASSWORD 环境变量未设置")
+    print("请在 .env 文件中配置 MONGO_PASSWORD")
+    print("参考 .env.example 文件获取配置说明")
+    sys.exit(1)
 
 print(f"\n配置信息:")
 print(f"  Host (完整): {MONGO_HOST_FULL}")

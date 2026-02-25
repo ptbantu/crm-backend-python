@@ -57,8 +57,20 @@ class OSSConfig:
     ]
     
     @classmethod
+    def validate_credentials(cls):
+        """验证必需的凭证是否已配置"""
+        if not cls.ACCESS_KEY_ID or not cls.ACCESS_KEY_SECRET:
+            print("错误: OSS 凭证未配置")
+            print("请设置以下环境变量:")
+            print("  - OSS_ACCESS_KEY_ID")
+            print("  - OSS_ACCESS_KEY_SECRET")
+            print("参考 .env.example 文件获取配置说明")
+            sys.exit(1)
+
+    @classmethod
     def get_config(cls) -> Dict:
         """获取完整配置字典"""
+        cls.validate_credentials()
         return {
             "endpoint": cls.ENDPOINT,
             "region": cls.REGION,

@@ -44,6 +44,7 @@ ENV/
 # Logs
 *.log
 logs/
+processed_ids.txt
 
 # Database
 *.db

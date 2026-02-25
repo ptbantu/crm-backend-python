@@ -22,7 +22,7 @@ class BaseServiceSettings(BaseSettings):
     DB_PORT: int = 3306
     DB_NAME: str = "bantu_crm"
     DB_USER: str = "bantu_user"
-    DB_PASSWORD: str = "bantu_user_password_2024"
+    DB_PASSWORD: str = ""
     
     @property
     def DATABASE_URL(self) -> str:
@@ -33,7 +33,7 @@ class BaseServiceSettings(BaseSettings):
     # Redis 配置
     REDIS_HOST: str = "redis.default.svc.cluster.local"
     REDIS_PORT: int = 6379
-    REDIS_PASSWORD: str = "bantu_redis_password_2024"
+    REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
     
     @field_validator('REDIS_PORT', mode='before')
@@ -64,7 +64,7 @@ class BaseServiceSettings(BaseSettings):
     MONGO_PORT: int = 27017
     MONGO_DATABASE: str = "bantu_crm"
     MONGO_USERNAME: str = "bantu_mongo_user"
-    MONGO_PASSWORD: str = "bantu_mongo_user_password_2024"
+    MONGO_PASSWORD: str = ""
     MONGO_AUTH_SOURCE: str = "bantu_crm"
     
     @property
@@ -75,8 +75,8 @@ class BaseServiceSettings(BaseSettings):
     # MinIO 配置
     MINIO_ENDPOINT: str = "minio.default.svc.cluster.local"
     MINIO_PORT: int = 9000
-    MINIO_ACCESS_KEY: str = "bantu_minio_admin"
-    MINIO_SECRET_KEY: str = "bantu_minio_password_2024"
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
     MINIO_BUCKET: str = "bantu-crm"
     MINIO_SECURE: bool = False
     
@@ -175,7 +175,7 @@ class BaseServiceSettings(BaseSettings):
     WHATSAPP_APP_SECRET: Optional[str] = None
     
     # JWT 配置
-    JWT_SECRET: str = "bantucrm-key-20251101-jwt"
+    JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION: int = 86400000  # 24小时（毫秒）
     

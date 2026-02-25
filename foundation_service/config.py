@@ -13,12 +13,9 @@ class Settings(BaseServiceSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     
-    # JWT 配置（从环境变量读取，如果没有则使用默认值）
-    # 环境变量优先级：JWT_SECRET > 默认值
-    # 环境变量优先级：JWT_ALGORITHM > 默认值
-    JWT_SECRET: str = "bantucrm-key-20251101-jwt"  # 默认值，会被环境变量覆盖
-    JWT_ALGORITHM: str = "HS256"  # 默认值，会被环境变量覆盖
-    JWT_EXPIRATION: int = 86400000  # 24小时
+    # JWT 配置（从环境变量读取）
+    # 继承自 BaseServiceSettings，不需要重复定义
+    # JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION 已在父类中定义
     
     # Order Workflow Service 配置
     WORKFLOW_AUTO_TRANSITION: bool = True  # 是否自动流转工作流

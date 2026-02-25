@@ -31,6 +31,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制公共代码
 COPY common/ /app/common/
 
+# 复制 .env 文件（可选，仅用于开发/测试环境）
+# 生产环境应通过 Kubernetes Secrets/ConfigMaps 注入环境变量
+COPY .env* /app/ 2>/dev/null || true
+
 # 复制服务代码（根据构建参数）
 # SERVICE_DIR 是实际的目录名，SERVICE_NAME 是 Python 模块名
 # 注意：代码中使用的是带 _service 后缀的模块名，所以需要复制到对应的目录

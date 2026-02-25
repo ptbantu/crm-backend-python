@@ -45,7 +45,9 @@ k8s/
 logs/
 
 # Environment
-.env
+# Note: .env is included in Docker builds for development/testing
+# Production deployments should use Kubernetes Secrets/ConfigMaps
+# .env
 .env.local
 .env.*.local
 
