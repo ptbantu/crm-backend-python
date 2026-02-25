@@ -1,0 +1,8 @@
+composio-openai
+openai
+pdfplumber>=0.10.0
+pytesseract>=0.3.10
+pdf2image>=1.16.0
+Pillow>=10.0.0
+PyMySQL>=1.1.0
+python-dotenv>=1.0.0

@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visa-reading-worker
+  namespace: default
+  labels:
+    app: visa-reading-worker
+    component: worker
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: visa-reading-worker
+  template:
+    metadata:
+      labels:
+        app: visa-reading-worker
+        component: worker
+    spec:
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30  # 优雅退出时间
+      containers:
+      - name: visa-reader
+        image: bantu-crm-visa-reading:latest
+        imagePullPolicy: IfNotPresent
+        command: ["python", "main.py"]
+        env:
+        # Composio 配置
+        - name: COMPOSIO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: visa-reading-secret
+              key: COMPOSIO_API_KEY
+        - name: COMPOSIO_DANGEROUSLY_SKIP_VERSION_CHECK
+          value: "true"
+        - name: COMPOSIO_ENTITY_ID
+          valueFrom:
+            secretKeyRef:
+              name: visa-reading-secret
+              key: COMPOSIO_ENTITY_ID
+
+        # OpenAI/DeepSeek 配置
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: visa-reading-secret
+              key: OPENAI_API_KEY
+        - name: OPENAI_BASE_URL
+          value: "https://api.deepseek.com"
+
+        # Visa Worker 配置
+        - name: VISA_SENDER_EMAIL
+          value: "ws19930801@163.com"
+        - name: VISA_URGENCY_THRESHOLD_DAYS
+          value: "7"
+        - name: VISA_MAX_EMAILS_PER_RUN
+          value: "50"
+        - name: VISA_CHECK_INTERVAL_SECONDS
+          value: "1200"
+
+        # 数据库配置
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_PASSWORD
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        # 存活探针 - 检测进程是否卡死
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        # 就绪探针 - 检测是否准备好接收流量（虽然这是 worker 不接收流量）
+        readinessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: visa-reading-secret
+  namespace: default
+  labels:
+    app: visa-reading-worker
+type: Opaque
+stringData:
+  COMPOSIO_API_KEY: "ak_NhaP1Mm32iE9CGE6izhr"
+  COMPOSIO_ENTITY_ID: "pg-test-69d49a5d-5542-4097-bc2f-f2a974534d59"
+  OPENAI_API_KEY: "sk-9264a1486afb44e4a92983418ae2b470"
