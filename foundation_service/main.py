@@ -30,6 +30,7 @@ from foundation_service.api.v1 import product_prices, exchange_rates, price_chan
 from foundation_service.api.v1.customer_levels import router as customer_levels_router
 from foundation_service.config import settings
 from foundation_service.utils.jwt import verify_token
+from foundation_service.scheduler import init_scheduler, start_scheduler, shutdown_scheduler
 
 # 导入所有模型，确保它们被注册到 SQLAlchemy metadata 中
 from common.models import (
@@ -149,10 +150,25 @@ async def lifespan(app: FastAPI):
         logger.info("✅ MongoDB 连接已初始化")
     except Exception as e:
         logger.warning(f"⚠️ MongoDB 连接初始化失败: {str(e)}，日志查询功能将不可用")
-    
+
+    # 初始化并启动调度器
+    try:
+        init_scheduler(settings)
+        start_scheduler()
+        logger.info("✅ 调度器已启动")
+    except Exception as e:
+        logger.error(f"❌ 调度器启动失败: {str(e)}", exc_info=True)
+
     yield
     # 关闭时执行
     logger.info("🛑 Foundation Service 关闭中...")
+
+    # 关闭调度器
+    try:
+        shutdown_scheduler()
+        logger.info("✅ 调度器已关闭")
+    except Exception as e:
+        logger.error(f"❌ 调度器关闭失败: {str(e)}", exc_info=True)
 
 
 app = FastAPI(

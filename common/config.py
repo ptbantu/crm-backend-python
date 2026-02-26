@@ -178,7 +178,17 @@ class BaseServiceSettings(BaseSettings):
     JWT_SECRET: str = ""
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION: int = 86400000  # 24小时（毫秒）
-    
+
+    # 企业微信配置
+    WECOM_WEBHOOK_URL: Optional[str] = None
+    WECOM_ENABLED: bool = False
+
+    # 调度器配置
+    VISA_NOTIFICATION_ENABLED: bool = True
+    VISA_NOTIFICATION_CRON_HOUR: int = 9
+    VISA_NOTIFICATION_CRON_MINUTE: int = 0
+    VISA_NOTIFICATION_TIMEZONE: str = "Asia/Shanghai"
+
     # CORS 配置（支持从环境变量读取 JSON 字符串）
     @property
     def CORS_ALLOWED_ORIGINS(self) -> List[str]:

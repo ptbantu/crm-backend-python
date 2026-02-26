@@ -32,6 +32,8 @@ crm-backend-python/
 - **Redis**: 缓存
 - **python-jose**: JWT 认证
 - **Motor**: MongoDB 异步驱动
+- **APScheduler**: 后台任务调度（签证预警）
+- **pytz**: 时区处理（Asia/Jakarta）
 
 ## 快速开始
 
@@ -140,14 +142,25 @@ docker-compose up -d
 
 ## 数据库
 
+### 数据库版本管理
+
+**单快照模式（Single Snapshot Mode）**：
+- 快照文件：`init-scripts/schema.sql` (表结构) + `init-scripts/seed_data.sql` (种子数据)
+- 导出工具：`scripts/export_schema_and_seed.sh`
+- 导入工具：`scripts/import-sql-to-mysql.sh`
+- 更新规范：修改数据库后立即导出新快照，删除旧版本 SQL 文件
+- 时区：Asia/Jakarta (UTC+7)
+- 最后更新：2026-02-26（包含签证预警系统字段）
+
 ### 初始化数据库
 
 ```bash
-# 导入数据库 Schema
-mysql -u username -p database_name < init-scripts/schema.sql
+# 导入数据库 Schema 和种子数据
+bash scripts/import-sql-to-mysql.sh
 
-# 导入审计日志表
-./scripts/import-sql-to-mysql.sh init-scripts/migrations/create_audit_logs_table.sql
+# 或手动导入
+mysql -u username -p database_name < init-scripts/schema.sql
+mysql -u username -p database_name < init-scripts/seed_data.sql
 ```
 
 ### 数据库结构
@@ -184,4 +197,43 @@ mysql -u username -p database_name < init-scripts/schema.sql
 - ✅ 数据分析
 - ✅ 系统监控
 - ✅ 日志查询
+
+### Background Tasks（后台任务）
+
+- ✅ **签证到期预警**（APScheduler）
+  - 每天雅加达时间 09:00 自动执行
+  - 5-3-1 天精准预警（剩余 5/3/1 天时发送通知）
+  - 企业微信 Webhook 推送
+  - 幂等性保证（防止重复通知）
+  - 配置：`VISA_NOTIFICATION_ENABLED`, `WECOM_WEBHOOK_URL`
+
+## 业务文档
+
+- **[业务逻辑文档](./docs/skills.md)** - 签证预警、数据库操作等业务规则
+- **[API 文档索引](./docs/api/API_DOCUMENTATION.md)** - 完整 API 文档
+
+## 项目进度
+
+### 最新更新（2026-02-26）
+
+**APScheduler 签证预警系统 + 数据库版本管理规范**
+
+核心功能：
+- APScheduler 集成：每天雅加达时间 09:00 执行签证到期检查
+- 5-3-1 精准预警：仅在剩余 5/3/1 天时发送企业微信通知
+- 幂等性保证：通过 `last_notified_day` 字段防止重复通知
+- 时区锁定：Asia/Jakarta (UTC+7)
+
+数据库变更：
+- 新增字段：`customer_documents.last_notified_day` (INT)
+- 新增索引：`ix_customer_documents_last_notified`
+- 数据库快照：schema.sql (256K), seed_data.sql (164K)
+- 单快照模式：删除所有旧版本 SQL 文件
+
+技术栈：
+- APScheduler 3.10.4
+- pytz 2024.1
+- FastAPI lifespan events
+- SQLAlchemy 原生 SQL
+- requests (企业微信 API)
 
