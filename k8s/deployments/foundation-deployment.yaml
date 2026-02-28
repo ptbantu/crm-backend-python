@@ -211,6 +211,24 @@ spec:
             configMapKeyRef:
               name: crm-python-config
               key: TIANYANCHA_TIMEOUT
+        # 签证预警系统配置
+        - name: VISA_NOTIFICATION_ENABLED
+          value: "true"
+        - name: VISA_NOTIFICATION_CRON_HOUR
+          value: "9"
+        - name: VISA_NOTIFICATION_CRON_MINUTE
+          value: "0"
+        - name: VISA_NOTIFICATION_TIMEZONE
+          value: "Asia/Jakarta"
+        # 企业微信配置
+        - name: WECOM_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: wecom-secret
+              key: WECOM_WEBHOOK_URL
+              optional: true
+        - name: WECOM_ENABLED
+          value: "false"
         volumeMounts:
         # 挂载本地代码目录，实现热重载
         - name: common-code

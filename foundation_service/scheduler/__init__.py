@@ -4,11 +4,11 @@ APScheduler 调度器初始化模块
 """
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-import logging
 
+from common.utils.logger import get_logger
 from .visa_notification import visa_notification_job
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 创建后台调度器实例（时区锁定为雅加达时间）
 scheduler = BackgroundScheduler(timezone="Asia/Jakarta")
