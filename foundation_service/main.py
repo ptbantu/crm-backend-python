@@ -268,13 +268,20 @@ from foundation_service.middleware.audit_middleware import AuditMiddleware
 app.add_middleware(AuditMiddleware)
 
 # CORS 配置
-# 临时允许所有域名访问（开发环境）
+# 允许前端域名访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 临时允许所有域名
-    allow_credentials=False,  # 使用 "*" 时不能使用 credentials
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "https://www.crmbantu.space",  # 生产前端
+        "https://crmbantu.space",      # 生产前端（无 www）
+        "http://localhost:3000",        # 本地开发
+        "http://localhost:5173",        # 本地开发（Vite）
+        "http://127.0.0.1:3000",        # 本地开发
+        "http://127.0.0.1:5173",        # 本地开发（Vite）
+    ],
+    allow_credentials=True,  # 允许携带 cookies 和 Authorization header
+    allow_methods=["*"],     # 允许所有 HTTP 方法
+    allow_headers=["*"],     # 允许所有 headers
 )
 
 
